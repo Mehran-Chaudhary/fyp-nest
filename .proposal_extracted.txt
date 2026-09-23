@@ -1,0 +1,319 @@
+
+A Distributed AI Agent Management Platform
+(With Privacy-Preserving RAG and Secure Workflow Orchestration)
+Submitted By: 
+Mohammad Mehran Chaudhary – 232433 
+Ahmad Hanbal – 231653 
+Ameer Abdullah – 233087
+Supervisor: Ms. Maryam Wardah
+Co-Supervisor: Mr. Qaiser Manzoor
+Department of Computer Science Air University Islamabad (AU)
+
+Department of Computer Science 
+Air University Islamabad (AU)
+
+Table of Contents
+ TOC \o "1-3" \h \z \u 1. Introduction	 PAGEREF _Toc223001770 \h 3
+2. Related System Analysis	 PAGEREF _Toc223001771 \h 3
+3. Problem Statement	 PAGEREF _Toc223001772 \h 4
+4. Problem Solution / Objectives of the Proposed System	 PAGEREF _Toc223001773 \h 5
+4.1 Objectives	 PAGEREF _Toc223001774 \h 5
+5. Scope	 PAGEREF _Toc223001775 \h 6
+6. Modules	6
+6.1 Authentication and IAM Module	6
+6.2 Organization Workspace Module	6
+6.3 Strict RBAC (Role-Based Access Control) Module	6
+6.4 Document Ingestion & Parsing Module	7
+6.5 Vector Embedding & Storage Module	7
+6.6 Secure RAG Retrieval Pipeline	7
+6.7 Local LLM Gateway Module	7
+6.8 Agent Builder & Persona Engine	7
+6.9 Multi-Agent Workflow Engine	7
+6.10 Agent Memory & Context Module	8
+6.11 Tool Execution Engine	8
+6.12 PII Redaction Engine (Research Component	8
+6.13 Interactive Workflow Canvas	8
+6.14 Token Throttling & Rate Limiting Module	8
+6.15 Secure Audit Logging Module Module	9
+66.16 Real-Time Notification & WebSocket Engine Module	9
+7. System Limitations/Constraints	9
+8. Data Gathering Approach	9
+9. Tools and Technologies	10
+10. Project Stakeholders and Roles	11
+11. Module-based Work Division	11
+12. Gantt Chart	12
+13. Mockups	13
+14. References	18
+
+1. Introduction 
+The rapid adoption of Artificial Intelligence in the enterprise sector has shifted the focus from simple conversational chat bots to autonomous "AI Agents" capable of executing complex workflows, analyzing documents, and making data-driven decisions. However, integrating generic public Large Language Models (LLMs) like ChatGPT or Claude poses severe data privacy and compliance risks. Organizations struggle to utilize AI effectively because uploading sensitive intellectual property, financial records, or internal policies to public servers violates data sovereignty laws. Additionally, building custom models from scratch is computationally expensive, and existing platforms lack centralized orchestration to manage multiple specialized agents securely.
+Recognizing these enterprise bottlenecks, we propose the development of a Distributed AI Agent Management Platform. This comprehensive SaaS (Software-as-a-Service) application is tailored to provide businesses with a secure environment to create, deploy, and manage custom "Digital Employees." The platform introduces a unique Privacy-Preserving Retrieval-Augmented Generation (RAG) pipeline combined with an active Personal Identifiable Information (PII) Redaction Engine. This ensures that sensitive enterprise data is dynamically masked before being processed by locally hosted open-source LLMs (like Ollama). By providing a centralized multi-tenant architecture, strict Role-Based Access Control (RBAC), and interactive multi-agent workflows, this project aims to revolutionize enterprise AI adoption. It offers organizations the power of autonomous AI automation while guaranteeing 100% data privacy and operational security.
+2. Related System Analysis 
+Write a summary of related system first then compre its weakness with your solution in table structure 
+Table 1: Comparison of Existing Systems
+Application Name 
+ | Weakness 
+ | Proposed Project Solution
+ | 
+OpenAI Enterprise / ChatGPT
+ | Processes sensitive enterprise data on external public clouds, creating severe data leakage risks and violating strict compliance laws. It functions primarily as a chatbot, lacking distributed multi-agent workflows.
+ | Our platform ensures 100% data sovereignty by utilizing locally hosted open-source LLMs (via Ollama) and a dedicated PII Redaction Engine, ensuring no sensitive data leaves the organization's firewall.
+ | 
+LangChain / AutoGPT
+ | These are raw developer code libraries, not complete software products. They lack visual User Interfaces, multi-tenant workspaces, and Role-Based Access Control (RBAC), making them unusable for non-technical managers.
+ | We provide a complete SaaS interface with a centralized dashboard, strict RBAC, and a drag-and-drop workflow builder, allowing non-technical admins to easily orchestrate AI agents.
+ | 
+n8n / Make.com
+ | These are general-purpose API automation platforms. They lack native, secure Retrieval-Augmented Generation (RAG) pipelines and do not possess built-in active data masking for AI prompts.
+ | Our system is an "Agent-First" platform with an integrated Secure RAG pipeline and a dedicated PII masking layer, specifically designed to process unstructured private data securely.
+ | 
+Standard Internal RAG Systems
+ | Standard custom RAG pipelines blindly fetch data from vector databases and feed it to LLMs, often accidentally exposing hidden Personal Identifiable Information (PII) like salaries or credit card numbers to the AI model logs.
+ | Our core research module introduces an Active PII Redaction Engine that intercepts retrieved data, masks sensitive entities before LLM processing, and unmasks them in the final output, ensuring Zero-Trust security.
+ | 
+3. Problem Statement 
+The absence of a centralized, privacy-first AI agent orchestration platform represents a critical bottleneck for enterprise AI adoption. Currently, organizations face a significant dilemma: utilizing powerful public Large Language Models (LLMs) exposes highly sensitive proprietary data (such as financial records, internal policies, and client PII) to external servers, violating data sovereignty and compliance regulations. Conversely, building custom, secure AI models from scratch is computationally and financially unfeasible. Furthermore, the existing ecosystem is highly fragmented. Departments run isolated AI scripts without a unified management layer, leading to a lack of Role-Based Access Control (RBAC) and poor inter-agent communication. Additionally, without proper centralized resource management, individual AI agents can enter infinite execution loops, exhausting system tokens and API rate limits, which ultimately leads to system crashes and unpredictable operational costs. There is a pressing need for a comprehensive system that bridges the gap between autonomous AI capabilities and strict enterprise data security. 
+4. Problem Solution / Objectives of the Proposed System 
+To address the critical data privacy and orchestration challenges in current enterprise AI adoption, we propose a comprehensive Distributed AI Agent Management Platform. This platform will revolutionize how organizations utilize AI by introducing a centralized, multi-tenant SaaS architecture where custom "Digital Employees" (AI Agents) can be safely created, managed, and connected. By utilizing locally hosted open-source Large Language Models (LLMs) combined with a Secure Retrieval-Augmented Generation (RAG) pipeline, we eliminate the need to send sensitive proprietary data to external public clouds. Furthermore, our innovative PII Redaction Engine actively masks confidential information before it reaches the AI reasoning model, ensuring a zero-trust data security environment. The system's interactive visual workflow builder and asynchronous message queuing will enable these distinct agents to collaborate on complex tasks seamlessly. This solution aims to transform fragmented AI scripts into a unified, secure, and highly efficient enterprise automation engine.
+4.1 Objectives 
+● To design and develop a centralized SaaS platform for creating, deploying, and managing distributed AI agents within strictly isolated organizational workspaces.
+● To implement a secure, locally-hosted LLM inference engine (via Ollama) to guarantee complete data sovereignty and eliminate the risk of external data leakage.
+● To develop a Secure RAG (Retrieval-Augmented Generation) pipeline that restricts an AI agent's access to internal documents based on strict Role-Based Access Control (RBAC).
+● To integrate an active PII Redaction Engine (using advanced NLP techniques) that dynamically detects and masks sensitive enterprise data (e.g., names, credit cards, salaries) before it is processed by the AI model.
+● To build an interactive, drag-and-drop multi-agent workflow builder that allows administrators to visually chain AI tasks and tool executions.
+● To enable seamless, asynchronous inter-agent communication and task delegation using distributed message queues (e.g., Redis) for efficient background processing.
+● To provide comprehensive real-time monitoring, immutable secure audit logging, and token throttling mechanisms to prevent resource exhaustion and ensure overall system reliability.
+● To establish a heavily secured communication layer between distributed AI agents, utilizing encrypted message queues and Zero-Trust authorization to guarantee that internal AI workflows are immune to unauthorized data access or interception. 
+5. Scope 
+The scope of this project is to develop a sophisticated, multi-tenant SaaS platform that facilitates the secure creation, deployment, and management of distributed AI agents for enterprise environments. Organizations can create isolated workspaces, ingest unstructured documents securely into vector databases, and configure custom AI personas with specific roles and executable tools. The platform will enhance operational efficiency through an interactive, drag-and-drop workflow builder that orchestrates asynchronous communication between multiple specialized agents. It will also feature a Privacy-Preserving Retrieval-Augmented Generation (RAG) pipeline powered by locally hosted Large Language Models (LLMs), enforcing strict Role-Based Access Control (RBAC) at the data retrieval layer. A core research component, the PII Redaction Engine, will be implemented to dynamically mask sensitive information before AI processing, ensuring zero-trust data privacy and compliance. Additionally, the application will be managed through an extensive admin dashboard equipped with secure audit logging, token throttling, and real-time execution monitoring, ensuring a highly secure, reliable, and well-regulated AI infrastructure for all users.
+Furthermore, the platform emphasizes robust Security and Communication protocols. All inter-agent communication will be strictly encrypted using standard protocols (e.g., TLS/SSL) over distributed message queues to prevent data interception. At the infrastructure layer, the platform will enforce Zero-Trust security principles, ensuring that even isolated agents require explicit, token-based authorization before accessing or transmitting any workspace-specific data.
+6. Modules
+6.1 Authentication and IAM Module
+Allow users to securely register, log in, and log out of the platform.
+Implement JWT (JSON Web Tokens) for secure session management and API route protection.
+Develop password hashing and security protocols to protect user credentials.
+Implement strictly enforced mutual TLS (mTLS) for any internal API calls between the backend services and the Local LLM Gateway.
+Introduce comprehensive rate-limiting and IP-whitelisting at the workspace level to mitigate brute-force and DDoS attacks against the agent infrastructure.
+
+6.2 Organization Workspace Module
+Enable multi-tenant architecture so different companies or departments can create isolated accounts on the same platform.
+Implement database schema separation to ensure data from one organization cannot be accessed by another.
+Allow admins to invite team members to their specific secure workspace.
+6.3 Strict RBAC (Role-Based Access Control) Module
+Create custom roles within a workspace (e.g., Admin, HR Manager, Standard Employee).
+Develop backend middleware to evaluate user permissions before executing any API request.
+Restrict Vector Database queries so users can only retrieve documents and interact with agents they are authorized to access.
+6.4 Document Ingestion & Parsing Module
+Provide an interface for users to upload enterprise documents (PDF, TXT, DOCX) into their workspace.
+Develop text extraction logic to read the files, remove formatting artifacts, and clean garbage characters.
+Implement error handling for unsupported file types or corrupted documents.
+6.5 Vector Embedding & Storage Module
+Develop a chunking algorithm to break large extracted texts into optimal token sizes for AI processing.
+Integrate embedding models to convert text chunks into high-dimensional mathematical vectors.
+Securely store and index these vectors in a Vector Database (e.g., Qdrant or Pinecone) for rapid semantic search.
+6.6 Secure RAG Retrieval Pipeline
+Implement semantic search algorithms to fetch the most contextually relevant document chunks based on a user's natural language query.
+Apply RBAC metadata filters directly to the Vector DB search query to ensure isolated and authorized data retrieval.
+Format the retrieved data efficiently so it can be injected seamlessly into the LLM prompt.
+6.7 Local LLM Gateway Module
+Build an API bridge connecting the backend to the locally hosted open-source inference service (e.g., Ollama running Llama-3/Mistral).
+Handle prompt formatting, parameter tuning (e.g., temperature, max tokens), and extract the generated response from the local model.
+6.8 Agent Builder & Persona Engine
+Develop a CRUD (Create, Read, Update, Delete) interface allowing admins to build new AI agents.
+Store agent configurations, operational boundaries, and system prompts (e.g., "Act as a strict HR auditor") securely in the database.
+Enable dynamic updating of agent instructions and tool access without system downtime.
+6.9 Multi-Agent Workflow Engine
+Implement distributed message queues (e.g., Redis) for asynchronous background task processing.
+Develop dynamic routing logic (Supervisor Pattern) to pass the output of one agent automatically as the input to the next agent in a workflow.
+Handle failed tasks, execution timeouts, and automatic retry mechanisms for inter-agent communication.
+Implement secure, encrypted payload transfers between agents using TLS-secured message brokers (e.g., Redis with SSL enabled) to ensure that inter-agent communication cannot be eavesdropped on.
+Develop a robust Dead Letter Queue (DLQ) mechanism to securely handle and log any failed inter-agent communication attempts without exposing sensitive payload data.
+
+6.10 Agent Memory & Context Module
+Design a database schema to store chat histories persistently per user and per specific agent session.
+Write logic to retrieve the last 'N' messages of a conversation and dynamically inject them into the current LLM prompt to maintain conversational context.
+6.11 Tool Execution Engine
+Code specific backend executable functions (Tools) such as querying a database, sending an email, or calling an external API.
+Implement ReAct (Reasoning and Acting) logic that parses the LLM's response to detect tool trigger requests, executes the backend function, and feeds the result back to the LLM to formulate the final answer.
+6.12 PII Redaction Engine (Research Component)
+Integrate advanced NLP libraries (e.g., Microsoft Presidio) to actively scan retrieved text for sensitive entities like names, credit card numbers, and salaries.
+Develop dynamic masking logic before sending text to the LLM (e.g., replacing a name with [PERSON_NAME]) to ensure data privacy.
+Implement unmasking logic after receiving the response, ensuring the end-user sees a coherent answer without exposing the raw data to the model logs.
+6.13 Interactive Workflow Canvas
+Implement a visual drag-and-drop user interface on the frontend using libraries like React Flow.
+Allow admins to visually connect Agent nodes, Data Source nodes, and Tool nodes via edges (lines) to orchestrate workflows.
+Generate a JSON representation of this visual workflow to send to the backend engine for execution.
+6.14 Token Throttling & Rate Limiting Module
+Implement Redis-backed rate limiting algorithms to prevent server overload and API abuse.
+Track API hits and estimated token consumption per workspace and per individual agent.
+Temporarily block requests or circuit-break agents that exceed their allocated computing quota or enter infinite execution loops.
+6.15 Secure Audit Logging Module
+Develop backend middleware to intercept all agent actions, tool executions, and private data access requests.
+Store immutable logs in the database detailing user interactions, agent decisions, and timestamps for compliance auditing.
+Create an administrative dashboard endpoint to fetch, filter, and view these logs securely.
+6.16 Real-Time Notification & WebSocket Engine
+Implement a WebSocket server to push real-time execution events from the backend to the frontend.
+Notify users instantly via UI alerts when a background agent finishes a task, executes a tool, or encounters an execution error.
+7. System Limitations/Constraints
+Hardware Dependency and Latency: Because the platform prioritizes data privacy by utilizing locally hosted Large Language Models (e.g., Ollama running Llama-3), the inference speed is heavily dependent on the available hardware (GPUs/RAM). Consequently, the response latency will be higher compared to cloud-based proprietary APIs like OpenAI.
+LLM Hallucinations: While the Retrieval-Augmented Generation (RAG) pipeline significantly grounds the AI's responses in factual enterprise data, Large Language Models can still occasionally hallucinate or generate mathematically incorrect answers, especially when dealing with complex financial reasoning.
+PII Redaction Accuracy: The active PII Redaction Engine relies on NLP models (like Microsoft Presidio) to detect sensitive entities. While highly accurate, no NLP model is 100% foolproof. Edge cases, highly unstructured text, or heavily misspelled sensitive data might occasionally bypass the masking layer.
+Context Window Constraints: Local LLMs have a fixed context window limit (e.g., 8k tokens). Therefore, an agent cannot process excessively large documents (like a 500-page manual) in a single prompt. The system heavily relies on the chunking and retrieval accuracy of the Vector DB to mitigate this, meaning poorly retrieved chunks can lead to incomplete answers.
+Asynchronous Execution Delays: In complex multi-agent workflows involving several tools and external APIs, asynchronous message queuing (via Redis) means end-users will not receive instantaneous responses. The execution time scales with the number of agents involved in the workflow. 
+Cryptographic Performance Overhead: The strict enforcement of mutual TLS (mTLS) for internal APIs and TLS-secured message queues ensures maximum security but introduces cryptographic processing overhead. This will marginally increase inter-agent communication latency and CPU utilization compared to standard unencrypted microservices.
+Complex Debugging of Secure Queues: While the Dead Letter Queue (DLQ) prevents message loss during failed inter-agent communications, debugging these errors is inherently complex. System administrators must diagnose workflow failures based purely on metadata, as they cannot directly inspect the encrypted sensitive payloads due to Zero-Trust constraints.
+8. Data Gathering Approach
+Developing a comprehensive, enterprise-grade AI orchestration platform requires a rigorous and multi-faceted data gathering and research approach. The data collection for this project will be structured as follows:
+Domain Research & Literature Review: Extensive research into existing multi-agent architectures (like LangChain and CrewAI), RAG methodologies, and data privacy frameworks to establish a solid theoretical foundation.
+Mock Enterprise Datasets: To strictly evaluate the RAG pipeline and the PII Redaction Engine without violating real-world privacy, we will generate and utilize synthetic, mock enterprise datasets. This includes dummy HR policy documents, mocked financial statements, and artificial user profiles containing synthetic sensitive data (names, credit cards, emails).
+System Benchmarking Analytics: Internal scripts will be developed to gather quantitative data on the system's performance. This includes logging the inference latency of local LLMs, measuring the token consumption per agent, and calculating the exact processing time added by the PII Redaction Engine layer.
+Iterative Testing & Supervisor Guidance: The functional requirements and workflow designs will be iteratively refined based on continuous feedback and strategic guidance from our supervisor, Ms. Maryam Wardah, ensuring the project aligns with industry standards and academic rigor.
+ 
+9. Tools and Technologies 
+Table 2. Tech Stack 
+ 
+
+Tools And Technologies
+ | Tools 
+ | Rationale
+ | 
+
+ | VS Code / PyCharm
+ | IDE
+ | 
+
+ | React JS 
+ | Frontend Development
+ | 
+
+ | NestJS (Node.js)
+ | Backend Development
+ | 
+
+ | Python (FastAPI)
+ | Backend AI Service
+ | 
+
+ | PostgreSQL
+ | Primary Relational Database
+ | 
+
+ | Qdrant / Pinecone
+ | Vector Database
+ | 
+
+ | Redis (BullMQ)
+ | In-Memory Data Store
+ | 
+
+ | Ollama 
+ | Local LLM
+ | 
+
+ | 	LangChain 
+ | AI Orchestration 
+ | 
+
+10. Project Stakeholders and Roles
+Table 3. Team Member Work Division for Proposed Project
+Project  
+Sponsor
+ | Air University Islamabad
+ | 
+Stakeholder 
+ | ● Mohammad Mehran Chaudhary
+● Ahmad Hanbal
+● Ameer Abdullah
+● Ms. Maryam Wardah (Supervisor) 
+● Mr. Qaiser Manzoor (Co-Supervisor) 
+● Final Year Project Committee: Evaluation of project
+ | 
+
+11. Module-based Work Division 
+Table 4 . Member Work Division for Proposed Project
+Student Name 
+ | Student Registration Number 
+ | Responsibility/ Module / Feature
+ | 
+Ameer Abdullah
+ | 233087
+ | - Frontend Canvas & Security Access (React/Node) -
+(Responsible for the interactive UI, 
+workspaces, and system access control)
+
+● Authentication & IAM Module
+● Organization Workspace Module
+● Strict RBAC Module
+● Agent Builder & Persona Engine
+● Interactive Workflow Canvas (React Flow)
+● Real-Time Notification & WebSocket Engine
+
+ | 
+Ahmad Hanbal 
+ | 231653 
+ | - Core Orchestration & Backend (NestJS/Redis) -
+(Handles the multi-agent communication, tool execution logic, and system stability)
+
+● Multi-Agent Workflow Engine (Redis)
+● Agent Memory & Context Module
+● Tool Execution Engine
+● Token Throttling & Rate Limiting Module
+● Secure Audit Logging Module
+ | 
+Mohammad Mehran Chaudhary 
+ | 232433 
+ | - AI Brain & Data Layer (Python/FastAPI) -
+(Responsible for data ingestion, AI inference, and the core research component)
+
+● Document Ingestion & Parsing Module
+● Vector Embedding & Storage Module
+● Secure RAG Retrieval Pipeline
+● Local LLM Gateway Module
+● PII Redaction Engine (Research Component
+ | 
+
+12. Gantt Chart
+
+Figure 1. Gantt chart
+Mockups 
+Figure 1
+Description:   Screen 1 — Sign In / Create Account: Secure workspace authentication with SSO, SAML/LDAP support, and a privacy-first onboarding flow that emphasizes data sovereignty.
+
+Sign In / Sign Up  Page
+
+Figure 2
+
+Description:   Screen 2 — Command Center: Real-time overview of all active AI agents, task throughput, token usage, PII redaction counts, and a live security status feed.
+
+Main Dashboard - Command & Control
+
+Figure 3
+
+Description:   Screen 3 — Agent Builder: Configure a digital employee's persona, system prompt, local LLM model, knowledge base access, tool permissions, and RBAC rules.
+
+Agent Builder Page - Persona & Config
+
+Figure 4
+
+Description:   Screen 4 — Workflow Canvas: Drag-and-drop visual orchestrator for chaining multiple AI agents, triggers, tools, and output nodes into automated multi-step pipelines.
+
+Workflow Canvas Page - Multi Agent Orchestration 
+
+Figure 5
+
+Description:   Screen 5 — Document Vault & RAG Pipeline: Upload enterprise documents, track the secure embedding pipeline, and inspect per-document PII redaction before AI retrieval.
+
+Document Vault & RAG Pipeline
+
+Figure 6
+
+Description:   Screen 6 — Audit & Security Logs: Immutable compliance log of every agent action, tool call, access denial, and PII redaction event — with SOC2-grade audit trails.
+
+Audit & Security Logs
+
+14. References
+Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks: Lewis, P., et al. (2020). Advances in Neural Information Processing Systems (NeurIPS). This paper forms the foundational basis for the Secure RAG pipeline implemented in this project. Link: https://arxiv.org/abs/2005.11401
+ReAct: Synergizing Reasoning and Acting in Language Models: Yao, S., et al. (2022). Published in ICLR 2023. This research provides the architectural pattern for the Tool Execution Engine, allowing AI agents to interleave thinking and taking actions. Link: https://arxiv.org/abs/2210.03629
+Microsoft Presidio - Data Protection and De-identification SDK: Microsoft Open Source Documentation. Referenced for the design and implementation of the active PII Redaction Engine to ensure zero-trust data privacy. Link: https://microsoft.github.io/presidio/
+AutoGen: Enabling Next-Gen LLM Applications: Wu, Q., et al. (2023). Multi-Agent Collaboration Frameworks. Utilized to design the Supervisor routing pattern and asynchronous communication queues (Redis) between distinct AI personas. Link: https://arxiv.org/abs/2308.08155
+

@@ -1,0 +1,115 @@
+{
+  "name": "distributed-ai-agent-platform-backend",
+  "version": "0.1.0",
+  "description": "Backend for the Distributed AI Agent Management Platform with Privacy-Preserving RAG and Secure Workflow Orchestration",
+  "author": "Mohammad Mehran Chaudhary, Ahmad Hanbal, Ameer Abdullah",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+    "typeorm": "typeorm-ts-node-commonjs -d src/database/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "migration:show": "npm run typeorm -- migration:show",
+    "migration:generate": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:generate",
+    "migration:create": "typeorm-ts-node-commonjs migration:create",
+    "schema:drop": "npm run typeorm -- schema:drop",
+    "seed": "ts-node -r tsconfig-paths/register src/database/seeds/run-seed.ts",
+    "db:setup": "npm run migration:run && npm run seed",
+    "generate:secrets": "node scripts/generate-secrets.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.0.4",
+    "@nestjs/config": "^12.0.1",
+    "@nestjs/core": "^12.0.4",
+    "@nestjs/event-emitter": "^12.0.1",
+    "@nestjs/jwt": "^12.0.2",
+    "@nestjs/platform-express": "^12.0.4",
+    "@nestjs/swagger": "^12.0.1",
+    "@nestjs/terminus": "^12.1.0",
+    "@nestjs/typeorm": "^12.0.1",
+    "argon2": "^0.44.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^18.0.3",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.9.0",
+    "joi": "^18.0.1",
+    "nestjs-pino": "^5.2.0",
+    "nodemailer": "^10.0.10",
+    "pg": "^8.16.3",
+    "pino": "^10.0.0",
+    "pino-http": "^11.0.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "typeorm": "^1.1.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.18.0",
+    "@nestjs/cli": "^12.0.5",
+    "@nestjs/schematics": "^12.0.4",
+    "@nestjs/testing": "^12.0.4",
+    "@types/compression": "^1.8.1",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.10.7",
+    "@types/nodemailer": "^8.0.2",
+    "@types/supertest": "^6.0.2",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "globals": "^16.0.0",
+    "jest": "^30.0.0",
+    "pino-pretty": "^13.1.2",
+    "prettier": "^3.4.2",
+    "source-map-support": "^0.5.21",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.20.0"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1"
+    }
+  },
+  "overrides": {
+    "ora": "^5.4.1"
+  }
+}

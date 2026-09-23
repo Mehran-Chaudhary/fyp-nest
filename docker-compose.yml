@@ -1,0 +1,127 @@
+# Local infrastructure for the backend.
+#
+#   docker compose up -d
+#
+# Starts PostgreSQL and Redis only. The API itself runs on the host via
+# `npm run start:dev`, which keeps hot reload, debugger attachment and stack
+# traces working normally — containerising the app during development costs all
+# three and buys nothing.
+#
+# Commented-out services below are the phase 2+ dependencies, included so the
+# eventual shape of the stack is visible and so they can be started early for
+# experimentation.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: daiap-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-ai_agent_platform}
+      # C collation is materially faster for the btree indexes this schema
+      # relies on, and the application never depends on locale-aware ordering.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # Names the database explicitly: without it, pg_isready reports ready
+      # during the initdb phase when the application database does not exist yet.
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-ai_agent_platform}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    command:
+      - postgres
+      - '-c'
+      - 'max_connections=200'
+      - '-c'
+      - 'shared_buffers=256MB'
+      # Logs any statement over a second, which is how a missing index on the
+      # audit log gets noticed before it becomes a production incident.
+      - '-c'
+      - 'log_min_duration_statement=1000'
+
+  redis:
+    image: redis:8-alpine
+    container_name: daiap-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    command:
+      - redis-server
+      # AOF rather than RDB snapshots: from phase 4 this instance holds BullMQ
+      # job state, and losing a few seconds of in-flight agent work to a crash is
+      # not acceptable.
+      - '--appendonly'
+      - 'yes'
+      - '--maxmemory-policy'
+      - 'noeviction'
+
+  # ── Optional: web UI for inspecting the database ─────────────────────────
+  adminer:
+    image: adminer:latest
+    container_name: daiap-adminer
+    restart: unless-stopped
+    profiles: ['tools']
+    ports:
+      - '8080:8080'
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Phase 2: vector database for the secure RAG pipeline ─────────────────
+  # qdrant:
+  #   image: qdrant/qdrant:latest
+  #   container_name: daiap-qdrant
+  #   restart: unless-stopped
+  #   ports:
+  #     - '6333:6333'
+  #     - '6334:6334'
+  #   volumes:
+  #     - qdrant-data:/qdrant/storage
+
+  # ── Phase 3: local LLM inference ─────────────────────────────────────────
+  # Needs a GPU for usable latency; the proposal flags this as a known constraint.
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: daiap-ollama
+  #   restart: unless-stopped
+  #   ports:
+  #     - '11434:11434'
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+
+  # ── Phase 3: PII redaction engine ────────────────────────────────────────
+  # presidio-analyzer:
+  #   image: mcr.microsoft.com/presidio-analyzer:latest
+  #   container_name: daiap-presidio-analyzer
+  #   restart: unless-stopped
+  #   ports:
+  #     - '5001:3000'
+  #
+  # presidio-anonymizer:
+  #   image: mcr.microsoft.com/presidio-anonymizer:latest
+  #   container_name: daiap-presidio-anonymizer
+  #   restart: unless-stopped
+  #   ports:
+  #     - '5002:3000'
+
+volumes:
+  postgres-data:
+  redis-data:
+  # qdrant-data:
+  # ollama-data:
