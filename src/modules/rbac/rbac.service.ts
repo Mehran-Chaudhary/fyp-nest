@@ -187,7 +187,10 @@ export class RbacService {
         isDefault: definition.isDefault ?? false,
         priority: definition.priority,
         permissionKeys: [...definition.permissions],
-        permissions: this.resolveConcretePermissions(definition.permissions, permissionByKey),
+        permissions: this.resolveConcretePermissions(
+          definition.permissions,
+          permissionByKey,
+        ),
       });
 
       created.push(await roleRepository.save(role));
@@ -311,7 +314,8 @@ export class RbacService {
         // invitations, API integrations and saved dashboard filters; silently
         // changing it on a rename would break all of them.
       }
-      if (input.description !== undefined) target.description = input.description?.trim() ?? null;
+      if (input.description !== undefined)
+        target.description = input.description?.trim() ?? null;
       if (input.color !== undefined) target.color = input.color ?? null;
       if (input.priority !== undefined) target.priority = input.priority;
 
@@ -541,9 +545,7 @@ export class RbacService {
 
   /** Rejects permission keys that are not in the catalogue. */
   private assertPermissionsExist(keys: readonly string[]): void {
-    const unknown = keys.filter(
-      (key) => !PERMISSION_BY_KEY.has(key) && !key.includes('*'),
-    );
+    const unknown = keys.filter((key) => !PERMISSION_BY_KEY.has(key) && !key.includes('*'));
 
     if (unknown.length > 0) {
       throw new BadRequestError(ErrorCode.PERMISSION_NOT_FOUND, {
@@ -571,7 +573,9 @@ export class RbacService {
     if (missing.length > 0) {
       throw new ForbiddenError(ErrorCode.CANNOT_ESCALATE_PRIVILEGES, {
         message:
-          'You cannot grant permissions you do not hold yourself: ' + missing.join(', ') + '.',
+          'You cannot grant permissions you do not hold yourself: ' +
+          missing.join(', ') +
+          '.',
         details: { deniedPermissions: missing },
       });
     }

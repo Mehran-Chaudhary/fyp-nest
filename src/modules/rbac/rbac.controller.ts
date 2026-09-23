@@ -29,7 +29,12 @@ import {
 import { AuditAction } from '../../common/enums/audit-action.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import type { RequestMembership } from '../../common/interfaces/authenticated-request.interface';
-import { CreateRoleDto, PermissionCatalogueDto, RoleDto, UpdateRoleDto } from './dto/rbac.dto';
+import {
+  CreateRoleDto,
+  PermissionCatalogueDto,
+  RoleDto,
+  UpdateRoleDto,
+} from './dto/rbac.dto';
 import type { Role } from './entities/role.entity';
 import { RbacService } from './rbac.service';
 
@@ -59,7 +64,7 @@ export class PermissionsController {
   })
   @ApiEnvelopedResponse(PermissionCatalogueDto)
   @ApiStandardErrors()
-  async list(): Promise<PermissionCatalogueDto> {
+  list(): PermissionCatalogueDto {
     const definitions = this.rbacService.getPermissionDefinitions();
 
     const byCategory: Record<string, string[]> = {};

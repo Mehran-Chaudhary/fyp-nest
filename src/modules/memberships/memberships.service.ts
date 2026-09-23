@@ -20,8 +20,10 @@ import { AuditService } from '../audit/audit.service';
 import { Organization } from '../organizations/entities/organization.entity';
 import { RbacService } from '../rbac/rbac.service';
 import { Role } from '../rbac/entities/role.entity';
-import { User } from '../users/entities/user.entity';
-import { MembershipStatus, OrganizationMember } from './entities/organization-member.entity';
+import {
+  MembershipStatus,
+  OrganizationMember,
+} from './entities/organization-member.entity';
 
 export interface ListMembersQuery {
   page: number;
@@ -43,7 +45,13 @@ export interface MemberView {
   avatarUrl: string | null;
   title: string | null;
   status: MembershipStatus;
-  roles: Array<{ id: string; name: string; slug: string; color: string | null; priority: number }>;
+  roles: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    color: string | null;
+    priority: number;
+  }>;
   highestRolePriority: number;
   isOwner: boolean;
   joinedAt: Date | null;
@@ -122,7 +130,7 @@ export class MembershipsService {
           qb.where('LOWER(user.first_name) LIKE :term', { term })
             .orWhere('LOWER(user.last_name) LIKE :term', { term })
             .orWhere('user.email_normalized LIKE :term', { term })
-            .orWhere('LOWER(COALESCE(member.display_name, \'\')) LIKE :term', { term });
+            .orWhere("LOWER(COALESCE(member.display_name, '')) LIKE :term", { term });
         }),
       );
     }
@@ -292,7 +300,7 @@ export class MembershipsService {
         .getRepository(Role)
         .find({ where: roleIds.map((id) => ({ id, organizationId })) });
 
-      if (!roles.some((role) => role.slug === SystemRoleSlug.OWNER)) {
+      if (!roles.some((role) => role.slug === (SystemRoleSlug.OWNER as string))) {
         throw new ConflictError(ErrorCode.CANNOT_REMOVE_LAST_OWNER, {
           message:
             'The workspace owner must keep the Owner role. Transfer ownership first.',
@@ -307,7 +315,11 @@ export class MembershipsService {
 
     const before = (member.roles ?? []).map((role) => role.slug);
 
-    const updated = await this.rbacService.setMemberRoles(memberId, organizationId, roleIds);
+    const updated = await this.rbacService.setMemberRoles(
+      memberId,
+      organizationId,
+      roleIds,
+    );
 
     await this.auditService.recordSafe({
       action: AuditAction.ROLE_ASSIGNED,
@@ -573,8 +585,7 @@ export class MembershipsService {
     if (organization?.ownerId !== member.userId) return;
 
     throw new ConflictError(ErrorCode.CANNOT_REMOVE_LAST_OWNER, {
-      message:
-        'This member owns the workspace. Transfer ownership to someone else first.',
+      message: 'This member owns the workspace. Transfer ownership to someone else first.',
     });
   }
 
@@ -629,7 +640,7 @@ export class MembershipsService {
   }
 
   private toView(member: OrganizationMember, ownerId?: string): MemberView {
-    const user = member.user as User | undefined;
+    const user = member.user;
 
     return {
       id: member.id,

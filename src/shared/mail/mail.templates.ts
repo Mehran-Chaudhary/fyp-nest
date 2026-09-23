@@ -129,12 +129,12 @@ export function passwordResetTemplate(
           'We received a request to reset your password. Choose a new one using the link below.',
         ) +
         button(params.resetUrl, 'Choose a new password') +
-        paragraph(`This link expires in ${params.expiresInMinutes} minutes and can be used once.`) +
+        paragraph(
+          `This link expires in ${params.expiresInMinutes} minutes and can be used once.`,
+        ) +
         // Including the requesting IP turns a phishing-shaped message into
         // something the recipient can actually evaluate.
-        (params.requestIp
-          ? paragraph(`This request came from ${params.requestIp}.`)
-          : '') +
+        (params.requestIp ? paragraph(`This request came from ${params.requestIp}.`) : '') +
         paragraph(
           'If you did not request this, no action is needed — your password has not changed.',
         ),

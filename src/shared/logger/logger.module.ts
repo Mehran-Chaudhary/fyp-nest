@@ -57,6 +57,27 @@ const REDACTION_PATHS = [
 /** Paths that should never produce a request log line. */
 const IGNORED_PATHS = new Set(['/health', '/health/live', '/health/ready', '/favicon.ico']);
 
+/**
+ * The subset of pino's request object this module reads.
+ *
+ * `raw` is the underlying Express request, which is where the guards attach the
+ * resolved principal and workspace — so a log line can carry them without the
+ * serialiser having to know about Nest.
+ */
+interface SerialisableRequest {
+  id?: unknown;
+  method?: string;
+  url?: string;
+  raw?: {
+    organization?: { id?: string };
+    user?: { id?: string };
+  };
+}
+
+interface SerialisableResponse {
+  statusCode?: number;
+}
+
 @Module({
   imports: [
     PinoLoggerModule.forRootAsync({
@@ -107,15 +128,19 @@ const IGNORED_PATHS = new Set(['/health', '/health/live', '/health/ready', '/fav
 
             // Compact serialisers. The defaults log entire header and socket
             // objects, which is both noisy and a leak risk.
+            //
+            // pino types these callbacks loosely, so the shapes we actually read
+            // are declared here rather than reaching into `any`.
             serializers: {
-              req: (request: Record<string, any>) => ({
+              req: (request: SerialisableRequest) => ({
                 id: request.id,
                 method: request.method,
-                url: typeof request.url === 'string' ? request.url.split('?')[0] : request.url,
+                url:
+                  typeof request.url === 'string' ? request.url.split('?')[0] : request.url,
                 organizationId: request.raw?.organization?.id,
                 userId: request.raw?.user?.id,
               }),
-              res: (response: Record<string, any>) => ({
+              res: (response: SerialisableResponse) => ({
                 statusCode: response.statusCode,
               }),
               err: (error: Error & { code?: string; status?: number }) => ({

@@ -81,13 +81,17 @@ export class RateLimitGuard implements CanActivate {
         context.getClass(),
       ]) ?? this.config.defaultPolicy;
 
-    const policy = this.config.policies[policyName] ?? this.config.policies[THROTTLE_POLICY.DEFAULT];
+    const policy =
+      this.config.policies[policyName] ?? this.config.policies[THROTTLE_POLICY.DEFAULT];
     const identifier = this.identify(request);
 
     const decision = await this.consume(policyName, identifier, policy);
 
     response.setHeader(HEADER.RATE_LIMIT_LIMIT, String(decision.limit));
-    response.setHeader(HEADER.RATE_LIMIT_REMAINING, String(Math.max(decision.remaining, 0)));
+    response.setHeader(
+      HEADER.RATE_LIMIT_REMAINING,
+      String(Math.max(decision.remaining, 0)),
+    );
     response.setHeader(
       HEADER.RATE_LIMIT_RESET,
       String(Math.ceil((Date.now() + decision.resetMs) / 1000)),

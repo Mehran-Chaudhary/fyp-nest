@@ -564,7 +564,8 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] = [
   {
     slug: SystemRoleSlug.VIEWER,
     name: 'Viewer',
-    description: 'Read-only observer. Can see configuration but cannot change or run anything.',
+    description:
+      'Read-only observer. Can see configuration but cannot change or run anything.',
     priority: 20,
     permissions: [
       'workspace:read',

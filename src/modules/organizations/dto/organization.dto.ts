@@ -31,20 +31,29 @@ const Trim = () =>
  * and agent modules land.
  */
 export class OrganizationSettingsDto {
-  @ApiPropertyOptional({ description: 'Default local model for new agents.', example: 'llama3:8b' })
+  @ApiPropertyOptional({
+    description: 'Default local model for new agents.',
+    example: 'llama3:8b',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   defaultLlmModel?: string;
 
-  @ApiPropertyOptional({ description: 'Default ingestion chunk size in tokens.', example: 512 })
+  @ApiPropertyOptional({
+    description: 'Default ingestion chunk size in tokens.',
+    example: 512,
+  })
   @IsOptional()
   @IsInt()
   @Min(64)
   @Max(4096)
   defaultChunkSize?: number;
 
-  @ApiPropertyOptional({ description: 'Token overlap between adjacent chunks.', example: 64 })
+  @ApiPropertyOptional({
+    description: 'Token overlap between adjacent chunks.',
+    example: 64,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)

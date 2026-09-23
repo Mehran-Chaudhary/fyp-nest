@@ -12,15 +12,17 @@ const MAX_SLUG_LENGTH = 60;
  * Diacritics are folded to ASCII, so "Anwältin GmbH" becomes "anwaltin-gmbh".
  */
 export function slugify(input: string, maxLength: number = MAX_SLUG_LENGTH): string {
-  return input
-    .normalize('NFKD')
-    // Strip the combining diacritical marks left behind by NFKD normalisation.
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, maxLength)
-    .replace(/-+$/g, '');
+  return (
+    input
+      .normalize('NFKD')
+      // Strip the combining diacritical marks left behind by NFKD normalisation.
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, maxLength)
+      .replace(/-+$/g, '')
+  );
 }
 
 /**

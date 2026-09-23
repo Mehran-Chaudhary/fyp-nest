@@ -67,7 +67,8 @@ export const CacheKeys = {
   apiKeyByPrefix: (prefix: string): string => `${CACHE_NAMESPACE.AUTH}:apikey:${prefix}`,
 
   /** Failed sign-in counter, keyed by normalised email. */
-  loginAttempts: (emailHash: string): string => `${CACHE_NAMESPACE.AUTH}:login-attempts:${emailHash}`,
+  loginAttempts: (emailHash: string): string =>
+    `${CACHE_NAMESPACE.AUTH}:login-attempts:${emailHash}`,
 
   /** Failed sign-in counter, keyed by source IP. */
   loginAttemptsByIp: (ip: string): string => `${CACHE_NAMESPACE.AUTH}:login-ip:${ip}`,

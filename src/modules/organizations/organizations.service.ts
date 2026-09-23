@@ -12,7 +12,11 @@ import {
   NotFoundError,
 } from '../../common/exceptions/app.exception';
 import { isIpAllowed, isValidCidr } from '../../common/utils/ip.util';
-import { isReservedSlug, slugifyOrRandom, withRandomSuffix } from '../../common/utils/slug.util';
+import {
+  isReservedSlug,
+  slugifyOrRandom,
+  withRandomSuffix,
+} from '../../common/utils/slug.util';
 import {
   buildPaginationMeta,
   type PaginatedResult,
@@ -21,7 +25,10 @@ import { APP_CONFIG_KEY, type AppConfig } from '../../config/app.config';
 import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
 import { RedisService } from '../../shared/redis/redis.service';
 import { AuditService } from '../audit/audit.service';
-import { MembershipStatus, OrganizationMember } from '../memberships/entities/organization-member.entity';
+import {
+  MembershipStatus,
+  OrganizationMember,
+} from '../memberships/entities/organization-member.entity';
 import { RbacService } from '../rbac/rbac.service';
 import { OrganizationIpRule } from './entities/organization-ip-rule.entity';
 import {
@@ -85,7 +92,8 @@ export class OrganizationsService {
     private readonly configService: ConfigService,
   ) {
     this.appConfig = this.configService.getOrThrow<AppConfig>(APP_CONFIG_KEY);
-    this.securityConfig = this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY);
+    this.securityConfig =
+      this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY);
   }
 
   // ── Creation ──────────────────────────────────────────────────────────────
@@ -231,7 +239,9 @@ export class OrganizationsService {
     userId: string,
     page = 1,
     limit = 20,
-  ): Promise<PaginatedResult<{ organization: Organization; membership: OrganizationMember }>> {
+  ): Promise<
+    PaginatedResult<{ organization: Organization; membership: OrganizationMember }>
+  > {
     const [memberships, total] = await this.memberRepository.findAndCount({
       where: { userId, status: MembershipStatus.ACTIVE, deletedAt: IsNull() },
       relations: { organization: true, roles: true },
@@ -322,7 +332,10 @@ export class OrganizationsService {
       throw new NotFoundError(ErrorCode.ORGANIZATION_NOT_FOUND);
     }
 
-    const effective = await this.rbacService.getEffectivePermissions(organization.id, userId);
+    const effective = await this.rbacService.getEffectivePermissions(
+      organization.id,
+      userId,
+    );
 
     return {
       organization,
@@ -369,8 +382,9 @@ export class OrganizationsService {
    * (`/w/acme-corp/agents`) without an extra lookup round trip on every request.
    */
   private async resolveOrganization(identifier: string): Promise<Organization | null> {
-    const isUuid =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      identifier,
+    );
 
     const cacheKey = isUuid
       ? CacheKeys.organization(identifier)
@@ -436,9 +450,7 @@ export class OrganizationsService {
 
       // Memberships go too, so the workspace stops appearing in every member's
       // sidebar; the rows remain (soft-deleted) for audit resolution.
-      await manager
-        .getRepository(OrganizationMember)
-        .softDelete({ organizationId });
+      await manager.getRepository(OrganizationMember).softDelete({ organizationId });
 
       await this.auditService.record(
         {
@@ -508,7 +520,11 @@ export class OrganizationsService {
       });
 
       const ownerRole = await this.rbacService.getOwnerRole(organizationId, manager);
-      const adminRole = await this.rbacService.findRoleBySlug(organizationId, 'admin', manager);
+      const adminRole = await this.rbacService.findRoleBySlug(
+        organizationId,
+        'admin',
+        manager,
+      );
 
       newOwnerMembership.roles = [ownerRole];
       await memberRepository.save(newOwnerMembership);
@@ -520,7 +536,10 @@ export class OrganizationsService {
         // surprising and unrecoverable outcome.
         currentOwnerMembership.roles = adminRole ? [adminRole] : [];
         await memberRepository.save(currentOwnerMembership);
-        await this.rbacService.recomputeMemberPermissions(currentOwnerMembership.id, manager);
+        await this.rbacService.recomputeMemberPermissions(
+          currentOwnerMembership.id,
+          manager,
+        );
       }
 
       organization.ownerId = newOwnerUserId;

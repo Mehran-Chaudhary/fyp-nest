@@ -68,7 +68,9 @@ export class InitialSchema1758500000000 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX "idx_users_status" ON "users" ("status") WHERE "deleted_at" IS NULL`,
     );
-    await queryRunner.query(`CREATE INDEX "idx_users_created_at" ON "users" ("created_at")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_users_created_at" ON "users" ("created_at")`,
+    );
     // Only a handful of rows qualify, so a partial index keeps the platform-admin
     // lookup effectively free.
     await queryRunner.query(
@@ -242,7 +244,9 @@ export class InitialSchema1758500000000 implements MigrationInterface {
           REFERENCES "roles"("id") ON DELETE CASCADE
       )
     `);
-    await queryRunner.query(`CREATE INDEX "idx_member_roles_role" ON "member_roles" ("role_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_member_roles_role" ON "member_roles" ("role_id")`,
+    );
 
     // ── organization_ip_rules ───────────────────────────────────────────────
     await queryRunner.query(`
@@ -391,7 +395,9 @@ export class InitialSchema1758500000000 implements MigrationInterface {
       )
     `);
     await queryRunner.query(`CREATE INDEX "idx_sessions_user" ON "sessions" ("user_id")`);
-    await queryRunner.query(`CREATE INDEX "idx_sessions_family" ON "sessions" ("family_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_sessions_family" ON "sessions" ("family_id")`,
+    );
     await queryRunner.query(
       `CREATE INDEX "idx_sessions_expires_at" ON "sessions" ("expires_at") WHERE "revoked_at" IS NULL`,
     );

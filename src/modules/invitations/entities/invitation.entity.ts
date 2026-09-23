@@ -51,7 +51,12 @@ export class Invitation extends BaseEntity {
   @Column({ type: 'varchar', length: 128, name: 'token_hash' })
   tokenHash: string;
 
-  @Column({ type: 'varchar', length: 32, name: 'status', default: InvitationStatus.PENDING })
+  @Column({
+    type: 'varchar',
+    length: 32,
+    name: 'status',
+    default: InvitationStatus.PENDING,
+  })
   status: InvitationStatus;
 
   /**

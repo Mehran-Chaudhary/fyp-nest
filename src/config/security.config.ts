@@ -93,7 +93,8 @@ export default registerAs(SECURITY_CONFIG_KEY, (): SecurityConfig => {
 
   return {
     hashing: {
-      algorithm: (process.env.PASSWORD_HASH_ALGORITHM ?? 'argon2id') as PasswordHashAlgorithm,
+      algorithm: (process.env.PASSWORD_HASH_ALGORITHM ??
+        'argon2id') as PasswordHashAlgorithm,
       argon2: {
         memoryCost: Number(process.env.ARGON2_MEMORY_COST),
         timeCost: Number(process.env.ARGON2_TIME_COST),

@@ -177,7 +177,10 @@ export class RedisService implements OnModuleInit, OnApplicationShutdown {
    * two cannot leave a permanent counter — which, for a failed-sign-in counter,
    * would lock a user out forever.
    */
-  async increment(key: string, ttlSeconds: number): Promise<{ value: number; ttl: number }> {
+  async increment(
+    key: string,
+    ttlSeconds: number,
+  ): Promise<{ value: number; ttl: number }> {
     const results = await this.client
       .multi()
       .incr(key)

@@ -55,7 +55,10 @@ export async function seedPlatformAdmin(app: INestApplicationContext): Promise<v
   }
 
   const security = configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY);
-  const strength = evaluatePasswordStrength(password, security.passwordPolicy, [email, name]);
+  const strength = evaluatePasswordStrength(password, security.passwordPolicy, [
+    email,
+    name,
+  ]);
 
   if (!strength.valid) {
     // Refusing is the right outcome: creating the single most privileged account

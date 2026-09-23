@@ -1,6 +1,11 @@
-import { Controller, Get, Header, Param, Query, Res, StreamableFile } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiProduces, ApiTags } from '@nestjs/swagger';
-import type { Response } from 'express';
+import { Controller, Get, Header, Param, Query, StreamableFile } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Readable } from 'node:stream';
 import {
   ApiEnvelopedResponse,
@@ -153,7 +158,6 @@ export class AuditController {
     @CurrentOrganizationId() organizationId: string,
     @Query('from') from: string | undefined,
     @Query('to') to: string | undefined,
-    @Res({ passthrough: true }) _response: Response,
   ): Promise<StreamableFile> {
     await this.auditService.recordSafe({
       action: AuditAction.AUDIT_LOG_EXPORTED,

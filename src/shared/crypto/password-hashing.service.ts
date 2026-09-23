@@ -209,7 +209,8 @@ export class PasswordHashingService {
     const scryptStrategy = new ScryptStrategy(pepper);
 
     this.strategies = [argon2Strategy, scryptStrategy];
-    this.primary = security.hashing.algorithm === 'scrypt' ? scryptStrategy : argon2Strategy;
+    this.primary =
+      security.hashing.algorithm === 'scrypt' ? scryptStrategy : argon2Strategy;
 
     this.logger.log(
       `Password hashing: ${this.primary.id}${pepper ? ' (peppered)' : ' (no pepper configured)'}`,

@@ -98,7 +98,10 @@ export class PermissionDeniedError extends ForbiddenError {
 // ── 404 ─────────────────────────────────────────────────────────────────────
 
 export class NotFoundError extends AppException {
-  constructor(code: ErrorCode = ErrorCode.RESOURCE_NOT_FOUND, options?: AppExceptionOptions) {
+  constructor(
+    code: ErrorCode = ErrorCode.RESOURCE_NOT_FOUND,
+    options?: AppExceptionOptions,
+  ) {
     super(code, HttpStatus.NOT_FOUND, options);
   }
 }
@@ -106,7 +109,10 @@ export class NotFoundError extends AppException {
 // ── 409 ─────────────────────────────────────────────────────────────────────
 
 export class ConflictError extends AppException {
-  constructor(code: ErrorCode = ErrorCode.RESOURCE_CONFLICT, options?: AppExceptionOptions) {
+  constructor(
+    code: ErrorCode = ErrorCode.RESOURCE_CONFLICT,
+    options?: AppExceptionOptions,
+  ) {
     super(code, HttpStatus.CONFLICT, options);
   }
 }

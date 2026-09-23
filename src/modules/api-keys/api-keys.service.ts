@@ -103,7 +103,9 @@ export class ApiKeysService {
       }
     }
 
-    const allowedIps = (input.allowedIps ?? []).map((entry) => entry.trim()).filter(Boolean);
+    const allowedIps = (input.allowedIps ?? [])
+      .map((entry) => entry.trim())
+      .filter(Boolean);
     const invalidIps = allowedIps.filter((entry) => !isValidCidr(entry));
     if (invalidIps.length > 0) {
       throw new BadRequestError(ErrorCode.BAD_REQUEST, {

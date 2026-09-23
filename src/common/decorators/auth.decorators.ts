@@ -88,7 +88,8 @@ export const SkipOrganizationContext = () =>
 export const PlatformAdminOnly = () => SetMetadata(METADATA_KEY.PLATFORM_ADMIN_ONLY, true);
 
 /** Requires the caller's email address to be verified. */
-export const RequireVerifiedEmail = () => SetMetadata(METADATA_KEY.REQUIRE_VERIFIED_EMAIL, true);
+export const RequireVerifiedEmail = () =>
+  SetMetadata(METADATA_KEY.REQUIRE_VERIFIED_EMAIL, true);
 
 /**
  * Selects a named rate-limit policy for this route.

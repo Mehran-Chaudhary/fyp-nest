@@ -100,18 +100,7 @@ describe('duration parsing', () => {
     it('parses the defaults used in .env.example', () => {
       // Guards against a typo in the shipped configuration template producing a
       // boot failure the first time someone copies it.
-      const defaults = [
-        '10s',
-        '30s',
-        '15m',
-        '30d',
-        '24h',
-        '1h',
-        '7d',
-        '365d',
-        '60s',
-        '2w',
-      ];
+      const defaults = ['10s', '30s', '15m', '30d', '24h', '1h', '7d', '365d', '60s', '2w'];
       for (const value of defaults) {
         expect(() => parseDuration(value)).not.toThrow();
         expect(parseDuration(value)).toBeGreaterThan(0);

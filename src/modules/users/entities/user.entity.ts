@@ -160,7 +160,8 @@ export class User extends SoftDeletableEntity {
   /** True when the account is in a state that permits sign-in. */
   get canAuthenticate(): boolean {
     return (
-      (this.status === UserStatus.ACTIVE || this.status === UserStatus.PENDING) && !this.isLocked
+      (this.status === UserStatus.ACTIVE || this.status === UserStatus.PENDING) &&
+      !this.isLocked
     );
   }
 }

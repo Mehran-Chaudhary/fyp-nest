@@ -116,7 +116,8 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.BAD_REQUEST]: 'The request could not be processed.',
   [ErrorCode.VALIDATION_FAILED]: 'One or more fields failed validation.',
   [ErrorCode.RESOURCE_NOT_FOUND]: 'The requested resource was not found.',
-  [ErrorCode.RESOURCE_CONFLICT]: 'The request conflicts with the current state of the resource.',
+  [ErrorCode.RESOURCE_CONFLICT]:
+    'The request conflicts with the current state of the resource.',
   [ErrorCode.REQUEST_TIMEOUT]: 'The request took too long to complete.',
   [ErrorCode.PAYLOAD_TOO_LARGE]: 'The request payload is too large.',
   [ErrorCode.UNSUPPORTED_MEDIA_TYPE]: 'The supplied media type is not supported.',
@@ -132,14 +133,17 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.AUTH_REFRESH_TOKEN_REUSED]:
     'This refresh token has already been used. For your protection every session on this account has been signed out.',
   [ErrorCode.AUTH_SESSION_NOT_FOUND]: 'The session no longer exists.',
-  [ErrorCode.AUTH_SCHEME_NOT_ALLOWED]: 'This authentication scheme is not accepted on this route.',
+  [ErrorCode.AUTH_SCHEME_NOT_ALLOWED]:
+    'This authentication scheme is not accepted on this route.',
   [ErrorCode.AUTH_PASSWORD_MISMATCH]: 'The current password is incorrect.',
-  [ErrorCode.AUTH_PASSWORD_REUSED]: 'The new password must differ from the current password.',
+  [ErrorCode.AUTH_PASSWORD_REUSED]:
+    'The new password must differ from the current password.',
   [ErrorCode.AUTH_PASSWORD_TOO_WEAK]: 'The password does not meet the security policy.',
 
   [ErrorCode.ACCOUNT_NOT_FOUND]: 'No account was found.',
   [ErrorCode.ACCOUNT_ALREADY_EXISTS]: 'An account with this email address already exists.',
-  [ErrorCode.ACCOUNT_EMAIL_NOT_VERIFIED]: 'Please verify your email address before continuing.',
+  [ErrorCode.ACCOUNT_EMAIL_NOT_VERIFIED]:
+    'Please verify your email address before continuing.',
   [ErrorCode.ACCOUNT_SUSPENDED]: 'This account has been suspended.',
   [ErrorCode.ACCOUNT_DEACTIVATED]: 'This account has been deactivated.',
   [ErrorCode.ACCOUNT_LOCKED]:
@@ -152,7 +156,8 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.FORBIDDEN]: 'You do not have access to this resource.',
   [ErrorCode.PERMISSION_DENIED]: 'You lack the permissions required for this action.',
   [ErrorCode.ROLE_NOT_FOUND]: 'The role was not found.',
-  [ErrorCode.ROLE_ALREADY_EXISTS]: 'A role with this name already exists in this workspace.',
+  [ErrorCode.ROLE_ALREADY_EXISTS]:
+    'A role with this name already exists in this workspace.',
   [ErrorCode.ROLE_IMMUTABLE]: 'Built-in roles cannot be modified.',
   [ErrorCode.ROLE_IN_USE]: 'This role is still assigned to one or more members.',
   [ErrorCode.PERMISSION_NOT_FOUND]: 'One or more permissions do not exist.',
@@ -165,14 +170,17 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.ORGANIZATION_SLUG_TAKEN]: 'That workspace URL is already taken.',
   [ErrorCode.ORGANIZATION_SLUG_RESERVED]: 'That workspace URL is reserved.',
   [ErrorCode.ORGANIZATION_SUSPENDED]: 'This workspace has been suspended.',
-  [ErrorCode.ORGANIZATION_LIMIT_REACHED]: 'You have reached the maximum number of workspaces.',
+  [ErrorCode.ORGANIZATION_LIMIT_REACHED]:
+    'You have reached the maximum number of workspaces.',
   [ErrorCode.CROSS_TENANT_ACCESS_DENIED]: 'The resource belongs to a different workspace.',
-  [ErrorCode.IP_NOT_ALLOWED]: 'Your network address is not permitted to access this workspace.',
+  [ErrorCode.IP_NOT_ALLOWED]:
+    'Your network address is not permitted to access this workspace.',
 
   [ErrorCode.MEMBERSHIP_NOT_FOUND]: 'That member does not belong to this workspace.',
   [ErrorCode.MEMBERSHIP_ALREADY_EXISTS]: 'That user is already a member of this workspace.',
   [ErrorCode.MEMBERSHIP_SUSPENDED]: 'Your membership of this workspace has been suspended.',
-  [ErrorCode.CANNOT_REMOVE_LAST_OWNER]: 'A workspace must always retain at least one owner.',
+  [ErrorCode.CANNOT_REMOVE_LAST_OWNER]:
+    'A workspace must always retain at least one owner.',
   [ErrorCode.CANNOT_MODIFY_SELF]: 'You cannot perform this action on your own membership.',
   [ErrorCode.SEAT_LIMIT_REACHED]: 'This workspace has reached its member limit.',
 
@@ -189,7 +197,8 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.API_KEY_INVALID]: 'The supplied API key is not valid.',
   [ErrorCode.API_KEY_EXPIRED]: 'The supplied API key has expired.',
   [ErrorCode.API_KEY_REVOKED]: 'The supplied API key has been revoked.',
-  [ErrorCode.API_KEY_SCOPE_INSUFFICIENT]: 'The API key lacks the scope required for this action.',
+  [ErrorCode.API_KEY_SCOPE_INSUFFICIENT]:
+    'The API key lacks the scope required for this action.',
 
   [ErrorCode.RATE_LIMIT_EXCEEDED]: 'Too many requests. Please slow down.',
   [ErrorCode.QUOTA_EXCEEDED]: 'This workspace has exhausted its allocated quota.',

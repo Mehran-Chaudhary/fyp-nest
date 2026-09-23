@@ -16,6 +16,26 @@ import { AppException, RateLimitError } from '../exceptions/app.exception';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import { deepRedact } from '../utils/redact.util';
 
+/**
+ * HTTP status to {@link ErrorCode}, for exceptions raised by Nest itself rather
+ * than by this application's domain layer.
+ */
+const STATUS_TO_ERROR_CODE: Readonly<Record<number, ErrorCode>> = {
+  [HttpStatus.BAD_REQUEST]: ErrorCode.BAD_REQUEST,
+  [HttpStatus.UNAUTHORIZED]: ErrorCode.AUTH_REQUIRED,
+  [HttpStatus.FORBIDDEN]: ErrorCode.FORBIDDEN,
+  [HttpStatus.NOT_FOUND]: ErrorCode.RESOURCE_NOT_FOUND,
+  [HttpStatus.REQUEST_TIMEOUT]: ErrorCode.REQUEST_TIMEOUT,
+  [HttpStatus.CONFLICT]: ErrorCode.RESOURCE_CONFLICT,
+  [HttpStatus.PAYLOAD_TOO_LARGE]: ErrorCode.PAYLOAD_TOO_LARGE,
+  [HttpStatus.UNSUPPORTED_MEDIA_TYPE]: ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+  [HttpStatus.UNPROCESSABLE_ENTITY]: ErrorCode.VALIDATION_FAILED,
+  [HttpStatus.TOO_MANY_REQUESTS]: ErrorCode.RATE_LIMIT_EXCEEDED,
+  [HttpStatus.NOT_IMPLEMENTED]: ErrorCode.NOT_IMPLEMENTED,
+  [HttpStatus.SERVICE_UNAVAILABLE]: ErrorCode.SERVICE_UNAVAILABLE,
+  [HttpStatus.GATEWAY_TIMEOUT]: ErrorCode.REQUEST_TIMEOUT,
+};
+
 /** PostgreSQL error codes this filter translates into domain errors. */
 const PG_ERROR = {
   UNIQUE_VIOLATION: '23505',
@@ -187,14 +207,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
    * constraint name, the table and the offending value, all of which are
    * internal detail and some of which are another tenant's data.
    */
-  private resolveQueryFailure(exception: QueryFailedError): {
+  private resolveQueryFailure(exception: Error & { code?: string }): {
     status: number;
     code: ErrorCode;
     message: string;
     stack?: string;
     isExpected: boolean;
   } {
-    const driverCode = (exception as QueryFailedError & { code?: string }).code;
+    const driverCode = exception.code;
 
     switch (driverCode) {
       case PG_ERROR.UNIQUE_VIOLATION:
@@ -209,7 +229,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return {
           status: HttpStatus.CONFLICT,
           code: ErrorCode.RESOURCE_CONFLICT,
-          message: 'The request references a resource that does not exist, or is still in use.',
+          message:
+            'The request references a resource that does not exist, or is still in use.',
           isExpected: true,
         };
 
@@ -259,36 +280,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
   }
 
+  /**
+   * Maps an HTTP status to the error code returned for it.
+   *
+   * A lookup table rather than a switch: `HttpException.getStatus()` returns a
+   * plain `number`, and switching that against `HttpStatus` members trips
+   * `no-unsafe-enum-comparison` — while casting to satisfy it trips
+   * `no-unnecessary-type-assertion`. Indexing a numeric record sidesteps both
+   * and reads better than thirteen cases.
+   */
   private statusToErrorCode(status: number): ErrorCode {
-    switch (status) {
-      case HttpStatus.BAD_REQUEST:
-        return ErrorCode.BAD_REQUEST;
-      case HttpStatus.UNAUTHORIZED:
-        return ErrorCode.AUTH_REQUIRED;
-      case HttpStatus.FORBIDDEN:
-        return ErrorCode.FORBIDDEN;
-      case HttpStatus.NOT_FOUND:
-        return ErrorCode.RESOURCE_NOT_FOUND;
-      case HttpStatus.CONFLICT:
-        return ErrorCode.RESOURCE_CONFLICT;
-      case HttpStatus.PAYLOAD_TOO_LARGE:
-        return ErrorCode.PAYLOAD_TOO_LARGE;
-      case HttpStatus.UNSUPPORTED_MEDIA_TYPE:
-        return ErrorCode.UNSUPPORTED_MEDIA_TYPE;
-      case HttpStatus.UNPROCESSABLE_ENTITY:
-        return ErrorCode.VALIDATION_FAILED;
-      case HttpStatus.TOO_MANY_REQUESTS:
-        return ErrorCode.RATE_LIMIT_EXCEEDED;
-      case HttpStatus.REQUEST_TIMEOUT:
-      case HttpStatus.GATEWAY_TIMEOUT:
-        return ErrorCode.REQUEST_TIMEOUT;
-      case HttpStatus.NOT_IMPLEMENTED:
-        return ErrorCode.NOT_IMPLEMENTED;
-      case HttpStatus.SERVICE_UNAVAILABLE:
-        return ErrorCode.SERVICE_UNAVAILABLE;
-      default:
-        return status >= 500 ? ErrorCode.INTERNAL_SERVER_ERROR : ErrorCode.BAD_REQUEST;
-    }
+    return (
+      STATUS_TO_ERROR_CODE[status] ??
+      (status >= 500 ? ErrorCode.INTERNAL_SERVER_ERROR : ErrorCode.BAD_REQUEST)
+    );
   }
 
   /**
@@ -330,8 +335,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error(
         {
           ...context,
-          body: deepRedact(request.body),
-          err: exception,
+          body: deepRedact(request.body as unknown),
+          err: exception as Error,
         },
         `Unhandled exception: ${(exception as Error)?.message ?? 'unknown'}`,
       );

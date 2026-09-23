@@ -89,7 +89,10 @@ export class OrganizationInvitationsController {
       'an escalation path rather than an administrative convenience.',
   })
   @ApiEnvelopedResponse(InvitationDto)
-  @ApiErrorResponse(403, [ErrorCode.CANNOT_ESCALATE_PRIVILEGES, ErrorCode.SEAT_LIMIT_REACHED])
+  @ApiErrorResponse(403, [
+    ErrorCode.CANNOT_ESCALATE_PRIVILEGES,
+    ErrorCode.SEAT_LIMIT_REACHED,
+  ])
   @ApiErrorResponse(409, [
     ErrorCode.INVITATION_ALREADY_PENDING,
     ErrorCode.MEMBERSHIP_ALREADY_EXISTS,

@@ -28,7 +28,10 @@ export function parsePermission(permission: string): ParsedPermission | null {
 
   return {
     resource: permission.slice(0, separatorIndex).trim().toLowerCase(),
-    action: permission.slice(separatorIndex + 1).trim().toLowerCase(),
+    action: permission
+      .slice(separatorIndex + 1)
+      .trim()
+      .toLowerCase(),
   };
 }
 

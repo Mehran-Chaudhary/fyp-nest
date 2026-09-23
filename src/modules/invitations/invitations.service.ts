@@ -24,7 +24,6 @@ import { MembershipsService } from '../memberships/memberships.service';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { RbacService } from '../rbac/rbac.service';
 import { UsersService } from '../users/users.service';
-import { User } from '../users/entities/user.entity';
 import { Invitation, InvitationStatus } from './entities/invitation.entity';
 
 export interface CreateInvitationInput {
@@ -106,7 +105,9 @@ export class InvitationsService {
     actorPriority: number,
   ): Promise<{ invitation: Invitation; view: InvitationView }> {
     const email = UsersService.normaliseEmail(input.email);
-    const organization = await this.organizationsService.findByIdOrFail(input.organizationId);
+    const organization = await this.organizationsService.findByIdOrFail(
+      input.organizationId,
+    );
 
     await this.organizationsService.assertSeatAvailable(input.organizationId);
     this.assertEmailDomainAllowed(organization.settings.allowedEmailDomains, email);
@@ -130,8 +131,7 @@ export class InvitationsService {
 
     if (missing.length > 0) {
       throw new ForbiddenError(ErrorCode.CANNOT_ESCALATE_PRIVILEGES, {
-        message:
-          `The "${role.name}" role grants permissions you do not hold, so you cannot invite anyone into it.`,
+        message: `The "${role.name}" role grants permissions you do not hold, so you cannot invite anyone into it.`,
         details: { deniedPermissions: missing.slice(0, 20) },
       });
     }
@@ -218,10 +218,7 @@ export class InvitationsService {
    * still redeemable — for example after resending because the first link was
    * accidentally shared with the wrong person.
    */
-  async resend(
-    organizationId: string,
-    invitationId: string,
-  ): Promise<InvitationView> {
+  async resend(organizationId: string, invitationId: string): Promise<InvitationView> {
     const invitation = await this.findByIdOrFail(organizationId, invitationId);
 
     if (invitation.status !== InvitationStatus.PENDING) {
@@ -233,7 +230,10 @@ export class InvitationsService {
     }
 
     const organization = await this.organizationsService.findByIdOrFail(organizationId);
-    const role = await this.rbacService.findRoleByIdOrFail(invitation.roleId, organizationId);
+    const role = await this.rbacService.findRoleByIdOrFail(
+      invitation.roleId,
+      organizationId,
+    );
     const inviter = await this.usersService.findByIdOrFail(invitation.invitedById);
 
     const generated = this.tokenService.generateToken(32);
@@ -421,7 +421,9 @@ export class InvitationsService {
       take: limit,
     });
 
-    const items = await Promise.all(invitations.map((invitation) => this.toView(invitation)));
+    const items = await Promise.all(
+      invitations.map((invitation) => this.toView(invitation)),
+    );
 
     return { items, meta: buildPaginationMeta(total, page, limit) };
   }
@@ -516,8 +518,7 @@ export class InvitationsService {
       (await this.rbacService.findRoleById(invitation.roleId, invitation.organizationId));
 
     const inviter =
-      (invitation.invitedBy as User | undefined) ??
-      (await this.usersService.findById(invitation.invitedById));
+      invitation.invitedBy ?? (await this.usersService.findById(invitation.invitedById));
 
     return {
       id: invitation.id,

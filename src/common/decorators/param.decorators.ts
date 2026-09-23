@@ -105,8 +105,9 @@ export const CurrentPermissions = createParamDecorator(
  * spoofable, which matters because this value feeds the IP allowlist and the
  * rate limiter.
  */
-export const ClientIp = createParamDecorator((_data: unknown, context: ExecutionContext): string =>
-  normaliseIp(context.switchToHttp().getRequest<AuthenticatedRequest>().ip),
+export const ClientIp = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): string =>
+    normaliseIp(context.switchToHttp().getRequest<AuthenticatedRequest>().ip),
 );
 
 /** The request's correlation id. */
@@ -118,7 +119,10 @@ export const RequestId = createParamDecorator(
 /** The raw User-Agent header, truncated to the column width it is stored in. */
 export const UserAgent = createParamDecorator(
   (_data: unknown, context: ExecutionContext): string | undefined => {
-    const value = context.switchToHttp().getRequest<AuthenticatedRequest>().get('user-agent');
+    const value = context
+      .switchToHttp()
+      .getRequest<AuthenticatedRequest>()
+      .get('user-agent');
     return value ? value.slice(0, 512) : undefined;
   },
 );

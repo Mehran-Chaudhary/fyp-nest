@@ -74,36 +74,56 @@ function main() {
   }
 
   const exists = fs.existsSync(envPath);
-  const current = exists ? fs.readFileSync(envPath, 'utf8') : '';
+  let current = exists ? fs.readFileSync(envPath, 'utf8') : '';
 
-  // Only append keys that are genuinely absent. Overwriting a live
-  // AUDIT_HASH_SECRET would make every existing audit record unverifiable, and
-  // overwriting PASSWORD_PEPPER would lock every user out — so this script never
-  // replaces a value it did not write.
-  const missing = generated.filter(
-    (entry) => !new RegExp(`^${entry.key}=`, 'm').test(current),
-  );
+  // A key is "set" only if it has a non-empty value. `.env.example` ships these
+  // keys with empty values, so treating a bare `KEY=` as present would make the
+  // documented setup flow (copy the example, then run this) silently do nothing
+  // and leave the application unable to boot.
+  const isSet = (key) => new RegExp(`^${key}=(?!\\s*$).+$`, 'm').test(current);
+  const isPresentButEmpty = (key) => new RegExp(`^${key}=\\s*$`, 'm').test(current);
 
-  if (missing.length === 0) {
-    console.log('All secrets are already present in .env. Nothing to do.');
-    console.log('To rotate one deliberately, delete the line and re-run this script.');
+  const needed = generated.filter((entry) => !isSet(entry.key));
+
+  if (needed.length === 0) {
+    console.log('Every secret in .env already has a value. Nothing to do.');
+    console.log('To rotate one deliberately, blank its value and re-run this script.');
     return;
   }
 
-  const block = [
-    '',
-    '# ─── Generated secrets ' + '─'.repeat(50),
-    `# Written by scripts/generate-secrets.js on ${new Date().toISOString()}`,
-    '',
-    ...missing.flatMap((entry) => [`# ${entry.comment}`, `${entry.key}=${entry.value}`, '']),
-  ].join('\n');
+  // Never overwrite a value that is already set. Replacing a live
+  // AUDIT_HASH_SECRET would make every existing audit record fail verification,
+  // and replacing PASSWORD_PEPPER would lock every user out of their account.
+  const filled = needed.filter((entry) => isPresentButEmpty(entry.key));
+  const appended = needed.filter((entry) => !isPresentButEmpty(entry.key));
 
-  fs.appendFileSync(envPath, block, 'utf8');
-
-  console.log(`Appended ${missing.length} secret(s) to ${envPath}:`);
-  for (const entry of missing) {
-    console.log(`  ${entry.key}`);
+  for (const entry of filled) {
+    current = current.replace(
+      new RegExp(`^${entry.key}=\\s*$`, 'm'),
+      `${entry.key}=${entry.value}`,
+    );
   }
+
+  if (appended.length > 0) {
+    current +=
+      [
+        '',
+        '# ─── Generated secrets ' + '─'.repeat(50),
+        `# Written by scripts/generate-secrets.js on ${new Date().toISOString()}`,
+        '',
+        ...appended.flatMap((entry) => [
+          `# ${entry.comment}`,
+          `${entry.key}=${entry.value}`,
+          '',
+        ]),
+      ].join('\n');
+  }
+
+  fs.writeFileSync(envPath, current, 'utf8');
+
+  console.log(`Wrote ${needed.length} secret(s) to ${envPath}:`);
+  for (const entry of filled) console.log(`  ${entry.key}  (filled in place)`);
+  for (const entry of appended) console.log(`  ${entry.key}  (appended)`);
   console.log('');
   console.log('Make sure .env is git-ignored. It is, in this repository.');
 }

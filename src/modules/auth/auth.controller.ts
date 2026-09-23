@@ -24,7 +24,6 @@ import {
 } from '../../common/decorators/api-response.decorators';
 import {
   Public,
-  RequirePermissions,
   SkipOrganizationContext,
   ThrottlePolicy,
 } from '../../common/decorators/auth.decorators';
@@ -193,8 +192,7 @@ export class AuthController {
 
     if (!refreshToken) {
       throw new UnauthorizedError(ErrorCode.AUTH_TOKEN_MISSING, {
-        message:
-          'No refresh token supplied. Send it in the body or as the refresh cookie.',
+        message: 'No refresh token supplied. Send it in the body or as the refresh cookie.',
       });
     }
 
@@ -470,9 +468,7 @@ export class AuthController {
   private presentTokens(tokens: TokenPair): TokenPairDto {
     return {
       accessToken: tokens.accessToken,
-      ...(this.security.refreshCookie.enabled
-        ? {}
-        : { refreshToken: tokens.refreshToken }),
+      ...(this.security.refreshCookie.enabled ? {} : { refreshToken: tokens.refreshToken }),
       tokenType: tokens.tokenType,
       expiresIn: tokens.expiresIn,
       expiresAt: tokens.expiresAt,

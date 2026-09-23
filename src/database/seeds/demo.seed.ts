@@ -2,6 +2,10 @@ import { Logger } from '@nestjs/common';
 import type { INestApplicationContext } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { SystemRoleSlug } from '../../common/constants/permissions.constants';
+import {
+  MembershipStatus,
+  OrganizationMember,
+} from '../../modules/memberships/entities/organization-member.entity';
 import { OrganizationsService } from '../../modules/organizations/organizations.service';
 import { RbacService } from '../../modules/rbac/rbac.service';
 import { User, UserStatus } from '../../modules/users/entities/user.entity';
@@ -196,10 +200,6 @@ export async function seedDemoData(app: INestApplicationContext): Promise<void> 
       }
 
       await dataSource.transaction(async (manager) => {
-        const { MembershipStatus, OrganizationMember } = await import(
-          '../../modules/memberships/entities/organization-member.entity'
-        );
-
         const member = manager.getRepository(OrganizationMember).create({
           organizationId: organization.id,
           userId: user.id,

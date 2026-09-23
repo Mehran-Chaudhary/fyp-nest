@@ -156,7 +156,7 @@ export class AuditService {
         {
           action: input.action,
           organizationId: input.organizationId,
-          err: error,
+          err: error as Error,
         },
         `Failed to write audit record for "${input.action}".`,
       );
@@ -208,7 +208,8 @@ export class AuditService {
       resourceId: input.resourceId ? String(input.resourceId).slice(0, 128) : null,
       resourceLabel: input.resourceLabel ? input.resourceLabel.slice(0, 255) : null,
       ipAddress: input.context?.ipAddress ?? context?.ip ?? null,
-      userAgent: (input.context?.userAgent ?? context?.userAgent ?? null)?.slice(0, 512) ?? null,
+      userAgent:
+        (input.context?.userAgent ?? context?.userAgent ?? null)?.slice(0, 512) ?? null,
       requestId: input.context?.requestId ?? context?.requestId ?? null,
       httpMethod: input.context?.httpMethod ?? context?.method ?? null,
       httpPath: (input.context?.httpPath ?? context?.path ?? null)?.slice(0, 512) ?? null,
@@ -243,7 +244,9 @@ export class AuditService {
    * and the stored one, which would make re-verification fail spuriously.
    */
   private canonicalise(record: AuditLog): string {
-    const fields: Array<[string, unknown]> = [
+    // Typed narrowly so the join below is a safe stringification rather than a
+    // `String(unknown)` that could silently emit "[object Object]" into a hash.
+    const fields: Array<[string, string | number | null]> = [
       ['sequence', record.sequence],
       ['organizationId', record.organizationId],
       ['action', record.action],
@@ -268,7 +271,10 @@ export class AuditService {
     ];
 
     return fields
-      .map(([key, value]) => `${key}=${value === null || value === undefined ? '' : String(value)}`)
+      .map(
+        ([key, value]) =>
+          `${key}=${value === null || value === undefined ? '' : String(value)}`,
+      )
       .join('');
   }
 
@@ -437,7 +443,8 @@ export class AuditService {
       builder.andWhere('log.action LIKE :prefix', { prefix: `${filters.actionPrefix}%` });
     }
 
-    if (filters.status) builder.andWhere('log.status = :status', { status: filters.status });
+    if (filters.status)
+      builder.andWhere('log.status = :status', { status: filters.status });
     if (filters.severity) {
       builder.andWhere('log.severity = :severity', { severity: filters.severity });
     }
@@ -528,7 +535,9 @@ export class AuditService {
       bySeverity: Object.fromEntries(
         severityRows.map((row) => [row.severity, Number(row.count)]),
       ),
-      byStatus: Object.fromEntries(statusRows.map((row) => [row.status, Number(row.count)])),
+      byStatus: Object.fromEntries(
+        statusRows.map((row) => [row.status, Number(row.count)]),
+      ),
       topActions: actionRows.map((row) => ({
         action: row.action,
         count: Number(row.count),

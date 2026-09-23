@@ -80,8 +80,8 @@ export function deepRedact<T>(
     if (Buffer.isBuffer(input)) return `[Buffer ${input.length} bytes]`;
 
     if (typeof input === 'object') {
-      if (seen.has(input as object)) return '[CIRCULAR]';
-      seen.add(input as object);
+      if (seen.has(input)) return '[CIRCULAR]';
+      seen.add(input);
 
       const output: Record<string, unknown> = {};
       for (const [key, nested] of Object.entries(input as Record<string, unknown>)) {

@@ -26,7 +26,12 @@ import { AuditAction } from '../../common/enums/audit-action.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import type { AuthenticatedUser } from '../../common/interfaces/authenticated-request.interface';
 import { ApiKeysService } from './api-keys.service';
-import { ApiKeyDto, CreateApiKeyDto, CreatedApiKeyDto, RevokeApiKeyDto } from './dto/api-key.dto';
+import {
+  ApiKeyDto,
+  CreateApiKeyDto,
+  CreatedApiKeyDto,
+  RevokeApiKeyDto,
+} from './dto/api-key.dto';
 import type { ApiKey } from './entities/api-key.entity';
 
 /**
@@ -54,7 +59,7 @@ export class ApiKeysController {
       'deliberately not grantable to a machine credential.',
   })
   @ApiStandardErrors()
-  async listScopes(): Promise<{ scopes: readonly string[] }> {
+  listScopes(): { scopes: readonly string[] } {
     return { scopes: this.apiKeysService.getAvailableScopes() };
   }
 

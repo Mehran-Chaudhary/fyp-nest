@@ -63,7 +63,11 @@ export const REQUEST_PROPERTY = {
 } as const;
 
 // ── Route parameter names recognised for workspace resolution ───────────────
-export const ORGANIZATION_ROUTE_PARAMS = ['organizationId', 'orgId', 'workspaceId'] as const;
+export const ORGANIZATION_ROUTE_PARAMS = [
+  'organizationId',
+  'orgId',
+  'workspaceId',
+] as const;
 
 // ── Miscellaneous ───────────────────────────────────────────────────────────
 

@@ -29,6 +29,8 @@ class LogMailTransport implements MailTransport {
   readonly name = 'log';
   private readonly logger = new Logger('MailTransport:log');
 
+  // Implements the async MailTransport interface; nothing to await here.
+  // eslint-disable-next-line @typescript-eslint/require-await
   async send(message: MailMessage): Promise<MailSendResult> {
     this.logger.log(
       [
@@ -50,6 +52,7 @@ class LogMailTransport implements MailTransport {
     return { accepted: true, messageId: `log-${Date.now()}`, transport: this.name };
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- interface shape.
   async verify(): Promise<boolean> {
     return true;
   }
@@ -67,14 +70,15 @@ class SmtpMailTransport implements MailTransport {
   ) {}
 
   async send(message: MailMessage): Promise<MailSendResult> {
-    const info = await this.transporter.sendMail({
-      from: this.from,
-      to: message.to,
-      subject: message.subject,
-      text: message.text,
-      html: message.html,
-      replyTo: message.replyTo ?? this.defaultReplyTo,
-    });
+    const info: { accepted?: unknown[]; messageId?: string } =
+      await this.transporter.sendMail({
+        from: this.from,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+        replyTo: message.replyTo ?? this.defaultReplyTo,
+      });
 
     return {
       accepted: (info.accepted?.length ?? 0) > 0,
@@ -128,7 +132,8 @@ export class MailService implements OnModuleInit {
   ) {
     this.mailConfig = this.configService.getOrThrow<MailConfig>(MAIL_CONFIG_KEY);
     this.appConfig = this.configService.getOrThrow<AppConfig>(APP_CONFIG_KEY);
-    this.securityConfig = this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY);
+    this.securityConfig =
+      this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY);
   }
 
   onModuleInit(): void {
@@ -200,7 +205,7 @@ export class MailService implements OnModuleInit {
       return result;
     } catch (error) {
       this.logger.error(
-        { tag: message.tag, requestId: correlationId, err: error },
+        { tag: message.tag, requestId: correlationId, err: error as Error },
         `Failed to send "${message.subject}" to ${maskEmail(message.to)}.`,
       );
 

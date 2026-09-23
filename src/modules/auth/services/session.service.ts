@@ -62,7 +62,10 @@ export class SessionService {
   }
 
   /** Locates a session by the token presented, without judging its state. */
-  async findByToken(refreshToken: string, manager?: EntityManager): Promise<Session | null> {
+  async findByToken(
+    refreshToken: string,
+    manager?: EntityManager,
+  ): Promise<Session | null> {
     const repository = manager ? manager.getRepository(Session) : this.sessionRepository;
     return repository.findOne({
       where: { tokenHash: this.tokenService.hashToken(refreshToken) },
@@ -269,10 +272,7 @@ export class SessionService {
   }
 
   /** Bulk revocation by id, used when an administrator terminates sessions. */
-  async revokeMany(
-    sessionIds: string[],
-    reason: SessionRevocationReason,
-  ): Promise<number> {
+  async revokeMany(sessionIds: string[], reason: SessionRevocationReason): Promise<number> {
     if (sessionIds.length === 0) return 0;
 
     const result = await this.sessionRepository.update(

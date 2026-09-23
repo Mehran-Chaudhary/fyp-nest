@@ -124,8 +124,7 @@ export class MemberDto {
   roles: MemberRoleDto[];
 
   @ApiProperty({
-    description:
-      'Highest role priority held. Determines who may act on this member.',
+    description: 'Highest role priority held. Determines who may act on this member.',
   })
   highestRolePriority: number;
 

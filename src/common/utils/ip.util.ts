@@ -137,7 +137,9 @@ export function isIpInCidr(ip: string, cidr: string): boolean {
   if (parsedNetwork.family !== parsedIp.family) return false;
 
   const prefixLength =
-    slashIndex === -1 ? parsedNetwork.bits : Number.parseInt(cidr.slice(slashIndex + 1), 10);
+    slashIndex === -1
+      ? parsedNetwork.bits
+      : Number.parseInt(cidr.slice(slashIndex + 1), 10);
 
   if (!Number.isInteger(prefixLength) || prefixLength < 0 || prefixLength > parsedIp.bits) {
     return false;

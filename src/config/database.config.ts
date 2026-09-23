@@ -44,7 +44,8 @@ export default registerAs(DATABASE_CONFIG_KEY, (): DatabaseConfig => {
     logging: process.env.DB_LOGGING === 'true',
     // Guarded a second time here, not just in documentation: `synchronize` can
     // silently drop columns, and the audit log is append-only by contract.
-    synchronize: process.env.DB_SYNCHRONIZE === 'true' && process.env.NODE_ENV !== 'production',
+    synchronize:
+      process.env.DB_SYNCHRONIZE === 'true' && process.env.NODE_ENV !== 'production',
     migrationsRun: process.env.DB_MIGRATIONS_RUN === 'true',
     poolMax: Number(process.env.DB_POOL_MAX),
     idleTimeoutMs: parseDuration(process.env.DB_POOL_IDLE_TIMEOUT as string),

@@ -1,0 +1,334 @@
+# Implementation Plan — Backend
+
+**Project:** A Distributed AI Agent Management Platform
+(with Privacy-Preserving RAG and Secure Workflow Orchestration)
+
+**Scope of this document:** the NestJS backend only. The React frontend and the
+Python/FastAPI AI service are separate deliverables; this plan states where they
+attach.
+
+---
+
+## 1. How the sixteen proposal modules map onto five phases
+
+The proposal lists sixteen modules. They are not independent — several cannot be
+built before others exist — so the phases below are ordered by *dependency*, not
+by the numbering in the proposal.
+
+Three constraints drive the ordering:
+
+1. **Everything is tenant-scoped.** Documents, agents, workflows and audit
+   records all belong to a workspace. Until workspaces, membership and
+   permissions exist, every later module would have to invent its own access
+   rules and then be rewritten.
+2. **The research component needs data to operate on.** The PII Redaction Engine
+   (module 6.12) masks text retrieved from the vector store. It cannot be
+   evaluated before retrieval works, which cannot work before ingestion works.
+3. **Orchestration needs something to orchestrate.** The multi-agent workflow
+   engine (6.9) routes output between agents. Agents must exist first.
+
+| Phase | Theme | Proposal modules |
+|-------|-------|------------------|
+| **1** | Foundation, Identity & Multi-Tenancy | 6.1, 6.2, 6.3, 6.15, part of 6.14 |
+| **2** | Knowledge Layer & Secure Retrieval | 6.4, 6.5, 6.6 |
+| **3** | Inference, Agents & Privacy | 6.7, 6.8, 6.10, 6.12 |
+| **4** | Orchestration, Tools & Real-Time | 6.9, 6.11, 6.13 (backend), 6.16 |
+| **5** | Governance, Hardening & Operations | rest of 6.14, hardening of all |
+
+---
+
+## Phase 1 — Foundation, Identity & Multi-Tenancy · **IMPLEMENTED**
+
+Everything the rest of the platform stands on: who a caller is, which tenant
+they are acting inside, what they may do there, and an immutable record of what
+they did.
+
+**Proposal modules:** 6.1 Authentication & IAM · 6.2 Organization Workspace ·
+6.3 Strict RBAC · 6.15 Secure Audit Logging · 6.14 (rate-limiting foundation)
+
+### Delivered
+
+| Area | What was built |
+|------|----------------|
+| **Configuration** | Every environment variable declared and validated with Joi; the process refuses to start on invalid configuration. Seven typed namespaces. |
+| **Authentication** | Registration, sign-in, email verification, password reset, password change. Argon2id hashing with a keyed pepper and a scrypt fallback. Timing-equalised sign-in to prevent account enumeration. |
+| **Sessions** | JWT access tokens (15 min) plus refresh token **rotation with reuse detection**. Presenting a spent token revokes the whole family and alerts the account owner. |
+| **Revocation** | Per-token Redis denylist plus a per-user epoch, backed by a durable `tokens_valid_from` column so revocation survives a Redis outage. |
+| **Multi-tenancy** | Workspaces with slugs, settings, ownership transfer, soft deletion. Tenant resolution from header or path, membership re-verified per request. |
+| **RBAC** | Global permission catalogue covering **all five phases** (60+ keys), four immutable system roles per workspace, unlimited custom roles, wildcard matching, role priority ordering, two independent anti-escalation rules. |
+| **Members & invitations** | Member directory with search and filtering, suspension, removal, self-service leave. Single-use expiring invitations bound to the invited address. |
+| **API keys** | Workspace-scoped machine credentials with scopes capped by the issuer's own permissions, optional IP pinning, and immediate revocation. This is how the Python AI service will authenticate. |
+| **Audit log** | Append-only, **hash-chained**, tamper-evident. Per-workspace chains, PostgreSQL trigger blocking UPDATE/DELETE, a verification endpoint that names the exact sequence where a chain breaks, and NDJSON export for external review. |
+| **Network controls** | Per-workspace IP allowlisting with IPv4/IPv6 CIDR matching. |
+| **Rate limiting** | Redis sliding-window limiter with named policies, keyed by principal rather than only by IP. |
+| **Cross-cutting** | Structured logging with redaction, correlation IDs, consistent response envelope, stable machine-readable error codes, global exception filter, OpenAPI documentation, health/liveness/readiness probes. |
+
+### Verification status
+
+- `npm run typecheck` — clean
+- `npm run build` — clean
+- `npm test` — **184 tests, 7 suites, all passing**
+- Boot-time configuration validation — confirmed working against a live process
+- **Not yet verified:** migrations, seeding and live HTTP behaviour, which need a
+  reachable PostgreSQL instance. See “Outstanding verification” in the README.
+
+### Design decisions worth defending in the report
+
+These are the points an examiner is most likely to probe.
+
+- **Permissions are not in the JWT.** Embedding them would make revocation take
+  up to a full token lifetime to apply, which is incompatible with “strict
+  RBAC”. They are resolved per request from a materialised column with a short
+  Redis cache.
+- **Row-level tenancy, not schema-per-tenant**, despite the proposal's wording.
+  Reasoning in `docs/adr/0001-multi-tenancy.md`.
+- **Role priority exists alongside permissions.** Permission checks alone cannot
+  stop an administrator from stripping the owner's roles, because `member:update`
+  is exactly the permission an administrator is supposed to have.
+- **The audit log is hash-chained, not merely append-only.** “We never issue an
+  UPDATE” is a convention; a hash chain is evidence.
+- **Redis fails open, PostgreSQL fails closed.** Each fallback is documented at
+  its call site, and the durable checks are what make the cache-layer fail-open
+  acceptable.
+
+---
+
+## Phase 2 — Knowledge Layer & Secure Retrieval
+
+Getting enterprise documents into the platform and retrievable **under the same
+RBAC rules** that govern everything else.
+
+**Proposal modules:** 6.4 Document Ingestion & Parsing · 6.5 Vector Embedding &
+Storage · 6.6 Secure RAG Retrieval Pipeline
+
+### Deliverables
+
+1. **Storage abstraction** — local filesystem driver plus S3/MinIO, behind one
+   interface. Uploads validated by magic-byte sniffing rather than the
+   client-supplied MIME type, which is trivially forged.
+2. **Knowledge bases** — a grouping entity, each with its own access
+   classification, so a workspace can hold an “HR Policies” base that most
+   members cannot read.
+3. **Document entity & upload endpoints** — PDF, DOCX and TXT, with a per-file
+   status machine (`UPLOADED → PARSING → CHUNKING → EMBEDDING → READY / FAILED`)
+   surfaced to the Document Vault screen.
+4. **Async ingestion pipeline** — BullMQ queues introduced here rather than in
+   phase 4, because parsing and embedding a 200-page PDF cannot happen in a
+   request. Brings retry, backoff and a dead-letter queue with it.
+5. **Python AI service contract** — a typed HTTP client. The AI service performs
+   parsing, chunking and embedding; this backend owns metadata, access control
+   and orchestration. Authenticated with the phase 1 API keys.
+6. **Qdrant integration** — one collection per workspace (physical isolation at
+   the vector layer, which *is* appropriate there), with `organizationId`,
+   `knowledgeBaseId` and `classification` written into every point's payload.
+7. **Secure retrieval** — the core of module 6.6. Every query carries a
+   **mandatory** metadata filter built from the caller's resolved permissions.
+   The filter is constructed server-side from the request context and can never
+   be supplied or widened by the caller.
+8. **Retrieval auditing** — `rag.query.executed` and `rag.access.filtered`
+   records, so “which documents did this answer draw on, and what was withheld?”
+   is answerable after the fact.
+
+### Why the RBAC filter is the interesting part
+
+The proposal identifies standard RAG systems as blindly fetching from the vector
+store. The defect is not the fetch — it is that the fetch is unfiltered. A vector
+search returns the *semantically* nearest chunks, with no notion of who is
+asking. If an employee asks “what is the CEO's salary?”, a naive pipeline
+retrieves the payroll chunk and hands it to the model, which dutifully answers.
+
+The mitigation is to make the authorization filter part of the query itself, not
+a post-retrieval check. Filtering after retrieval still loads the data into
+process memory and into whatever logs the retrieval path writes.
+
+### Exit criteria
+
+- A document uploaded to a restricted knowledge base is **not** retrievable by a
+  member lacking access, verified by an integration test that asserts on the
+  vector store's returned payloads, not just on the HTTP response.
+- Ingestion survives a worker crash mid-embedding without duplicating chunks.
+
+---
+
+## Phase 3 — Inference, Agents & Privacy
+
+Local LLM inference, the agent abstraction, conversational memory, and the
+project's research component.
+
+**Proposal modules:** 6.7 Local LLM Gateway · 6.8 Agent Builder & Persona Engine ·
+6.10 Agent Memory & Context · 6.12 PII Redaction Engine
+
+### Deliverables
+
+1. **LLM gateway** — an Ollama client with model allowlisting per workspace,
+   parameter validation, token accounting, timeouts and a circuit breaker.
+   Streaming responses over SSE, because local inference latency makes anything
+   else unusable.
+2. **Agent entity & CRUD** — persona, system prompt, model, parameters, attached
+   knowledge bases, granted tools, and the RBAC rules the agent operates under.
+   Versioned, so changing a production agent's prompt is auditable and reversible.
+3. **Conversations & messages** — per user, per agent, with a sliding context
+   window and token-budget-aware truncation rather than a fixed message count.
+4. **PII Redaction Engine** — the research component. A three-stage pipeline:
+
+   - **Detect** — Microsoft Presidio, with a per-workspace configurable entity
+     set.
+   - **Mask** — replace each entity with a stable placeholder (`[PERSON_1]`),
+     holding the reverse mapping **encrypted** (AES-256-GCM, using the phase 1
+     `EncryptionService`) and scoped to the single request.
+   - **Unmask** — restore the real values in the response shown to an authorised
+     user, so the answer is coherent while the model never saw the originals.
+
+5. **Fail-closed policy** — when redaction fails or is unavailable, the request
+   is refused rather than silently sent unmasked. Configurable per workspace,
+   defaulting to closed.
+6. **`pii:reveal` enforcement** — already in the phase 1 catalogue as the most
+   sensitive permission on the platform. Only holders see unmasked values in
+   redaction reports.
+7. **Benchmarking harness** — the proposal commits to measuring “the exact
+   processing time added by the PII Redaction Engine layer”. Instrumented here,
+   with per-request timings recorded alongside token counts.
+
+### The critical subtlety
+
+Masking must happen **after** retrieval and **before** the prompt is assembled,
+and the mapping must never be persisted beyond the request. A mapping table
+sitting in the database is a decrypted PII store with extra steps — it would
+recreate exactly the exposure the engine exists to prevent.
+
+### Exit criteria
+
+- A synthetic HR document containing names, salaries and card numbers produces
+  an LLM prompt (captured at the gateway boundary) containing **none** of them.
+- Measured redaction overhead reported against a documented corpus — a result
+  the report can cite.
+
+---
+
+## Phase 4 — Orchestration, Tools & Real-Time
+
+Turning individual agents into collaborating ones.
+
+**Proposal modules:** 6.9 Multi-Agent Workflow Engine · 6.11 Tool Execution
+Engine · 6.13 Interactive Workflow Canvas (backend half) · 6.16 Real-Time
+Notification & WebSocket Engine
+
+### Deliverables
+
+1. **Workflow definition** — the JSON graph the React Flow canvas produces,
+   validated server-side: acyclic (or with explicit bounded loops), every node
+   referencing an agent or tool the workspace actually owns, and every edge
+   type-compatible.
+2. **Execution engine** — the Supervisor pattern from the AutoGen reference.
+   A supervisor node routes output to the next agent, with per-step persistence
+   so a run can be resumed rather than restarted.
+3. **Queue infrastructure** — BullMQ (introduced in phase 2) extended with
+   per-step retry, exponential backoff, execution timeouts and a **dead-letter
+   queue that stores metadata only**, never payloads. The proposal is explicit
+   that DLQ debugging must work from metadata alone under Zero-Trust
+   constraints, and that constraint is a design input rather than a limitation
+   to work around.
+4. **Tool Execution Engine** — a registry of executable functions with JSON
+   Schema signatures, per-agent grants, sandboxed execution, per-tool timeouts,
+   and an egress allowlist for tools that make outbound calls.
+5. **ReAct loop** — parse the model's tool-call intent, execute, feed the result
+   back, iterate to a bounded depth. Every step audited as `tool.executed` or
+   `tool.execution.denied`.
+6. **WebSocket gateway** — live execution events to the canvas. Authenticated at
+   handshake using the phase 1 token machinery, and **subscription-scoped to the
+   workspace**: a socket must never receive another tenant's events.
+7. **Encrypted inter-agent payloads** — TLS to Redis (already configurable in
+   phase 1 via `REDIS_TLS`) plus application-level encryption of step payloads,
+   so a compromised broker yields ciphertext.
+
+### Exit criteria
+
+- A three-agent workflow completes end to end and its full trace is
+  reconstructible from the audit log alone.
+- A deliberately failing step lands in the DLQ with **no** sensitive payload
+  recoverable from it.
+- An infinite-loop workflow is stopped by the step ceiling rather than by
+  exhausting the queue.
+
+---
+
+## Phase 5 — Governance, Hardening & Operations
+
+Making it defensible, measurable and operable.
+
+**Proposal modules:** 6.14 Token Throttling & Rate Limiting (completion), plus
+hardening across all modules.
+
+### Deliverables
+
+1. **Token quotas** — per workspace, per agent and per member, tracked against
+   real consumption from the phase 3 gateway. The `quota:manage` and `usage:read`
+   permissions already exist in the catalogue.
+2. **Circuit breaking** — agents that loop or overrun their budget are broken
+   open and audited as `agent.circuit_broken`. The proposal names runaway agents
+   exhausting tokens as a core problem; this is the control that addresses it.
+3. **Analytics** — the Command Centre screen: throughput, latency distributions,
+   token spend, PII redaction counts, security event feed.
+4. **PostgreSQL row-level security** — RLS policies as a third, independent
+   tenancy layer beneath the guard and the repository filter. Deferred to this
+   phase deliberately: it requires per-request session variables on pooled
+   connections, and adding that machinery before the access patterns settled
+   would have been premature.
+5. **mTLS** — mutual TLS between this backend and the Python AI service, as the
+   proposal specifies for internal APIs.
+6. **Observability** — OpenTelemetry traces spanning frontend → backend → AI
+   service → Ollama, and Prometheus metrics.
+7. **MFA (TOTP)** — the `mfaEnabled` / `mfaSecret` columns are already on the
+   user entity, unused, for exactly this.
+8. **Data lifecycle** — audit retention with the documented deletion escape
+   hatch, session pruning, token cleanup, GDPR-style export and erasure.
+9. **Breached-password check** — Have I Been Pwned's k-anonymity range API,
+   deferred because it is the only outbound network call the platform would
+   otherwise make and that deserves an explicit decision.
+10. **Deployment** — multi-stage Docker build, compose stack for the full
+    system, CI running typecheck/lint/test/build, load testing, and a
+    security review pass.
+
+### Exit criteria
+
+- A workspace exceeding its quota is throttled, not crashed.
+- Load test at target concurrency with p95 latency recorded.
+- No high or critical findings from `npm audit` or the security review.
+
+---
+
+## 2. Work division
+
+The proposal assigns modules per team member. The phases cut across those
+assignments, which is normal — phase 1 is shared infrastructure everyone builds
+on.
+
+| Member | Proposal responsibility | Primary phases |
+|--------|------------------------|----------------|
+| **Ameer Abdullah** | Frontend canvas & security access — Auth/IAM, Workspaces, RBAC, Agent Builder UI, Workflow Canvas, WebSockets | Phase 1 (consumes this API), Phase 4 (canvas + sockets) |
+| **Ahmad Hanbal** | Core orchestration & backend — Workflow engine, agent memory, tool execution, throttling, audit logging | Phase 1 (audit, throttling), Phase 4 (engine, tools), Phase 5 (quotas) |
+| **Mohammad Mehran Chaudhary** | AI brain & data layer — Ingestion, embeddings, secure RAG, LLM gateway, PII redaction | Phase 2 (ingestion, RAG), Phase 3 (gateway, PII) |
+
+The backend delivered in phase 1 is the contract all three depend on: it is what
+the frontend authenticates against and what the Python service calls back into.
+
+---
+
+## 3. Risks and how each is handled
+
+| Risk | Impact | Handling |
+|------|--------|----------|
+| Local LLM latency on available hardware | Phase 3 unusable for demos | SSE streaming, aggressive caching, and a documented fallback to a smaller model. The proposal already lists this as a known constraint. |
+| Presidio accuracy on edge cases | Research component under-performs | Report measured recall honestly against a synthetic corpus; fail-closed policy means a miss degrades to refusal, not disclosure. |
+| Vector store tenant leakage | Catastrophic — the project's core claim | Collection-per-workspace **and** mandatory payload filters. Two independent layers, plus an integration test asserting on returned payloads. |
+| Audit write throughput under load | Slow writes in a busy workspace | Per-workspace advisory lock means tenants never block each other; if it becomes a real bottleneck, batched appends with a periodic chain checkpoint. Measured in phase 5 before optimising. |
+| Scope: sixteen modules is a lot | Incomplete submission | Phase ordering is dependency-driven, so an incomplete later phase still leaves a coherent, demonstrable system. Phases 1–3 alone demonstrate the privacy thesis. |
+
+---
+
+## 4. Current status
+
+**Phase 1 is implemented and unit-tested.** Live database verification is the one
+outstanding step — see the README.
+
+Phases 2–5 are planned as above and not started.

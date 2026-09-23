@@ -179,7 +179,9 @@ export class ChainVerificationDto {
   @ApiProperty({ format: 'uuid' })
   organizationId: string;
 
-  @ApiProperty({ description: 'False means the log has been altered since it was written.' })
+  @ApiProperty({
+    description: 'False means the log has been altered since it was written.',
+  })
   valid: boolean;
 
   @ApiProperty()

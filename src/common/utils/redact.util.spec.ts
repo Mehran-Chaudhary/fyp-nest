@@ -52,20 +52,20 @@ describe('structural redaction', () => {
 
     it('preserves Date values', () => {
       const date = new Date('2026-01-01T00:00:00.000Z');
-      const result = deepRedact({ when: date }) as { when: Date };
+      const result = deepRedact({ when: date });
       expect(result.when).toBeInstanceOf(Date);
       expect(result.when.toISOString()).toBe(date.toISOString());
     });
 
     it('summarises an Error rather than serialising its stack', () => {
-      const result = deepRedact({ err: new TypeError('boom') }) as {
-        err: { name: string; message: string };
-      };
+      const result = deepRedact({ err: new TypeError('boom') });
       expect(result.err).toEqual({ name: 'TypeError', message: 'boom' });
     });
 
     it('summarises a Buffer rather than dumping its bytes', () => {
-      const result = deepRedact({ file: Buffer.from('hello') }) as { file: string };
+      const result = deepRedact({ file: Buffer.from('hello') }) as unknown as {
+        file: string;
+      };
       expect(result.file).toBe('[Buffer 5 bytes]');
     });
 
@@ -75,7 +75,7 @@ describe('structural redaction', () => {
       const input: Record<string, unknown> = { name: 'root' };
       input.self = input;
 
-      const result = deepRedact(input) as Record<string, unknown>;
+      const result = deepRedact(input);
       expect(result.name).toBe('root');
       expect(result.self).toBe('[CIRCULAR]');
     });

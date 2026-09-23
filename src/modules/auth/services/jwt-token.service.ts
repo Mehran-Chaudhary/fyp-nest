@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
-import { CacheKeys, CACHE_TTL_SECONDS } from '../../../common/constants/cache-keys.constants';
+import {
+  CacheKeys,
+  CACHE_TTL_SECONDS,
+} from '../../../common/constants/cache-keys.constants';
 import { ErrorCode } from '../../../common/enums/error-code.enum';
 import { UnauthorizedError } from '../../../common/exceptions/app.exception';
 import {
@@ -13,7 +16,6 @@ import {
 } from '../../../common/interfaces/jwt-payload.interface';
 import { JWT_CONFIG_KEY, type JwtConfig } from '../../../config/jwt.config';
 import { RedisService } from '../../../shared/redis/redis.service';
-import type { User } from '../../users/entities/user.entity';
 
 export interface AccessTokenSubject {
   id: string;
@@ -154,10 +156,15 @@ export class JwtTokenService {
   async verifyAccessToken(token: string): Promise<AccessTokenClaims> {
     const claims = await this.verify<AccessTokenClaims>(token, this.config.accessSecret);
 
-    if (claims.type !== TokenType.ACCESS) {
+    // Read through a widened type: the token is attacker-supplied, so its
+    // `type` claim really can be any value, even though `AccessTokenClaims`
+    // narrows it to one.
+    const presentedType = (claims as { type: TokenType }).type;
+
+    if (presentedType !== TokenType.ACCESS) {
       // A refresh token presented as an access token. Worth noticing.
       this.logger.warn(
-        `Token of type "${claims.type}" presented on the access path (sub=${claims.sub}).`,
+        `Token of type "${presentedType}" presented on the access path (sub=${claims.sub}).`,
       );
       throw new UnauthorizedError(ErrorCode.AUTH_TOKEN_INVALID);
     }
@@ -291,7 +298,7 @@ export class JwtTokenService {
    */
   decodeUnsafe<T extends object>(token: string): T | null {
     try {
-      return this.jwtService.decode(token) as T;
+      return this.jwtService.decode(token);
     } catch {
       return null;
     }

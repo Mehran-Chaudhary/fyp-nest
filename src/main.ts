@@ -44,7 +44,7 @@ async function bootstrap(): Promise<void> {
   // ── Configuration warnings ────────────────────────────────────────────────
   // Loud, early, and impossible to miss. A deployment running on a development
   // signing secret is compromised the moment anyone reads this repository.
-  const insecure = findInsecureDefaults(process.env as Record<string, unknown>);
+  const insecure = findInsecureDefaults(process.env);
   if (insecure.length > 0) {
     const message =
       `Using built-in development values for: ${insecure.join(', ')}. ` +
@@ -79,7 +79,11 @@ async function bootstrap(): Promise<void> {
           : undefined,
         crossOriginEmbedderPolicy: false,
         hsts: appConfig.isProduction
-          ? { maxAge: securityConfig.helmet.hstsMaxAge, includeSubDomains: true, preload: true }
+          ? {
+              maxAge: securityConfig.helmet.hstsMaxAge,
+              includeSubDomains: true,
+              preload: true,
+            }
           : false,
         referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       }),
@@ -278,7 +282,7 @@ async function bootstrap(): Promise<void> {
 
 bootstrap().catch((error: unknown) => {
   // The logger may not exist yet, so this deliberately uses console.
-  // eslint-disable-next-line no-console
+
   console.error('Failed to start the application:\n', error);
   process.exit(1);
 });

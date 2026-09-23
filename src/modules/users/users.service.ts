@@ -197,7 +197,9 @@ export class UsersService {
         await this.userRepository.update({ id: user.id }, { passwordHash: upgraded });
         this.logger.log(`Upgraded password hash parameters for user ${user.id}.`);
       } catch (error) {
-        this.logger.warn(`Password hash upgrade failed for ${user.id}: ${(error as Error).message}`);
+        this.logger.warn(
+          `Password hash upgrade failed for ${user.id}: ${(error as Error).message}`,
+        );
       }
     }
 
@@ -258,7 +260,9 @@ export class UsersService {
    *
    * Returns the lock expiry when the account was locked by this attempt.
    */
-  async recordFailedLogin(userId: string): Promise<{ locked: boolean; lockedUntil?: Date }> {
+  async recordFailedLogin(
+    userId: string,
+  ): Promise<{ locked: boolean; lockedUntil?: Date }> {
     const user = await this.findById(userId);
     if (!user) return { locked: false };
 
@@ -331,7 +335,9 @@ export class UsersService {
     requestedIp?: string,
     manager?: EntityManager,
   ): Promise<{ token: string; record: UserToken }> {
-    const repository = manager ? manager.getRepository(UserToken) : this.userTokenRepository;
+    const repository = manager
+      ? manager.getRepository(UserToken)
+      : this.userTokenRepository;
 
     await repository.update(
       { userId, type, consumedAt: IsNull() },
@@ -450,7 +456,10 @@ export class UsersService {
       await this.redis.setJson(cacheKey, cached, CACHE_TTL_SECONDS.USER_PROFILE);
     }
 
-    if (cached.status === UserStatus.SUSPENDED || cached.status === UserStatus.DEACTIVATED) {
+    if (
+      cached.status === UserStatus.SUSPENDED ||
+      cached.status === UserStatus.DEACTIVATED
+    ) {
       return null;
     }
     if (cached.lockedUntil && new Date(cached.lockedUntil).getTime() > Date.now()) {

@@ -80,7 +80,12 @@ export class Organization extends SoftDeletableEntity {
   @Column({ type: 'text', name: 'logo_url', nullable: true })
   logoUrl: string | null;
 
-  @Column({ type: 'varchar', length: 32, name: 'status', default: OrganizationStatus.ACTIVE })
+  @Column({
+    type: 'varchar',
+    length: 32,
+    name: 'status',
+    default: OrganizationStatus.ACTIVE,
+  })
   status: OrganizationStatus;
 
   @Column({ type: 'varchar', length: 32, name: 'plan', default: OrganizationPlan.FREE })

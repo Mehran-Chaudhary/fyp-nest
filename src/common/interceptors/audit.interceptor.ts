@@ -42,10 +42,10 @@ export class AuditInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const descriptor = this.reflector.getAllAndOverride<AuditDescriptor>(METADATA_KEY.AUDIT, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const descriptor = this.reflector.getAllAndOverride<AuditDescriptor>(
+      METADATA_KEY.AUDIT,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (!descriptor) return next.handle();
 
@@ -114,11 +114,11 @@ export class AuditInterceptor implements NestInterceptor {
         { params: request.params, body: request.body, query: request.query },
         descriptor.resourceIdFrom,
       );
-      if (value !== undefined && value !== null) return String(value);
+      const rendered = renderScalar(value);
+      if (rendered !== undefined) return rendered;
     }
 
-    const fromResult = (result as { id?: unknown } | undefined)?.id;
-    return fromResult !== undefined && fromResult !== null ? String(fromResult) : undefined;
+    return renderScalar((result as { id?: unknown } | undefined)?.id);
   }
 
   private resolveResourceLabel(
@@ -161,6 +161,20 @@ export class AuditInterceptor implements NestInterceptor {
 
     return metadata;
   }
+}
+
+/**
+ * Renders a resolved value as an identifier string, or `undefined`.
+ *
+ * Only scalars are accepted. A bare `String(value)` would happily write
+ * `[object Object]` into the audit record's `resource_id` column, which looks
+ * like data but identifies nothing.
+ */
+function renderScalar(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'bigint') return String(value);
+  if (typeof value === 'boolean') return String(value);
+  return undefined;
 }
 
 /** Reads a dotted path such as `params.roleId` from a plain object. */

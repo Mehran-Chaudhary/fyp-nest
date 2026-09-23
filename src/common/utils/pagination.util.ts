@@ -22,10 +22,16 @@ export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
 
 /** Clamps caller supplied paging input into a safe range. */
-export function normalisePagination(page?: number, limit?: number): { page: number; limit: number } {
-  const safePage = Number.isInteger(page) && (page as number) > 0 ? (page as number) : DEFAULT_PAGE;
+export function normalisePagination(
+  page?: number,
+  limit?: number,
+): { page: number; limit: number } {
+  const safePage =
+    Number.isInteger(page) && (page as number) > 0 ? (page as number) : DEFAULT_PAGE;
   const requestedLimit =
-    Number.isInteger(limit) && (limit as number) > 0 ? (limit as number) : DEFAULT_PAGE_SIZE;
+    Number.isInteger(limit) && (limit as number) > 0
+      ? (limit as number)
+      : DEFAULT_PAGE_SIZE;
 
   return { page: safePage, limit: Math.min(requestedLimit, MAX_PAGE_SIZE) };
 }

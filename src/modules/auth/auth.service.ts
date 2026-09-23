@@ -242,7 +242,11 @@ export class AuthService {
     const familyId = randomUUID();
 
     const tokens = await this.jwtTokenService.issueTokenPair(
-      { id: user.id, emailNormalized: user.emailNormalized, isPlatformAdmin: user.isPlatformAdmin },
+      {
+        id: user.id,
+        emailNormalized: user.emailNormalized,
+        isPlatformAdmin: user.isPlatformAdmin,
+      },
       sessionId,
       familyId,
       organizationId,
@@ -315,7 +319,11 @@ export class AuthService {
         action: AuditAction.USER_TOKEN_REFRESHED,
         resourceType: 'session',
         resourceId: rotated.session.id,
-        actor: { type: ActorType.USER, id: user.id, label: maskEmail(user.emailNormalized) },
+        actor: {
+          type: ActorType.USER,
+          id: user.id,
+          label: maskEmail(user.emailNormalized),
+        },
         metadata: { familyId: rotated.familyId },
       });
 
@@ -422,7 +430,10 @@ export class AuthService {
   }
 
   /** Signs out everywhere. Used after a suspected compromise. */
-  async logoutAll(userId: string, exceptFamilyId?: string): Promise<{ revokedSessions: number }> {
+  async logoutAll(
+    userId: string,
+    exceptFamilyId?: string,
+  ): Promise<{ revokedSessions: number }> {
     const revoked = await this.sessionService.revokeAllForUser(
       userId,
       SessionRevocationReason.LOGOUT_ALL,
@@ -462,7 +473,10 @@ export class AuthService {
     });
   }
 
-  async verifyEmail(token: string, context: RequestContextInput): Promise<{ verified: boolean }> {
+  async verifyEmail(
+    token: string,
+    context: RequestContextInput,
+  ): Promise<{ verified: boolean }> {
     const record = await this.dataSource.transaction(async (manager) => {
       const consumed = await this.usersService.consumeToken(
         token,
@@ -539,7 +553,11 @@ export class AuthService {
         action: AuditAction.USER_PASSWORD_RESET_REQUESTED,
         resourceType: 'user',
         resourceId: user.id,
-        actor: { type: ActorType.USER, id: user.id, label: maskEmail(user.emailNormalized) },
+        actor: {
+          type: ActorType.USER,
+          id: user.id,
+          label: maskEmail(user.emailNormalized),
+        },
         metadata: { requestIp: context.ip },
       });
     } else {
@@ -675,7 +693,10 @@ export class AuthService {
 
   // ── Sessions ──────────────────────────────────────────────────────────────
 
-  async listSessions(userId: string, currentSessionId?: string): Promise<
+  async listSessions(
+    userId: string,
+    currentSessionId?: string,
+  ): Promise<
     Array<{
       id: string;
       deviceLabel: string | null;

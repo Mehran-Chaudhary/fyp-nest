@@ -7,7 +7,11 @@ import {
   type ValidationOptions,
   type ValidatorConstraintInterface,
 } from 'class-validator';
-import { SECURITY_CONFIG_KEY, type PasswordPolicy, type SecurityConfig } from '../../config/security.config';
+import {
+  SECURITY_CONFIG_KEY,
+  type PasswordPolicy,
+  type SecurityConfig,
+} from '../../config/security.config';
 
 /**
  * Passwords rejected outright regardless of whether they satisfy the character
@@ -125,14 +129,17 @@ export function evaluatePasswordStrength(
     errors.push('Password must not contain long sequences such as "12345" or "abcde".');
   }
 
-  // A password containing the user's own email or name is trivially guessable by
+  // A password containing the user's own name or email is trivially guessable by
   // anyone who knows them, which for an enterprise workspace is everyone.
-  for (const value of personalData) {
-    if (!value || value.length < 3) continue;
-    if (normalised.includes(value.toLowerCase())) {
-      errors.push('Password must not contain your name or email address.');
-      break;
-    }
+  //
+  // Comparing against the raw values alone is too literal to be useful: nobody
+  // puts "ahmad.hanbal@example.com" in their password, but plenty of people put
+  // "ahmad.hanbal" or "Hanbal2026". The values are therefore broken into
+  // meaningful fragments first.
+  if (
+    personalDataFragments(personalData).some((fragment) => normalised.includes(fragment))
+  ) {
+    errors.push('Password must not contain your name or email address.');
   }
 
   return {
@@ -140,6 +147,39 @@ export function evaluatePasswordStrength(
     errors,
     score: scorePassword(password),
   };
+}
+
+/**
+ * Expands the user's identifying fields into the fragments worth checking.
+ *
+ * For `ahmad.hanbal@example.com` that yields `ahmad.hanbal`, `ahmad` and
+ * `hanbal` — the forms someone actually builds a password from — while dropping
+ * the domain, which is shared by the whole organization and would otherwise ban
+ * every password containing the company name.
+ *
+ * Fragments shorter than three characters are discarded: a two-letter first name
+ * must not make half the dictionary unusable.
+ */
+function personalDataFragments(values: readonly string[]): string[] {
+  const fragments = new Set<string>();
+
+  const add = (candidate: string): void => {
+    const trimmed = candidate.trim().toLowerCase();
+    if (trimmed.length >= 3) fragments.add(trimmed);
+  };
+
+  for (const value of values) {
+    if (!value) continue;
+
+    const atIndex = value.lastIndexOf('@');
+    // For an address, only the local part identifies the person.
+    const meaningful = atIndex > 0 ? value.slice(0, atIndex) : value;
+
+    add(meaningful);
+    for (const token of meaningful.split(/[^a-zA-Z0-9]+/)) add(token);
+  }
+
+  return Array.from(fragments);
 }
 
 /** Detects an ascending or descending run of `length` consecutive characters. */
@@ -200,7 +240,8 @@ export class IsStrongPasswordConstraint implements ValidatorConstraintInterface 
   constructor(private readonly configService: ConfigService) {}
 
   validate(password: string, args: ValidationArguments): boolean {
-    const policy = this.configService.get<SecurityConfig>(SECURITY_CONFIG_KEY)?.passwordPolicy;
+    const policy =
+      this.configService.get<SecurityConfig>(SECURITY_CONFIG_KEY)?.passwordPolicy;
 
     if (!policy) {
       // Configuration is validated at boot, so this should be unreachable.

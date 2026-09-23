@@ -247,13 +247,21 @@ export const envValidationSchema = Joi.object({
   /** `log` prints messages to the console; nothing is sent. Ideal for development. */
   MAIL_TRANSPORT: Joi.string().valid('log', 'smtp').default('log'),
   MAIL_FROM_NAME: Joi.string().default('AI Agent Platform'),
-  MAIL_FROM_ADDRESS: Joi.string().email().default('no-reply@localhost'),
+  // A bare host such as `no-reply@localhost` — the natural default on a
+  // development machine or inside a container network — must be accepted.
+  // Joi rejects it twice over by default: `tlds` insists on a registered
+  // top-level domain, and `minDomainSegments` insists on at least two labels.
+  MAIL_FROM_ADDRESS: Joi.string()
+    .email({ tlds: { allow: false }, minDomainSegments: 1 })
+    .default('no-reply@localhost'),
   MAIL_REPLY_TO: Joi.string().allow('').default(''),
-  SMTP_HOST: Joi.string().allow('').when('MAIL_TRANSPORT', {
-    is: 'smtp',
-    then: Joi.string().required(),
-    otherwise: Joi.string().allow('').default(''),
-  }),
+  SMTP_HOST: Joi.string()
+    .allow('')
+    .when('MAIL_TRANSPORT', {
+      is: 'smtp',
+      then: Joi.string().required(),
+      otherwise: Joi.string().allow('').default(''),
+    }),
   SMTP_PORT: Joi.number().port().default(587),
   /** True for implicit TLS on port 465; false for STARTTLS on 587. */
   SMTP_SECURE: Joi.boolean().default(false),
@@ -293,11 +301,15 @@ export interface EnvValidationResult {
  * bootstrap rather than at the first request that happens to read the value.
  */
 export function validateEnvironment(raw: Record<string, unknown>): Record<string, unknown> {
-  const { error, value } = envValidationSchema.validate(raw, {
+  // Joi's result is loosely typed; annotating keeps the `any` from leaking into
+  // every caller of this function.
+  const result = envValidationSchema.validate(raw, {
     abortEarly: false,
     convert: true,
     stripUnknown: false,
-  });
+  }) as { error?: Joi.ValidationError; value: Record<string, unknown> };
+
+  const { error, value } = result;
 
   if (error) {
     const details = error.details.map((detail) => `  - ${detail.message}`).join('\n');
@@ -307,7 +319,7 @@ export function validateEnvironment(raw: Record<string, unknown>): Record<string
     );
   }
 
-  return value as Record<string, unknown>;
+  return value;
 }
 
 /**
