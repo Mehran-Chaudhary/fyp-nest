@@ -102,6 +102,29 @@ export enum ErrorCode {
   // ── Audit ─────────────────────────────────────────────────────────────────
   AUDIT_CHAIN_BROKEN = 'AUDIT_CHAIN_BROKEN',
   AUDIT_LOG_IMMUTABLE = 'AUDIT_LOG_IMMUTABLE',
+
+  // ── Knowledge bases ───────────────────────────────────────────────────────
+  KNOWLEDGE_BASE_NOT_FOUND = 'KNOWLEDGE_BASE_NOT_FOUND',
+  KNOWLEDGE_BASE_NAME_TAKEN = 'KNOWLEDGE_BASE_NAME_TAKEN',
+  KNOWLEDGE_BASE_ACCESS_DENIED = 'KNOWLEDGE_BASE_ACCESS_DENIED',
+  KNOWLEDGE_BASE_GRANT_NOT_FOUND = 'KNOWLEDGE_BASE_GRANT_NOT_FOUND',
+  CLASSIFICATION_EXCEEDS_CLEARANCE = 'CLASSIFICATION_EXCEEDS_CLEARANCE',
+
+  // ── Documents & ingestion ─────────────────────────────────────────────────
+  DOCUMENT_NOT_FOUND = 'DOCUMENT_NOT_FOUND',
+  DOCUMENT_DUPLICATE = 'DOCUMENT_DUPLICATE',
+  DOCUMENT_TYPE_NOT_ALLOWED = 'DOCUMENT_TYPE_NOT_ALLOWED',
+  DOCUMENT_CONTENT_MISMATCH = 'DOCUMENT_CONTENT_MISMATCH',
+  DOCUMENT_EMPTY = 'DOCUMENT_EMPTY',
+  DOCUMENT_PROCESSING = 'DOCUMENT_PROCESSING',
+  DOCUMENT_CONTENT_UNAVAILABLE = 'DOCUMENT_CONTENT_UNAVAILABLE',
+  STORAGE_QUOTA_EXCEEDED = 'STORAGE_QUOTA_EXCEEDED',
+
+  // ── Knowledge-layer dependencies ──────────────────────────────────────────
+  KNOWLEDGE_LAYER_NOT_CONFIGURED = 'KNOWLEDGE_LAYER_NOT_CONFIGURED',
+  AI_SERVICE_UNAVAILABLE = 'AI_SERVICE_UNAVAILABLE',
+  VECTOR_STORE_UNAVAILABLE = 'VECTOR_STORE_UNAVAILABLE',
+  OBJECT_STORAGE_UNAVAILABLE = 'OBJECT_STORAGE_UNAVAILABLE',
 }
 
 /**
@@ -206,4 +229,31 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
 
   [ErrorCode.AUDIT_CHAIN_BROKEN]: 'The audit log integrity chain could not be verified.',
   [ErrorCode.AUDIT_LOG_IMMUTABLE]: 'Audit records cannot be modified or deleted.',
+
+  [ErrorCode.KNOWLEDGE_BASE_NOT_FOUND]: 'The knowledge base was not found.',
+  [ErrorCode.KNOWLEDGE_BASE_NAME_TAKEN]:
+    'A knowledge base with this name already exists in this workspace.',
+  [ErrorCode.KNOWLEDGE_BASE_ACCESS_DENIED]:
+    'Your access to this knowledge base does not permit this action.',
+  [ErrorCode.KNOWLEDGE_BASE_GRANT_NOT_FOUND]: 'The access grant was not found.',
+  [ErrorCode.CLASSIFICATION_EXCEEDS_CLEARANCE]:
+    'You cannot assign a classification above your own clearance.',
+
+  [ErrorCode.DOCUMENT_NOT_FOUND]: 'The document was not found.',
+  [ErrorCode.DOCUMENT_DUPLICATE]:
+    'An identical file already exists in this knowledge base.',
+  [ErrorCode.DOCUMENT_TYPE_NOT_ALLOWED]: 'This file type is not accepted.',
+  [ErrorCode.DOCUMENT_CONTENT_MISMATCH]: 'The file’s contents do not match its extension.',
+  [ErrorCode.DOCUMENT_EMPTY]: 'The file is empty or contains no extractable text.',
+  [ErrorCode.DOCUMENT_PROCESSING]:
+    'The document is still being processed. Try again when processing finishes.',
+  [ErrorCode.DOCUMENT_CONTENT_UNAVAILABLE]:
+    'The document’s content has been destroyed and cannot be retrieved.',
+  [ErrorCode.STORAGE_QUOTA_EXCEEDED]: 'This workspace has used its document storage quota.',
+
+  [ErrorCode.KNOWLEDGE_LAYER_NOT_CONFIGURED]:
+    'Document storage and retrieval are not configured on this deployment.',
+  [ErrorCode.AI_SERVICE_UNAVAILABLE]: 'The AI service is temporarily unavailable.',
+  [ErrorCode.VECTOR_STORE_UNAVAILABLE]: 'The vector store is temporarily unavailable.',
+  [ErrorCode.OBJECT_STORAGE_UNAVAILABLE]: 'Document storage is temporarily unavailable.',
 };

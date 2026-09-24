@@ -78,6 +78,17 @@ export enum AuditAction {
   KNOWLEDGE_BASE_CREATED = 'knowledge_base.created',
   KNOWLEDGE_BASE_UPDATED = 'knowledge_base.updated',
   KNOWLEDGE_BASE_DELETED = 'knowledge_base.deleted',
+  KNOWLEDGE_BASE_ACCESS_GRANTED = 'knowledge_base.access.granted',
+  KNOWLEDGE_BASE_ACCESS_REVOKED = 'knowledge_base.access.revoked',
+  DOCUMENT_UPDATED = 'document.updated',
+  DOCUMENT_RECLASSIFIED = 'document.reclassified',
+  DOCUMENT_REINDEX_REQUESTED = 'document.reindex_requested',
+  /** A file was refused at upload: wrong type, disguised content, macros. */
+  DOCUMENT_UPLOAD_REJECTED = 'document.upload.rejected',
+  DOCUMENT_INGESTION_FAILED = 'document.ingestion.failed',
+  DOCUMENT_INGESTION_DEAD_LETTERED = 'document.ingestion.dead_lettered',
+  /** Content destroyed: vectors, chunks, stored object and the data key. */
+  DOCUMENT_PURGED = 'document.purged',
 
   // ── Secure RAG (6.6) — later phases ───────────────────────────────────────
   RAG_QUERY_EXECUTED = 'rag.query.executed',
@@ -160,6 +171,9 @@ const WARNING_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.WORKFLOW_EXECUTION_DEAD_LETTERED,
   AuditAction.AGENT_CIRCUIT_BROKEN,
   AuditAction.RAG_ACCESS_FILTERED,
+  AuditAction.DOCUMENT_UPLOAD_REJECTED,
+  AuditAction.DOCUMENT_INGESTION_FAILED,
+  AuditAction.DOCUMENT_INGESTION_DEAD_LETTERED,
 ]);
 
 const NOTICE_ACTIONS: ReadonlySet<AuditAction> = new Set([
@@ -176,6 +190,12 @@ const NOTICE_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.USER_PASSWORD_RESET_COMPLETED,
   AuditAction.USER_LOGGED_OUT_ALL,
   AuditAction.DOCUMENT_DELETED,
+  AuditAction.DOCUMENT_DOWNLOADED,
+  AuditAction.DOCUMENT_RECLASSIFIED,
+  AuditAction.DOCUMENT_PURGED,
+  AuditAction.KNOWLEDGE_BASE_DELETED,
+  AuditAction.KNOWLEDGE_BASE_ACCESS_GRANTED,
+  AuditAction.KNOWLEDGE_BASE_ACCESS_REVOKED,
   AuditAction.PII_POLICY_UPDATED,
 ]);
 

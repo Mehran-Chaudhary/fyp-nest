@@ -32,6 +32,23 @@ export const INSECURE_DEV_DEFAULTS = {
   AUDIT_HASH_SECRET: 'dev-only-insecure-audit-chain-secret-do-not-use-in-prod',
 } as const;
 
+/**
+ * Dev-only default for the AI service request-signing secret. Kept apart from
+ * {@link INSECURE_DEV_DEFAULTS} because it applies only once `AI_SERVICE_URL` is
+ * set, but reported by {@link findInsecureDefaults} all the same.
+ */
+export const INSECURE_AI_SIGNING_DEFAULT =
+  'dev-only-insecure-ai-service-signing-secret-do-not-use';
+
+/** A byte size such as `50mb`, `1gb`, `512kb` or a bare byte count. */
+const byteSize = (defaultValue: string) =>
+  Joi.string()
+    .pattern(/^\d+(\.\d+)?\s*(b|kb|mb|gb|tb)?$/i)
+    .default(defaultValue)
+    .messages({
+      'string.pattern.base': '{{#label}} must be a size such as 512kb, 50mb or 1gb.',
+    });
+
 /** A duration expression such as `15m`, `7d`, `500ms` or a bare millisecond count. */
 const duration = (defaultValue: string) =>
   Joi.string()
@@ -240,6 +257,151 @@ export const envValidationSchema = Joi.object({
   /** Bucket for endpoints that send email, to prevent using us as a spam relay. */
   THROTTLE_EMAIL_TTL: duration('1h'),
   THROTTLE_EMAIL_LIMIT: Joi.number().integer().min(1).default(5),
+  /** Document uploads: each one costs storage, parsing and embedding compute. */
+  THROTTLE_UPLOAD_TTL: duration('1h'),
+  THROTTLE_UPLOAD_LIMIT: Joi.number().integer().min(1).default(100),
+  /** Retrieval queries: each one costs an embedding call and a vector search. */
+  THROTTLE_RAG_TTL: duration('60s'),
+  THROTTLE_RAG_LIMIT: Joi.number().integer().min(1).default(60),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 2 — object storage (S3-compatible: AWS S3, Cloudflare R2, Backblaze
+  // B2, Supabase Storage, MinIO). Uploads are refused until a bucket is set.
+  // ───────────────────────────────────────────────────────────────────────────
+  STORAGE_S3_BUCKET: Joi.string().allow('').default(''),
+  /** Empty for AWS itself; the provider's S3 endpoint for everyone else. */
+  STORAGE_S3_ENDPOINT: Joi.string().uri().allow('').default(''),
+  STORAGE_S3_REGION: Joi.string().default('auto'),
+  STORAGE_S3_ACCESS_KEY_ID: Joi.string().allow('').default(''),
+  STORAGE_S3_SECRET_ACCESS_KEY: Joi.string().allow('').default(''),
+  /** Path-style addressing. Required by MinIO and some B2 setups. */
+  STORAGE_S3_FORCE_PATH_STYLE: Joi.boolean().default(false),
+  /** Provider-side encryption on top of the application-level encryption. */
+  STORAGE_S3_SERVER_SIDE_ENCRYPTION: Joi.string()
+    .valid('', 'AES256', 'aws:kms')
+    .default(''),
+  /** Prefix for every object key, so one bucket can serve several deployments. */
+  STORAGE_KEY_PREFIX: Joi.string()
+    .pattern(/^[A-Za-z0-9._/-]*$/)
+    .allow('')
+    .default('daiap/'),
+  UPLOAD_MAX_FILE_SIZE: byteSize('50mb'),
+  /** Comma-separated subset of: pdf, docx, txt, md. */
+  UPLOAD_ALLOWED_TYPES: Joi.string()
+    .pattern(/^\s*(pdf|docx|txt|md)(\s*,\s*(pdf|docx|txt|md))*\s*$/i)
+    .default('pdf,docx,txt,md'),
+  /** Upload requests stream up to UPLOAD_MAX_FILE_SIZE, so they get a longer budget. */
+  UPLOAD_REQUEST_TIMEOUT: duration('120s'),
+  /** Total document bytes one workspace may store. Zero means unlimited. */
+  STORAGE_QUOTA_PER_ORGANIZATION: byteSize('1gb'),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 2 — the Python AI service (parsing, chunking, embedding, reranking)
+  // ───────────────────────────────────────────────────────────────────────────
+  AI_SERVICE_URL: Joi.string().uri().allow('').default(''),
+  /**
+   * HMAC key signing every request to the AI service. Required, and at least 32
+   * characters, whenever AI_SERVICE_URL is set outside development.
+   */
+  AI_SERVICE_SIGNING_SECRET: Joi.string()
+    .allow('')
+    .when('AI_SERVICE_URL', {
+      is: Joi.string().min(1),
+      then: Joi.when('NODE_ENV', {
+        is: Joi.valid('production', 'staging'),
+        then: Joi.string().min(MIN_SECRET_LENGTH).required().messages({
+          'any.required':
+            '{{#label}} must be set when AI_SERVICE_URL is configured. Generate one with `npm run generate:secrets`.',
+        }),
+        otherwise: Joi.string().min(MIN_SECRET_LENGTH).default(INSECURE_AI_SIGNING_DEFAULT),
+      }),
+      otherwise: Joi.string().allow('').default(''),
+    })
+    .messages({
+      'string.min': `{{#label}} must be at least ${MIN_SECRET_LENGTH} characters of high-entropy randomness.`,
+    }),
+  /** Identifies which secret signed a request, so the secret can be rotated. */
+  AI_SERVICE_KEY_ID: Joi.string()
+    .pattern(/^[A-Za-z0-9._-]{1,32}$/)
+    .default('v1'),
+  AI_SERVICE_TIMEOUT: duration('30s'),
+  /** Parsing a long scanned PDF can legitimately take minutes. */
+  AI_SERVICE_PARSE_TIMEOUT: duration('300s'),
+  AI_SERVICE_MAX_RETRIES: Joi.number().integer().min(0).max(5).default(2),
+  AI_SERVICE_MAX_RESPONSE_SIZE: byteSize('64mb'),
+  AI_SERVICE_CIRCUIT_THRESHOLD: Joi.number().integer().min(1).max(100).default(5),
+  AI_SERVICE_CIRCUIT_COOLDOWN: duration('30s'),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 2 — vector store (Qdrant Cloud) and embeddings
+  // ───────────────────────────────────────────────────────────────────────────
+  QDRANT_URL: Joi.string().uri().allow('').default(''),
+  QDRANT_API_KEY: Joi.string().allow('').default(''),
+  QDRANT_COLLECTION_PREFIX: Joi.string()
+    .pattern(/^[a-z0-9_-]{0,40}$/)
+    .allow('')
+    .default('daiap_'),
+  /**
+   * `collection` — one collection per workspace: physical isolation at the
+   * vector layer. `shared` — one collection, partitioned by a tenant-indexed
+   * payload field: Qdrant's recommendation once workspaces number in the
+   * hundreds. The mandatory tenant filter applies in both modes.
+   */
+  QDRANT_TENANCY: Joi.string().valid('collection', 'shared').default('collection'),
+  QDRANT_TIMEOUT: duration('15s'),
+  /** int8 scalar quantisation: ~4x less vector memory, with rescoring. */
+  QDRANT_QUANTIZATION: Joi.string().valid('scalar', 'none').default('scalar'),
+  QDRANT_CIRCUIT_THRESHOLD: Joi.number().integer().min(1).max(100).default(5),
+  QDRANT_CIRCUIT_COOLDOWN: duration('20s'),
+  EMBEDDING_MODEL: Joi.string().max(128).default('nomic-embed-text'),
+  EMBEDDING_DIMENSIONS: Joi.number().integer().min(8).max(8192).default(768),
+  EMBEDDING_BATCH_SIZE: Joi.number().integer().min(1).max(512).default(32),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 2 — background processing (BullMQ on the Redis above)
+  // ───────────────────────────────────────────────────────────────────────────
+  /** Defaults to `${REDIS_KEY_PREFIX}bull`. */
+  QUEUE_PREFIX: Joi.string()
+    .pattern(/^[A-Za-z0-9:_-]*$/)
+    .allow('')
+    .default(''),
+  /**
+   * Whether this process consumes jobs. `true` suits a single-service
+   * deployment; set `false` on the API and run `npm run start:worker`
+   * separately to scale ingestion independently.
+   */
+  QUEUE_WORKERS_ENABLED: Joi.boolean().default(true),
+  INGESTION_CONCURRENCY: Joi.number().integer().min(1).max(32).default(2),
+  INGESTION_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
+  INGESTION_BACKOFF_DELAY: duration('15s'),
+  INGESTION_JOB_TIMEOUT: duration('30m'),
+  INGESTION_MAX_CHUNKS: Joi.number().integer().min(1).max(200_000).default(20_000),
+  CHUNK_SIZE_DEFAULT: Joi.number().integer().min(64).max(4096).default(512),
+  CHUNK_OVERLAP_DEFAULT: Joi.number().integer().min(0).max(1024).default(64),
+  MAINTENANCE_SWEEP_INTERVAL: duration('5m'),
+  /** A document in-flight this long without progress is considered stalled. */
+  INGESTION_STALL_THRESHOLD: duration('45m'),
+  /** Grace period before a deleted workspace's documents are destroyed. */
+  ORGANIZATION_PURGE_GRACE: duration('7d'),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 2 — secure retrieval (module 6.6)
+  // ───────────────────────────────────────────────────────────────────────────
+  RAG_DEFAULT_TOP_K: Joi.number().integer().min(1).max(100).default(8),
+  RAG_MAX_TOP_K: Joi.number().integer().min(1).max(200).default(50),
+  /** `hybrid` fuses dense and lexical (BM25) results; `dense` is vectors only. */
+  RAG_SEARCH_MODE: Joi.string().valid('hybrid', 'dense').default('hybrid'),
+  /** Candidates fetched per final result when reranking. */
+  RAG_CANDIDATE_MULTIPLIER: Joi.number().integer().min(1).max(20).default(4),
+  RAG_RERANK_ENABLED: Joi.boolean().default(false),
+  RAG_MAX_QUERY_LENGTH: Joi.number().integer().min(16).max(16_384).default(2_000),
+  /**
+   * Also record *what the access policy withheld* from each query — document
+   * ids only, never content — so an auditor can see the policy working.
+   */
+  RAG_AUDIT_WITHHELD: Joi.boolean().default(true),
+  RAG_WITHHELD_SCORE_THRESHOLD: Joi.number().min(0).max(1).default(0.35),
+  RAG_REQUEST_TIMEOUT: duration('60s'),
 
   // ───────────────────────────────────────────────────────────────────────────
   // Outbound email
@@ -327,7 +489,13 @@ export function validateEnvironment(raw: Record<string, unknown>): Record<string
  * default, so that bootstrap can warn loudly.
  */
 export function findInsecureDefaults(env: Record<string, unknown>): string[] {
-  return Object.entries(INSECURE_DEV_DEFAULTS)
+  const insecure = Object.entries(INSECURE_DEV_DEFAULTS)
     .filter(([key, devValue]) => env[key] === devValue)
     .map(([key]) => key);
+
+  if (env.AI_SERVICE_SIGNING_SECRET === INSECURE_AI_SIGNING_DEFAULT) {
+    insecure.push('AI_SERVICE_SIGNING_SECRET');
+  }
+
+  return insecure;
 }

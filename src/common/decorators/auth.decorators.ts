@@ -1,4 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
+import type { RequestTimeoutBudget } from '../../config/app.config';
 import { METADATA_KEY } from '../constants/app.constants';
 import { AuthType } from '../enums/auth-type.enum';
 
@@ -102,3 +103,14 @@ export const ThrottlePolicy = (policy: string) =>
 /** Returns the handler's response as-is, bypassing the standard envelope. */
 export const SkipResponseEnvelope = () =>
   SetMetadata(METADATA_KEY.SKIP_RESPONSE_ENVELOPE, true);
+
+/**
+ * Selects a longer, named request-timeout budget for this route.
+ *
+ * A name rather than a number so the value stays in configuration, where it can
+ * be tuned per deployment without a code change.
+ *
+ * @see `requestTimeoutBudgets` in `src/config/app.config.ts`.
+ */
+export const TimeoutBudget = (budget: RequestTimeoutBudget) =>
+  SetMetadata(METADATA_KEY.TIMEOUT_BUDGET, budget);

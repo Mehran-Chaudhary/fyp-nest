@@ -43,6 +43,7 @@ export enum PermissionCategory {
   TOOLS = 'tools',
   PRIVACY = 'privacy',
   OBSERVABILITY = 'observability',
+  CLEARANCE = 'clearance',
 }
 
 export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
@@ -273,6 +274,38 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
     key: 'rag:query',
     category: PermissionCategory.KNOWLEDGE,
     description: 'Run retrieval queries against the workspace vector store.',
+    phase: 2,
+  },
+
+  // ── Clearance: document sensitivity tiers (6.6) ───────────────────────────
+  //
+  // Every document carries a classification: PUBLIC, INTERNAL, CONFIDENTIAL or
+  // RESTRICTED. A principal's clearance is the highest tier whose key it holds,
+  // and clearance is hierarchical — holding `clearance:restricted` implies the
+  // tiers beneath it. PUBLIC needs no key at all.
+  //
+  // Expressed as permissions rather than a separate attribute so that clearance
+  // is granted, revoked, audited and escalation-checked by exactly the same
+  // machinery as every other authority on the platform.
+  {
+    key: 'clearance:internal',
+    category: PermissionCategory.CLEARANCE,
+    description: 'Read documents classified INTERNAL.',
+    phase: 2,
+  },
+  {
+    key: 'clearance:confidential',
+    category: PermissionCategory.CLEARANCE,
+    description: 'Read documents classified CONFIDENTIAL.',
+    dangerous: true,
+    phase: 2,
+  },
+  {
+    key: 'clearance:restricted',
+    category: PermissionCategory.CLEARANCE,
+    description:
+      'Read documents classified RESTRICTED — the most sensitive tier, such as payroll.',
+    dangerous: true,
     phase: 2,
   },
 
@@ -521,6 +554,10 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] = [
       'knowledgebase:*',
       'document:*',
       'rag:query',
+      // Not RESTRICTED: an administrator runs the workspace, which is a
+      // different thing from being entitled to read its payroll.
+      'clearance:internal',
+      'clearance:confidential',
       'agent:*',
       'conversation:read',
       'conversation:read_all',
@@ -548,6 +585,7 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] = [
       'document:create',
       'document:reindex',
       'rag:query',
+      'clearance:internal',
       'agent:read',
       'agent:execute',
       'conversation:read',
@@ -573,6 +611,7 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] = [
       'role:read',
       'knowledgebase:read',
       'document:read',
+      'clearance:internal',
       'agent:read',
       'conversation:read',
       'workflow:read',
@@ -593,6 +632,10 @@ export const DEFAULT_SYSTEM_ROLE_SLUG = SystemRoleSlug.MEMBER;
  * Scopes an API key may carry. A key's effective permissions are the
  * intersection of its scopes with the permissions of the role it was issued
  * under, so a key can never exceed the authority of its creator.
+ *
+ * `clearance:restricted` is deliberately absent. The most sensitive tier is
+ * reachable only by a person, never by a machine credential that can be copied
+ * into a config file and forgotten.
  */
 export const API_KEY_SCOPES: readonly string[] = [
   'rag:query',
@@ -600,6 +643,8 @@ export const API_KEY_SCOPES: readonly string[] = [
   'document:create',
   'document:reindex',
   'knowledgebase:read',
+  'clearance:internal',
+  'clearance:confidential',
   'agent:read',
   'agent:execute',
   'llm:invoke',

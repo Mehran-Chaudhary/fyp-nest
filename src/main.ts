@@ -114,6 +114,8 @@ async function bootstrap(): Promise<void> {
       HEADER.RATE_LIMIT_REMAINING,
       HEADER.RATE_LIMIT_RESET,
       HEADER.RETRY_AFTER,
+      // So the frontend can name a downloaded document correctly.
+      'content-disposition',
     ],
     maxAge: 86_400,
   });
@@ -235,6 +237,9 @@ async function bootstrap(): Promise<void> {
       .addTag('Access control', 'Roles and the permission catalogue')
       .addTag('API keys', 'Machine credentials for service-to-service calls')
       .addTag('Audit', 'Tamper-evident compliance log')
+      .addTag('Knowledge bases', 'Document collections and access compartments')
+      .addTag('Documents', 'The Document Vault: upload, processing status, download')
+      .addTag('Retrieval', 'Access-controlled retrieval for RAG')
       .addTag('Health', 'Liveness and readiness probes')
       .build();
 

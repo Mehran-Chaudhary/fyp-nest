@@ -16,6 +16,11 @@ export interface AppConfig {
   frontendUrl: string;
   shutdownTimeoutMs: number;
   requestTimeoutMs: number;
+  /**
+   * Named, longer budgets for the few routes that legitimately need them,
+   * selected with `@TimeoutBudget()`. Everything else keeps the default.
+   */
+  requestTimeoutBudgets: Record<RequestTimeoutBudget, number>;
   jsonBodyLimit: string;
   logLevel: string;
   logPretty: boolean;
@@ -32,6 +37,8 @@ export interface AppConfig {
 }
 
 export const APP_CONFIG_KEY = 'app';
+
+export type RequestTimeoutBudget = 'upload' | 'retrieval';
 
 export default registerAs(APP_CONFIG_KEY, (): AppConfig => {
   const env = (process.env.NODE_ENV ?? 'development') as NodeEnvironment;
@@ -50,6 +57,10 @@ export default registerAs(APP_CONFIG_KEY, (): AppConfig => {
     frontendUrl: (process.env.FRONTEND_URL as string).replace(/\/+$/, ''),
     shutdownTimeoutMs: parseDuration(process.env.APP_SHUTDOWN_TIMEOUT as string),
     requestTimeoutMs: parseDuration(process.env.REQUEST_TIMEOUT as string),
+    requestTimeoutBudgets: {
+      upload: parseDuration(process.env.UPLOAD_REQUEST_TIMEOUT ?? '120s'),
+      retrieval: parseDuration(process.env.RAG_REQUEST_TIMEOUT ?? '60s'),
+    },
     jsonBodyLimit: process.env.JSON_BODY_LIMIT as string,
     logLevel: process.env.LOG_LEVEL as string,
     logPretty: process.env.LOG_PRETTY === 'true',

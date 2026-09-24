@@ -1,6 +1,10 @@
 import { ApiKey } from '../modules/api-keys/entities/api-key.entity';
 import { AuditLog } from '../modules/audit/entities/audit-log.entity';
 import { Invitation } from '../modules/invitations/entities/invitation.entity';
+import { Document } from '../modules/knowledge/entities/document.entity';
+import { DocumentChunk } from '../modules/knowledge/entities/document-chunk.entity';
+import { KnowledgeBaseGrant } from '../modules/knowledge/entities/knowledge-base-grant.entity';
+import { KnowledgeBase } from '../modules/knowledge/entities/knowledge-base.entity';
 import { OrganizationIpRule } from '../modules/organizations/entities/organization-ip-rule.entity';
 import { Organization } from '../modules/organizations/entities/organization.entity';
 import { OrganizationMember } from '../modules/memberships/entities/organization-member.entity';
@@ -32,12 +36,20 @@ export const entities = [
   Invitation,
   ApiKey,
   AuditLog,
+  KnowledgeBase,
+  KnowledgeBaseGrant,
+  Document,
+  DocumentChunk,
 ];
 
 export {
   ApiKey,
   AuditLog,
+  Document,
+  DocumentChunk,
   Invitation,
+  KnowledgeBase,
+  KnowledgeBaseGrant,
   Organization,
   OrganizationIpRule,
   OrganizationMember,

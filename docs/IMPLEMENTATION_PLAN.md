@@ -67,10 +67,14 @@ they did.
 
 - `npm run typecheck` — clean
 - `npm run build` — clean
-- `npm test` — **184 tests, 7 suites, all passing**
+- `npm test` — 184 tests at phase 1 close (343 including phase 2)
 - Boot-time configuration validation — confirmed working against a live process
-- **Not yet verified:** migrations, seeding and live HTTP behaviour, which need a
-  reachable PostgreSQL instance. See “Outstanding verification” in the README.
+- **Verified during phase 2 (2026-09-24)** against a real PostgreSQL 18: the
+  initial migration applies, the seed runs (catalogue, demo workspace, roles,
+  members), sign-in and workspace-scoped HTTP work, and the audit chain verifies.
+- **Found and fixed in phase 2:** health probes were served at `/v1/health`
+  instead of `/health` (URI versioning applied despite the prefix exclusion),
+  which would have failed every cloud host's health check.
 
 ### Design decisions worth defending in the report
 
@@ -93,13 +97,71 @@ These are the points an examiner is most likely to probe.
 
 ---
 
-## Phase 2 — Knowledge Layer & Secure Retrieval
+## Phase 2 — Knowledge Layer & Secure Retrieval · **IMPLEMENTED**
 
 Getting enterprise documents into the platform and retrievable **under the same
 RBAC rules** that govern everything else.
 
 **Proposal modules:** 6.4 Document Ingestion & Parsing · 6.5 Vector Embedding &
 Storage · 6.6 Secure RAG Retrieval Pipeline
+
+### Delivered
+
+| Area | What was built |
+|------|----------------|
+| **Access model** | A lattice: knowledge-base **compartments** (WORKSPACE or RESTRICTED, with READ/WRITE/MANAGE grants to roles, memberships or API keys) × document **classification** (PUBLIC → RESTRICTED) against **clearance** held as `clearance:*` permissions. Only `*:*` bypasses compartments — not the admin role. Hidden resources return 404; probes are audited. |
+| **Secure retrieval** | Mandatory server-built filter applied **inside** the Qdrant search; callers can only narrow it. A **second, independent enforcement point**: passage text is fetched from PostgreSQL through a query restating the whole policy, so the policy holds even while stores disagree. |
+| **Hybrid search** | Dense vectors + BM25 sparse vectors (computed in-process, IDF by Qdrant) fused with reciprocal rank fusion; optional cross-encoder rerank that degrades gracefully. |
+| **Retrieval auditing** | `rag.query.executed` records which documents/chunks an answer drew on (never the query text — a keyed fingerprint instead). `rag.access.filtered` records which relevant documents the policy **withheld** and why, by id only. |
+| **Encryption** | Per-document data keys (envelope encryption, AES-256-GCM, bound by associated data). Files in object storage and chunk text in PostgreSQL are ciphertext; the vector store holds no text at all. **Crypto-shredding**: deletion destroys the key in the same transaction, making backups unreadable too. |
+| **Upload hardening** | Type from magic bytes, never the client's Content-Type; extension must agree; DOCX central directory inspected (macros refused, zip bombs refused); keyed duplicate detection; per-workspace storage quota under an advisory lock; UTF-8-safe filenames. |
+| **Ingestion pipeline** | BullMQ, `UPLOADED → PARSING → CHUNKING → EMBEDDING → READY / FAILED`. Compare-and-set transitions, chunks persisted atomically with the stage change, **UUIDv5 chunk ids = vector point ids** (retries overwrite, never duplicate), per-batch checkpoints (resume after a crash), inactive-until-complete vectors, **zero-downtime reindex** (old version serves until the new one is ready). Transient vs permanent failure policy; metadata-only dead-letter queue. |
+| **Reconciliation** | PostgreSQL is the source of truth and the outbox. A single scheduled sweep re-enqueues lost uploads, resumes stalled runs, finishes purges, re-syncs vector payloads after reclassification, and destroys deleted workspaces' knowledge after a grace period. |
+| **AI service contract** | Typed client with HMAC request signing (method, path, query, timestamp, nonce, body hash), timeouts, jittered retries honouring `Retry-After`, a circuit breaker, a response-size ceiling and strict response validation. Full contract with a Python reference verifier in `docs/contracts/ai-service-v1.md`. |
+| **Cloud infrastructure** | S3-compatible storage (R2, S3, B2, Supabase, MinIO), Qdrant Cloud with per-workspace collections (or tenant-indexed shared mode) and int8 quantisation, BullMQ on managed Redis. All optional at boot, with 503 responses naming missing variables; degraded-not-down health indicators. Optional dedicated worker process. |
+| **RBAC upkeep** | 3 new permissions; the seed now also upgrades built-in roles in existing workspaces. Demo seed adds a WORKSPACE handbook and a RESTRICTED HR compartment. |
+
+### Verification status
+
+- `npm run typecheck`, `npm run lint`, `npm run build` — clean
+- `npm test` — **343 tests, 16 suites, all passing** (159 new). Includes the
+  retrieval policy evaluated over a payload corpus with Qdrant's filter
+  semantics, upload inspection against real PDF/DOCX/ZIP bytes, encryption and
+  signing properties, and the AI client against a fake transport.
+- **Against real PostgreSQL 18:** both migrations apply, revert and re-apply;
+  the seed runs and the system-role sync upgrades a simulated pre-phase-2
+  workspace; live HTTP confirmed compartment invisibility (employee *and* admin
+  get 404 on HR), clearance resolution per role, grant management, 503s naming
+  missing configuration, and an intact audit chain.
+- **End-to-end (`npm run test:e2e:knowledge`), real PostgreSQL, in-memory cloud
+  stand-ins — 13/13:** upload → parse → chunk → embed → READY; ciphertext at rest
+  everywhere; employee and admin never receive the payroll chunk while HR does;
+  withheld documents audited; **crash mid-embedding resumes with 70 chunks and 70
+  vectors, no duplicates**; zero-downtime reindex; SQL gate excludes a
+  reclassified document before the vector payload syncs; download; delete
+  shreds the key and purge removes vectors and objects; audit chain verifies.
+- **Pending the cloud services:** `npm run test:integration` runs the exit
+  criterion against a live Qdrant (5 tests, skipped until `QDRANT_URL` is set),
+  and real ingestion needs the Python AI service implementing the v1 contract.
+
+### Exit criteria
+
+- ✅ A document in a restricted knowledge base is not retrievable by a member
+  lacking access — proven over payloads in unit tests, end to end against real
+  PostgreSQL, and by an integration test asserting on Qdrant's returned payloads
+  (runs when `QDRANT_URL` is set).
+- ✅ Ingestion survives a worker crash mid-embedding without duplicating chunks —
+  proven end to end.
+
+### Design decisions worth defending in the report
+
+See [`docs/adr/0002-knowledge-layer-security.md`](adr/0002-knowledge-layer-security.md).
+The short version: the policy is part of the query *and* of the text fetch; the
+vector store holds no text; deletion is crypto-shredding; PostgreSQL is the
+source of truth and the other stores converge on it; the AI service computes and
+never decides.
+
+### Original plan (for reference)
 
 ### Deliverables
 
@@ -328,7 +390,14 @@ the frontend authenticates against and what the Python service calls back into.
 
 ## 4. Current status
 
-**Phase 1 is implemented and unit-tested.** Live database verification is the one
-outstanding step — see the README.
+| Phase | Status |
+|-------|--------|
+| 1 — Foundation, Identity & Multi-Tenancy | ✅ Implemented; verified against real PostgreSQL during phase 2 |
+| 2 — Knowledge Layer & Secure Retrieval | ✅ Implemented; verified end to end against real PostgreSQL. Live runs await the cloud services and the Python AI service (see `docs/CLOUD_SETUP.md`) |
+| 3 — Inference, Agents & Privacy | Next |
+| 4 — Orchestration, Tools & Real-Time | Planned |
+| 5 — Governance, Hardening & Operations | Planned |
 
-Phases 2–5 are planned as above and not started.
+**Three phases remain.** Phase 3 builds directly on phase 2: agents retrieve
+through the exported `RetrievalService`, and the PII engine masks exactly the
+passages it returns, after retrieval and before the prompt is assembled.

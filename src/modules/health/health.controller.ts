@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, VERSION_NEUTRAL } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -10,6 +10,7 @@ import {
 } from '@nestjs/terminus';
 import { Public, SkipOrganizationContext } from '../../common/decorators/auth.decorators';
 import { APP_CONFIG_KEY, type AppConfig } from '../../config/app.config';
+import { KnowledgeDependenciesHealthIndicator } from './indicators/knowledge-dependencies.health';
 import { RedisHealthIndicator } from './indicators/redis.health';
 
 /**
@@ -29,7 +30,9 @@ import { RedisHealthIndicator } from './indicators/redis.health';
  * would otherwise drown out everything of interest.
  */
 @ApiTags('Health')
-@Controller('health')
+// Version-neutral: orchestrators probe `/health`, and URI versioning would
+// otherwise move it to `/v1/health` even though the global prefix is excluded.
+@Controller({ path: 'health', version: VERSION_NEUTRAL })
 @Public()
 @SkipOrganizationContext()
 export class HealthController {
@@ -40,6 +43,7 @@ export class HealthController {
     private readonly database: TypeOrmHealthIndicator,
     private readonly redis: RedisHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
+    private readonly knowledge: KnowledgeDependenciesHealthIndicator,
     private readonly configService: ConfigService,
   ) {
     this.appConfig = this.configService.getOrThrow<AppConfig>(APP_CONFIG_KEY);
@@ -55,6 +59,11 @@ export class HealthController {
       // A heap ceiling catches a runaway leak before the process is OOM-killed,
       // which gives the orchestrator a chance to cycle the instance gracefully.
       () => this.memory.checkHeap('memory_heap', 512 * 1024 * 1024),
+      // Phase 2 dependencies: reported, never fatal (see the indicator).
+      () => this.knowledge.objectStorage('object_storage'),
+      () => this.knowledge.vectorStoreHealth('vector_store'),
+      () => this.knowledge.aiServiceHealth('ai_service'),
+      () => this.knowledge.queue('queue'),
     ]);
   }
 

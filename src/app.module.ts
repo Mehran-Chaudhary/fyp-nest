@@ -18,12 +18,17 @@ import { RequestContextModule } from './shared/context/request-context.module';
 import { CryptoModule } from './shared/crypto/crypto.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { MailModule } from './shared/mail/mail.module';
+import { AiServiceModule } from './shared/ai-service/ai-service.module';
+import { QueueModule } from './shared/queue/queue.module';
 import { RedisModule } from './shared/redis/redis.module';
+import { StorageModule } from './shared/storage/storage.module';
+import { VectorStoreModule } from './shared/vector-store/vector-store.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
+import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { RbacModule } from './modules/rbac/rbac.module';
@@ -74,6 +79,12 @@ import { UsersModule } from './modules/users/users.module';
     RedisModule,
     MailModule,
     DatabaseModule,
+    // Phase 2 cloud dependencies. Each boots without configuration and reports
+    // itself unconfigured, so the platform starts before they are provisioned.
+    StorageModule,
+    VectorStoreModule,
+    AiServiceModule,
+    QueueModule,
     EventEmitterModule.forRoot({
       // Wildcard listeners let phase 4's workflow engine subscribe to whole
       // event families (`agent.*`) without enumerating them.
@@ -93,6 +104,7 @@ import { UsersModule } from './modules/users/users.module';
     MembershipsModule,
     InvitationsModule,
     AuthModule,
+    KnowledgeModule,
   ],
   providers: [
     // ── Global guards, in execution order ─────────────────────────────────

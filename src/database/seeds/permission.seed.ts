@@ -26,4 +26,12 @@ export async function seedPermissions(app: INestApplicationContext): Promise<voi
     `Permission catalogue synchronised: ${PERMISSION_DEFINITIONS.length} defined, ` +
       `${result.created} created, ${result.updated} updated.`,
   );
+
+  // Built-in roles in existing workspaces pick up permissions added since they
+  // were seeded (phase 2: the clearance keys).
+  const roles = await rbacService.syncSystemRoles();
+  logger.log(
+    `System roles synchronised: ${roles.rolesUpdated} updated, ` +
+      `${roles.membersRecomputed} member permission set(s) recomputed.`,
+  );
 }

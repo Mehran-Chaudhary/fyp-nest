@@ -30,6 +30,8 @@ export const THROTTLE_POLICY = {
   DEFAULT: 'default',
   AUTH: 'auth',
   EMAIL: 'email',
+  UPLOAD: 'upload',
+  RAG: 'rag',
 } as const;
 
 export default registerAs(THROTTLE_CONFIG_KEY, (): ThrottleConfig => {
@@ -53,6 +55,20 @@ export default registerAs(THROTTLE_CONFIG_KEY, (): ThrottleConfig => {
       limit: Number(process.env.THROTTLE_EMAIL_LIMIT),
       description:
         'Endpoints that trigger outbound email, so the platform cannot be used as a spam relay.',
+    },
+    [THROTTLE_POLICY.UPLOAD]: {
+      name: THROTTLE_POLICY.UPLOAD,
+      ttlMs: parseDuration(process.env.THROTTLE_UPLOAD_TTL as string),
+      limit: Number(process.env.THROTTLE_UPLOAD_LIMIT),
+      description:
+        'Document uploads. Each one costs storage, parsing and embedding compute downstream.',
+    },
+    [THROTTLE_POLICY.RAG]: {
+      name: THROTTLE_POLICY.RAG,
+      ttlMs: parseDuration(process.env.THROTTLE_RAG_TTL as string),
+      limit: Number(process.env.THROTTLE_RAG_LIMIT),
+      description:
+        'Retrieval queries. Each one costs an embedding call and a vector search.',
     },
   };
 

@@ -1,3 +1,5 @@
+// Must stay first: it disables queue workers before configuration is read.
+import './seed-env';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../../app.module';

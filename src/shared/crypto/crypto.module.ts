@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { ContentEncryptionService } from './content-encryption.service';
 import { EncryptionService } from './encryption.service';
 import { PasswordHashingService } from './password-hashing.service';
 import { TokenService } from './token.service';
@@ -12,7 +13,17 @@ import { TokenService } from './token.service';
  */
 @Global()
 @Module({
-  providers: [PasswordHashingService, TokenService, EncryptionService],
-  exports: [PasswordHashingService, TokenService, EncryptionService],
+  providers: [
+    PasswordHashingService,
+    TokenService,
+    EncryptionService,
+    ContentEncryptionService,
+  ],
+  exports: [
+    PasswordHashingService,
+    TokenService,
+    EncryptionService,
+    ContentEncryptionService,
+  ],
 })
 export class CryptoModule {}

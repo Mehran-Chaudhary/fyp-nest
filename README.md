@@ -13,24 +13,38 @@ Supervisor: Ms. Maryam Wardah · Co-Supervisor: Mr. Qaiser Manzoor
 
 ## Status
 
-**Phase 1 of 5 is implemented** — foundation, identity, multi-tenancy, RBAC and
-the tamper-evident audit log. See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md)
-for the full five-phase plan and what each phase delivers.
+**Phases 1 and 2 of 5 are implemented.**
+
+- **Phase 1:** foundation, identity, multi-tenancy, RBAC and the tamper-evident
+  audit log.
+- **Phase 2:** the knowledge layer. Encrypted document storage, an async
+  ingestion pipeline, hybrid vector search, and access-controlled retrieval
+  that enforces compartments and clearance *inside* the search.
+
+See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the
+five-phase plan and [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md) for what to
+provision.
 
 | Check | Result |
 |-------|--------|
-| `npm run typecheck` | clean |
-| `npm run build` | clean |
-| `npm test` | 184 tests, 7 suites, passing |
+| `npm run typecheck` / `lint` / `build` | clean |
+| `npm test` | 343 tests, 16 suites, passing |
 | `npm audit` | 0 vulnerabilities |
-| Live database run | **not yet verified** — see below |
+| Migrations + seed on real PostgreSQL 18 | ✅ both migrations apply, revert and re-apply |
+| Live HTTP (auth, workspaces, knowledge bases, grants) | ✅ |
+| `npm run test:e2e:knowledge` (real PostgreSQL, in-memory cloud stand-ins) | ✅ 13/13 |
+| `npm run test:integration` (live Qdrant) | ⏳ runs once `QDRANT_URL` is set |
 
-### Outstanding verification
+### Outstanding
 
-The migration, seed and live HTTP paths have not been exercised against a real
-PostgreSQL instance yet. They compile and are unit-tested, but that is not the
-same as having run. Follow the setup below and report anything that breaks —
-first-run issues in a schema this size are expected and are quick to fix.
+- **The database credentials in the local `.env` are rejected** by the server
+  (`password authentication failed for user "postgres"`). Fix them before running
+  migrations against your cloud database.
+- Real document ingestion needs object storage, Qdrant and the Python AI service
+  (implementing [the v1 contract](docs/contracts/ai-service-v1.md)). Until they
+  are configured, upload and retrieval return `503
+  KNOWLEDGE_LAYER_NOT_CONFIGURED` and name the missing variables; everything else
+  works.
 
 ---
 
@@ -39,10 +53,15 @@ first-run issues in a schema this size are expected and are quick to fix.
 | | Version | Notes |
 |---|---|---|
 | Node.js | ≥ 20.11 | Developed on 22.14 |
-| PostgreSQL | ≥ 13 | Needs `gen_random_uuid()`; 17+ recommended |
-| Redis | ≥ 6 | |
+| PostgreSQL | ≥ 13 | Needs `gen_random_uuid()`; verified on 18 |
+| Redis | ≥ 6 | `maxmemory-policy noeviction` (it holds BullMQ jobs) |
+| S3-compatible storage | any | phase 2: Cloudflare R2 recommended |
+| Qdrant | ≥ 1.10 | phase 2: Qdrant Cloud; needs the Query API for hybrid search |
+| Python AI service | contract v1 | phase 2: see `docs/contracts/ai-service-v1.md` |
 
-Docker Compose is provided for both, if you would rather not install them.
+All of these run as managed cloud services. [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md)
+walks through provisioning each one and which variables to set where. Docker
+Compose is provided for PostgreSQL and Redis if you ever want them locally.
 
 ---
 
@@ -129,7 +148,7 @@ npm run start:dev
 | API | http://localhost:3000/api/v1 |
 | Swagger UI | http://localhost:3000/docs |
 | OpenAPI JSON | http://localhost:3000/docs-json |
-| Health | http://localhost:3000/health |
+| Health | http://localhost:3000/health (full) · `/health/ready` (use for cloud health checks) · `/health/live` |
 
 The OpenAPI document is the contract for the React frontend — generate the client
 from `/docs-json` rather than hand-writing request types.
@@ -159,7 +178,24 @@ curl http://localhost:3000/api/v1/organizations/acme-corporation/members \
 curl http://localhost:3000/api/v1/organizations/acme-corporation/audit-logs/verify \
   -H 'Authorization: Bearer <accessToken>' \
   -H 'X-Organization-Id: acme-corporation'
+
+# Phase 2: create a restricted knowledge base, upload into it, ask a question.
+curl -X POST http://localhost:3000/api/v1/organizations/acme-corporation/knowledge-bases \
+  -H 'Authorization: Bearer <accessToken>' -H 'Content-Type: application/json' \
+  -d '{"name":"HR Policies","accessMode":"RESTRICTED","defaultClassification":"CONFIDENTIAL"}'
+
+curl -X POST http://localhost:3000/api/v1/organizations/acme-corporation/knowledge-bases/<kbId>/documents \
+  -H 'Authorization: Bearer <accessToken>' -F 'file=@leave-policy.pdf'
+
+curl -X POST http://localhost:3000/api/v1/organizations/acme-corporation/rag/query \
+  -H 'Authorization: Bearer <accessToken>' -H 'Content-Type: application/json' \
+  -d '{"query":"How many days of annual leave do I get?"}'
 ```
+
+With `SEED_DEMO_DATA=true`, the demo workspace `acme-corp` has an open
+**Company Handbook** and a RESTRICTED **HR Policies** compartment admitting only
+the HR Manager (MANAGE) and Compliance Auditor (READ) roles. Sign in as
+`employee@acme.test` or `admin@acme.test` and HR Policies does not exist for you.
 
 ---
 
@@ -170,8 +206,12 @@ curl http://localhost:3000/api/v1/organizations/acme-corporation/audit-logs/veri
 | `npm run start:dev` | Watch mode |
 | `npm run build` | Compile to `dist/` |
 | `npm run start:prod` | Run the compiled build |
+| `npm run start:worker:prod` | Run the compiled background worker (optional separate service) |
+| `npm run start:worker:dev` | Worker in watch mode |
 | `npm run typecheck` | Type check without emitting |
 | `npm test` | Unit tests |
+| `npm run test:integration` | Live tests against cloud services (skipped unless configured) |
+| `npm run test:e2e:knowledge` | Knowledge layer end to end on a **disposable** database (`KNOWLEDGE_E2E=true`) |
 | `npm run test:cov` | Coverage |
 | `npm run lint` | ESLint with `--fix` |
 | `npm run migration:run` | Apply pending migrations |
@@ -190,7 +230,9 @@ src/
 ├── config/          Typed, Joi-validated configuration namespaces
 ├── common/          Cross-cutting: guards, decorators, filters, interceptors, utils
 ├── database/        Entities registry, data source, migrations, seeds
-├── shared/          Infrastructure: crypto, redis, mail, logging, request context
+├── shared/          Infrastructure: crypto, redis, mail, logging, request context,
+│                    object storage (S3), vector store (Qdrant), AI service client, queues
+├── worker.ts        Optional dedicated background worker entry point
 └── modules/         Feature modules
     ├── auth/            Sign-in, token rotation, sessions, recovery
     ├── users/           Identities and one-time tokens
@@ -200,6 +242,12 @@ src/
     ├── rbac/            Roles, permissions, effective-permission materialisation
     ├── api-keys/        Machine credentials for service-to-service calls
     ├── audit/           Tamper-evident compliance log
+    ├── knowledge/       Phase 2: knowledge bases, documents, ingestion, secure retrieval
+    │   ├── domain/          Classification lattice, access scope, status machine
+    │   ├── knowledge-bases/ Compartments and grants
+    │   ├── documents/       Upload inspection, encryption, the Document Vault
+    │   ├── ingestion/       BullMQ pipeline, reconciliation sweep, purges
+    │   └── retrieval/       Policy filters and two-point enforcement
     └── health/          Liveness and readiness probes
 ```
 
@@ -262,6 +310,16 @@ Worth knowing before changing anything in this codebase.
 - **Redis fails open; PostgreSQL fails closed.** Caching and rate limiting
   degrade gracefully during a Redis outage; the authoritative checks
   (`users.tokens_valid_from`, membership status) always run against the database.
+- **Retrieval enforces access twice.** Inside the vector search (a filter built
+  on the server; requests can narrow it, never widen it) and again when passage
+  text is read from PostgreSQL. The vector store holds no text.
+- **Document content is ciphertext everywhere it rests,** under per-document
+  keys. Deleting a document destroys its key immediately, so backups become
+  unreadable too. Deletion is irreversible by design.
+- **Upload types come from file bytes,** never from the client's
+  `Content-Type`. Macro-enabled and zip-bomb DOCX files are refused.
+- **Requests to the AI service are HMAC-signed** with replay protection, and
+  its responses are validated as untrusted input.
 
 ### Before deploying
 
@@ -289,6 +347,12 @@ without them, and bootstrap throws if it detects a development default.
 - [`docs/adr/0001-multi-tenancy.md`](docs/adr/0001-multi-tenancy.md) — why
   row-level tenancy rather than schema-per-tenant, and what replaces the
   guarantee
+- [`docs/adr/0002-knowledge-layer-security.md`](docs/adr/0002-knowledge-layer-security.md) —
+  the access lattice, two-point enforcement, crypto-shredding, convergence
+- [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md) — provisioning each cloud service,
+  per phase, and which variables go where
+- [`docs/contracts/ai-service-v1.md`](docs/contracts/ai-service-v1.md) — the
+  Python AI service contract, with a reference signature verifier
 
 ---
 

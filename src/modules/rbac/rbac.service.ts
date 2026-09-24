@@ -617,7 +617,11 @@ export class RbacService {
     let updated = 0;
 
     for (const definition of PERMISSION_DEFINITIONS) {
-      const [resource, action] = definition.key.split(':');
+      // Split on the first colon only: `pii:policy:read` is resource `pii`,
+      // action `policy:read` — the same rule the permission matcher applies.
+      const separator = definition.key.indexOf(':');
+      const resource = definition.key.slice(0, separator);
+      const action = definition.key.slice(separator + 1);
 
       const existing = await this.permissionRepository.findOne({
         where: { key: definition.key },
@@ -643,19 +647,87 @@ export class RbacService {
         existing.description !== definition.description ||
         existing.category !== definition.category ||
         existing.isDangerous !== (definition.dangerous ?? false) ||
-        existing.phase !== definition.phase;
+        existing.phase !== definition.phase ||
+        existing.resource !== resource ||
+        existing.action !== action;
 
       if (changed) {
         existing.description = definition.description;
         existing.category = definition.category;
         existing.isDangerous = definition.dangerous ?? false;
         existing.phase = definition.phase;
+        existing.resource = resource;
+        existing.action = action;
         await this.permissionRepository.save(existing);
         updated += 1;
       }
     }
 
     return { created, updated };
+  }
+
+  /**
+   * Brings every workspace's built-in roles in line with their code definitions.
+   *
+   * System roles are seeded when a workspace is created and are immutable
+   * through the API, so without this a permission added to, say, the Member
+   * role in a later phase would reach new workspaces only. Phase 2 is the first
+   * time that matters: every existing Member needs `clearance:internal` to read
+   * ordinary documents.
+   *
+   * Idempotent. Each changed role and the effective permissions of its holders
+   * are updated in one transaction per role. Custom roles are never touched —
+   * they belong to the workspace, not to the platform.
+   */
+  async syncSystemRoles(): Promise<{ rolesUpdated: number; membersRecomputed: number }> {
+    const definitions = new Map(
+      SYSTEM_ROLE_DEFINITIONS.map((definition) => [definition.slug, definition]),
+    );
+    const systemRoles = await this.roleRepository.find({
+      where: { isSystem: true, slug: In([...definitions.keys()]) },
+    });
+
+    const catalogue = new Map(
+      (await this.permissionRepository.find()).map((p) => [p.key, p]),
+    );
+    let rolesUpdated = 0;
+    let membersRecomputed = 0;
+
+    for (const role of systemRoles) {
+      const definition = definitions.get(role.slug as SystemRoleSlug);
+      if (!definition) continue;
+
+      const current = [...(role.permissionKeys ?? [])].sort();
+      const desired = [...definition.permissions].sort();
+      if (
+        current.length === desired.length &&
+        current.every((key, index) => key === desired[index])
+      ) {
+        continue;
+      }
+
+      await this.dataSource.transaction(async (manager) => {
+        role.permissionKeys = [...definition.permissions];
+        role.permissions = this.resolveConcretePermissions(
+          definition.permissions,
+          catalogue,
+        );
+        await manager.getRepository(Role).save(role);
+
+        const holders: Array<{ member_id: string }> = await manager.query(
+          `SELECT mr.member_id FROM member_roles mr
+             JOIN organization_members m ON m.id = mr.member_id
+            WHERE mr.role_id = $1 AND m.deleted_at IS NULL`,
+          [role.id],
+        );
+        await this.recomputeMembersWithRole(role.id, manager);
+        membersRecomputed += holders.length;
+      });
+
+      rolesUpdated += 1;
+    }
+
+    return { rolesUpdated, membersRecomputed };
   }
 
   /** Convenience accessor used by the workspace-creation flow. */

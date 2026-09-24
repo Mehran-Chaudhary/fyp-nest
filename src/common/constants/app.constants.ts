@@ -29,6 +29,8 @@ export const METADATA_KEY = {
   THROTTLE_POLICY: 'daiap:throttle-policy',
   /** Requires a verified email address. */
   REQUIRE_VERIFIED_EMAIL: 'daiap:require-verified-email',
+  /** Named request-timeout budget overriding the global default. */
+  TIMEOUT_BUDGET: 'daiap:timeout-budget',
 } as const;
 
 // ── Custom request / response headers ───────────────────────────────────────
@@ -81,8 +83,8 @@ export const SECURITY_SCHEME = {
 } as const;
 
 /**
- * Upper bound on any single JSON body. Documents are uploaded as multipart in a
- * later phase and are governed by their own, larger limit.
+ * Upper bound on any single JSON body. Documents are uploaded as multipart and
+ * are governed by their own, larger limit (`UPLOAD_MAX_FILE_SIZE`).
  */
 export const DEFAULT_JSON_BODY_LIMIT = '2mb';
 

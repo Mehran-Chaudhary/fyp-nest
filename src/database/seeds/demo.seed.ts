@@ -3,6 +3,14 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { SystemRoleSlug } from '../../common/constants/permissions.constants';
 import {
+  AccessLevel,
+  KnowledgeBaseAccessMode,
+  type AccessPrincipal,
+} from '../../modules/knowledge/domain/access';
+import { Classification } from '../../modules/knowledge/domain/classification';
+import { GrantSubjectType } from '../../modules/knowledge/entities/knowledge-base-grant.entity';
+import { KnowledgeBasesService } from '../../modules/knowledge/knowledge-bases/knowledge-bases.service';
+import {
   MembershipStatus,
   OrganizationMember,
 } from '../../modules/memberships/entities/organization-member.entity';
@@ -95,10 +103,14 @@ const DEMO_ROLES = [
       'role:read',
       'knowledgebase:read',
       'knowledgebase:create',
+      'knowledgebase:update',
       'document:read',
       'document:create',
       'document:update',
+      'document:download',
       'rag:query',
+      // Holds the highest clearance in the workspace: payroll is RESTRICTED.
+      'clearance:restricted',
       'agent:read',
       'agent:execute',
       'conversation:read',
@@ -125,6 +137,7 @@ const DEMO_ROLES = [
       'audit:verify',
       'document:read',
       'knowledgebase:read',
+      'clearance:confidential',
       'agent:read',
       'conversation:read',
       'conversation:read_all',
@@ -157,7 +170,8 @@ export async function seedDemoData(app: INestApplicationContext): Promise<void> 
 
     const existing = await organizationsService.findBySlug('acme-corp');
     if (existing) {
-      logger.log('Demo workspace "acme-corp" already exists; nothing to do.');
+      logger.log('Demo workspace "acme-corp" already exists.');
+      await seedDemoKnowledge(app, existing.id, owner.id, logger);
       return;
     }
 
@@ -217,6 +231,7 @@ export async function seedDemoData(app: INestApplicationContext): Promise<void> 
     }
 
     await organizationsService.refreshMemberCount(organization.id);
+    await seedDemoKnowledge(app, organization.id, owner.id, logger);
   });
 
   logger.log('');
@@ -225,6 +240,90 @@ export async function seedDemoData(app: INestApplicationContext): Promise<void> 
     logger.log(`  ${person.email.padEnd(22)} ${DEMO_PASSWORD}   (${person.roleSlug})`);
   }
   logger.log('');
+}
+
+/**
+ * Two knowledge bases that make the phase 2 access model demonstrable:
+ *
+ *  - **Company Handbook** — WORKSPACE mode, INTERNAL. Every member can search it.
+ *  - **HR Policies** — a RESTRICTED compartment, CONFIDENTIAL by default. Only
+ *    the HR Manager role (MANAGE) and the Compliance Auditor role (READ) are
+ *    admitted; to everyone else, including the administrator, it does not exist.
+ *
+ * Created through the same service the API uses, as the owner. Documents are not
+ * seeded: they need the object store, the vector store and the AI service, and
+ * uploading a few through the API is the better demonstration anyway.
+ */
+async function seedDemoKnowledge(
+  app: INestApplicationContext,
+  organizationId: string,
+  ownerUserId: string,
+  logger: Logger,
+): Promise<void> {
+  const knowledgeBases = app.get(KnowledgeBasesService);
+  const rbacService = app.get(RbacService);
+  const dataSource = app.get(DataSource);
+
+  const [membership]: Array<{ id: string }> = await dataSource.query(
+    `SELECT id FROM organization_members
+      WHERE organization_id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+    [organizationId, ownerUserId],
+  );
+
+  const owner: AccessPrincipal = {
+    organizationId,
+    kind: 'user',
+    userId: ownerUserId,
+    membershipId: membership?.id,
+    permissions: ['*:*'],
+  };
+
+  const existing = await knowledgeBases.list(owner, {
+    page: 1,
+    limit: 100,
+    sortDirection: 'ASC',
+  });
+  const names = new Set(existing.items.map((base) => base.name));
+
+  if (!names.has('Company Handbook')) {
+    await knowledgeBases.create(owner, {
+      name: 'Company Handbook',
+      description: 'Policies and guides every employee may read.',
+      accessMode: KnowledgeBaseAccessMode.WORKSPACE,
+      defaultClassification: Classification.INTERNAL,
+    });
+    logger.log('  knowledge base: Company Handbook (WORKSPACE, INTERNAL)');
+  }
+
+  if (!names.has('HR Policies')) {
+    const hr = await knowledgeBases.create(owner, {
+      name: 'HR Policies',
+      description: 'Compensation, disciplinary and payroll material. Restricted to HR.',
+      accessMode: KnowledgeBaseAccessMode.RESTRICTED,
+      defaultClassification: Classification.CONFIDENTIAL,
+    });
+
+    const roles = new Map(
+      (await rbacService.listRoles(organizationId)).map((role) => [role.slug, role]),
+    );
+    const grants: Array<[string, AccessLevel]> = [
+      ['hr-manager', AccessLevel.MANAGE],
+      ['compliance-auditor', AccessLevel.READ],
+    ];
+
+    for (const [slug, accessLevel] of grants) {
+      const role = roles.get(slug);
+      if (!role) continue;
+      await knowledgeBases.upsertGrant(owner, hr.id, {
+        subjectType: GrantSubjectType.ROLE,
+        subjectId: role.id,
+        accessLevel,
+      });
+    }
+    logger.log(
+      '  knowledge base: HR Policies (RESTRICTED, CONFIDENTIAL; HR Manager + Auditor)',
+    );
+  }
 }
 
 /** Creates a demo user, or returns the existing one. Idempotent. */

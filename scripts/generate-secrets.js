@@ -46,6 +46,11 @@ const SECRET_KEYS = [
     key: 'COOKIE_SECRET',
     comment: 'Signs cookies. Falls back to JWT_ACCESS_SECRET when unset.',
   },
+  {
+    key: 'AI_SERVICE_SIGNING_SECRET',
+    comment:
+      'HMAC key signing requests to the Python AI service. Set the SAME value on the AI service.',
+  },
 ];
 
 function generate() {
