@@ -5,8 +5,9 @@ the only client. This document is the specification; the TypeScript side lives
 in `src/shared/ai-service/`.
 
 **Division of labour.** The AI service does stateless computation: it turns
-bytes into chunks and text into vectors. It stores nothing, holds no tenant
-data between requests, and never talks to the vector store or the database.
+bytes into chunks, text into vectors and text into entity spans. It stores
+nothing, holds no tenant data between requests, and never talks to the vector
+store or the database.
 The backend decides what may be processed, stores the results encrypted, and
 enforces who may retrieve them.
 
@@ -227,6 +228,104 @@ Response `200`: best first, `index` refers to the input array.
 
 ---
 
+## `POST /v1/pii/analyze` (phase 3)
+
+Named-entity detection for the PII Redaction Engine: the part of detection that
+finds **names** (and places, organisations), which no regular expression can.
+The backend finds everything structural itself (cards, IBANs, national ids,
+phones, emails, credentials, salaries) and asks this endpoint only for the types
+it cannot, so it is called with `entities: ["PERSON"]` in the default policy.
+
+Used when `PII_NER_PROVIDER=ai-service` (the default). If the endpoint is
+missing (404), unreachable or failing, the workspace's policy decides: refuse
+the request (the default, `REFUSE`) or continue with the pattern layer only
+(`DEGRADE_TO_PATTERNS`). Nothing is ever sent to a model unmasked because this
+service is down.
+
+```json
+{
+  "texts": ["Employee: Ayesha Raza, joined 2019.", "Raza reports to Imran Khan."],
+  "entities": ["PERSON"],
+  "language": "en",
+  "score_threshold": 0.5
+}
+```
+
+- `texts`: up to 32 per request, 120,000 characters in total. Analyse each
+  independently. The backend has already normalised them (NFKC, invisible
+  characters removed); do not normalise again, or the offsets will not match.
+- `entities`: return only these types. Use Presidio's names (`PERSON`,
+  `LOCATION`, `NRP`, `ORGANIZATION`, …); anything upper-case is accepted.
+- `score_threshold`: drop results scoring below it.
+
+Response `200`: one list per input text, in input order.
+
+```json
+{
+  "results": [
+    [ { "entity_type": "PERSON", "start": 10, "end": 21, "score": 0.85 } ],
+    [ { "entity_type": "PERSON", "start": 0, "end": 4, "score": 0.72 },
+      { "entity_type": "PERSON", "start": 16, "end": 26, "score": 0.85 } ]
+  ],
+  "detector": { "name": "presidio", "version": "2.2.358", "model": "en_core_web_lg" }
+}
+```
+
+- **Offsets are Python string indices** (code points), end exclusive, exactly as
+  Presidio returns them. The backend converts them to its own (UTF-16) indices;
+  do **not** convert them yourself. On text with an emoji before a name, the two
+  differ, and a wrong offset masks the wrong characters.
+- The backend **rejects** the whole response (and applies the failure policy)
+  unless there is one list per text, every `entity_type` is upper-case, every
+  span satisfies `0 ≤ start < end ≤ len(text)`, and every `score` is in `[0, 1]`.
+- `detector` is optional and recorded with each redaction, so a change of model
+  shows up in the usage ledger.
+- **Never log the texts.** They are exactly the personal data about to be masked.
+  Log the request id, workspace id, counts and timings.
+
+### Reference implementation (Presidio)
+
+```python
+# pip install presidio-analyzer && python -m spacy download en_core_web_lg
+from presidio_analyzer import AnalyzerEngine
+from pydantic import BaseModel, Field
+
+analyzer = AnalyzerEngine()  # loads spaCy once, at startup
+
+class AnalyzeRequest(BaseModel):
+    texts: list[str] = Field(max_length=32)
+    entities: list[str]
+    language: str = "en"
+    score_threshold: float = 0.5
+
+@app.post("/v1/pii/analyze")
+async def analyze(body: AnalyzeRequest, _=Depends(verify_signature)):
+    results = []
+    for text in body.texts:
+        found = analyzer.analyze(
+            text=text,
+            entities=body.entities,
+            language=body.language,
+            score_threshold=body.score_threshold,
+        ) if text else []
+        results.append([
+            {"entity_type": r.entity_type, "start": r.start, "end": r.end, "score": round(r.score, 3)}
+            for r in found
+        ])
+    return {
+        "results": results,
+        "detector": {"name": "presidio", "version": presidio_analyzer.__version__, "model": "en_core_web_lg"},
+    }
+```
+
+`analyzer.analyze` is CPU-bound: run it in a thread pool (`run_in_executor`) or
+with several workers, or one slow request stalls the others. `en_core_web_lg`
+needs about 1 GB of RAM; `en_core_web_trf` is more accurate on names and needs
+a GPU to be fast. Keep the model warm: the backend times the call out after
+`PII_TIMEOUT` (10 s).
+
+---
+
 ## `GET /v1/health`
 
 Signed like everything else (no body). Called once at backend boot and by the
@@ -237,12 +336,15 @@ backend's `/health` report.
   "status": "ok",
   "contract_version": 1,
   "embedding": { "model": "nomic-embed-text", "dimensions": 768 },
-  "rerank": { "available": false }
+  "rerank": { "available": false },
+  "pii": { "available": true, "detector": "presidio@2.2.358/en_core_web_lg" }
 }
 ```
 
 The backend logs an error at boot if `embedding` disagrees with its
-`EMBEDDING_MODEL` / `EMBEDDING_DIMENSIONS`.
+`EMBEDDING_MODEL` / `EMBEDDING_DIMENSIONS`. `pii` (phase 3) says whether
+`/v1/pii/analyze` is implemented; the backend's `/health` report shows it as
+the `pii_detector` component. A service built before phase 3 simply omits it.
 
 ---
 
@@ -251,7 +353,7 @@ The backend logs an error at boot if `embedding` disagrees with its
 - **Idempotent and stateless.** The same request may arrive more than once
   (retries, resumed jobs). Return the same result; store nothing.
 - **Response size** ≤ `AI_SERVICE_MAX_RESPONSE_SIZE` (64 MB); larger is refused.
-- **Timeouts:** parse ≤ `AI_SERVICE_PARSE_TIMEOUT` (300 s), everything else ≤
-  `AI_SERVICE_TIMEOUT` (30 s).
-- **Never log document text or query text.** Log the request id, workspace id,
+- **Timeouts:** parse ≤ `AI_SERVICE_PARSE_TIMEOUT` (300 s), PII analysis ≤
+  `PII_TIMEOUT` (10 s), everything else ≤ `AI_SERVICE_TIMEOUT` (30 s).
+- **Never log document, query or PII-analysis text.** Log the request id, workspace id,
   document id, sizes and timings.

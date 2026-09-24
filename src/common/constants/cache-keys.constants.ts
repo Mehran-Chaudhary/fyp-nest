@@ -20,6 +20,8 @@ export const CACHE_NAMESPACE = {
   THROTTLE: 'throttle',
   LOCK: 'lock',
   IDEMPOTENCY: 'idem',
+  PII: 'pii',
+  LLM: 'llm',
 } as const;
 
 export const CacheKeys = {
@@ -79,6 +81,13 @@ export const CacheKeys = {
 
   /** Distributed mutex. */
   lock: (resource: string): string => `${CACHE_NAMESPACE.LOCK}:${resource}`,
+
+  /**
+   * NER results for one text, keyed by a keyed digest of the text, the
+   * workspace and the policy. The value is offsets and types only — never text.
+   */
+  piiDetection: (fingerprint: string): string =>
+    `${CACHE_NAMESPACE.PII}:ner:${fingerprint}`,
 } as const;
 
 /** Default TTLs, in seconds, for cached projections. */

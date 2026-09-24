@@ -38,7 +38,7 @@ export interface AppConfig {
 
 export const APP_CONFIG_KEY = 'app';
 
-export type RequestTimeoutBudget = 'upload' | 'retrieval';
+export type RequestTimeoutBudget = 'upload' | 'retrieval' | 'inference';
 
 export default registerAs(APP_CONFIG_KEY, (): AppConfig => {
   const env = (process.env.NODE_ENV ?? 'development') as NodeEnvironment;
@@ -60,6 +60,8 @@ export default registerAs(APP_CONFIG_KEY, (): AppConfig => {
     requestTimeoutBudgets: {
       upload: parseDuration(process.env.UPLOAD_REQUEST_TIMEOUT ?? '120s'),
       retrieval: parseDuration(process.env.RAG_REQUEST_TIMEOUT ?? '60s'),
+      // Retrieval, redaction and a full generation on a local model.
+      inference: parseDuration(process.env.LLM_REQUEST_TIMEOUT ?? '300s'),
     },
     jsonBodyLimit: process.env.JSON_BODY_LIMIT as string,
     logLevel: process.env.LOG_LEVEL as string,

@@ -12,9 +12,9 @@ import { QueryFailedError, EntityNotFoundError } from 'typeorm';
 import { APP_CONFIG_KEY, type AppConfig } from '../../config/app.config';
 import { HEADER } from '../constants/app.constants';
 import { ERROR_CODE_MESSAGES, ErrorCode } from '../enums/error-code.enum';
-import { AppException, RateLimitError } from '../exceptions/app.exception';
+import { AppException } from '../exceptions/app.exception';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
-import { deepRedact } from '../utils/redact.util';
+import { deepRedact, LOG_SENSITIVE_KEYS } from '../utils/redact.util';
 
 /**
  * HTTP status to {@link ErrorCode}, for exceptions raised by Nest itself rather
@@ -86,6 +86,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     this.log(exception, resolved, request);
 
+    // A streaming response (Server-Sent Events) has already sent its status
+    // and headers; there is no envelope left to write. The stream reports its
+    // own errors as events, so all that remains is to end it cleanly.
+    if (response.headersSent) {
+      if (!response.writableEnded) response.end();
+      return;
+    }
+
     if (resolved.retryAfterSeconds !== undefined) {
       response.setHeader(HEADER.RETRY_AFTER, String(resolved.retryAfterSeconds));
     }
@@ -125,8 +133,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         code: exception.code,
         message: exception.displayMessage,
         details: exception.details,
-        retryAfterSeconds:
-          exception instanceof RateLimitError ? exception.retryAfterSeconds : undefined,
+        retryAfterSeconds: exception.retryAfterSeconds,
         isExpected: true,
       };
     }
@@ -335,7 +342,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error(
         {
           ...context,
-          body: deepRedact(request.body as unknown),
+          // Free text is redacted as well as secrets: a failed chat request
+          // must not copy the user's message into the application log.
+          body: deepRedact(request.body as unknown, LOG_SENSITIVE_KEYS),
           err: exception as Error,
         },
         `Unhandled exception: ${(exception as Error)?.message ?? 'unknown'}`,

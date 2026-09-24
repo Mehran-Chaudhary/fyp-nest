@@ -23,14 +23,17 @@ import { QueueModule } from './shared/queue/queue.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { VectorStoreModule } from './shared/vector-store/vector-store.module';
+import { AgentsModule } from './modules/agents/agents.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
+import { LlmModule } from './modules/llm/llm.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -105,6 +108,11 @@ import { UsersModule } from './modules/users/users.module';
     InvitationsModule,
     AuthModule,
     KnowledgeModule,
+    // Phase 3: the PII engine, the LLM gateway, and agents with memory. Each
+    // boots without its cloud dependency and answers 503 naming what is missing.
+    PrivacyModule,
+    LlmModule,
+    AgentsModule,
   ],
   providers: [
     // ── Global guards, in execution order ─────────────────────────────────

@@ -1,3 +1,7 @@
+import { Agent } from '../modules/agents/entities/agent.entity';
+import { AgentVersion } from '../modules/agents/entities/agent-version.entity';
+import { Conversation } from '../modules/agents/entities/conversation.entity';
+import { ConversationMessage } from '../modules/agents/entities/conversation-message.entity';
 import { ApiKey } from '../modules/api-keys/entities/api-key.entity';
 import { AuditLog } from '../modules/audit/entities/audit-log.entity';
 import { Invitation } from '../modules/invitations/entities/invitation.entity';
@@ -5,10 +9,13 @@ import { Document } from '../modules/knowledge/entities/document.entity';
 import { DocumentChunk } from '../modules/knowledge/entities/document-chunk.entity';
 import { KnowledgeBaseGrant } from '../modules/knowledge/entities/knowledge-base-grant.entity';
 import { KnowledgeBase } from '../modules/knowledge/entities/knowledge-base.entity';
+import { LlmInvocation } from '../modules/llm/entities/llm-invocation.entity';
+import { LlmPolicy } from '../modules/llm/entities/llm-policy.entity';
 import { OrganizationIpRule } from '../modules/organizations/entities/organization-ip-rule.entity';
 import { Organization } from '../modules/organizations/entities/organization.entity';
 import { OrganizationMember } from '../modules/memberships/entities/organization-member.entity';
 import { Permission } from '../modules/rbac/entities/permission.entity';
+import { PiiPolicy } from '../modules/privacy/entities/pii-policy.entity';
 import { Role } from '../modules/rbac/entities/role.entity';
 import { Session } from '../modules/auth/entities/session.entity';
 import { UserToken } from '../modules/users/entities/user-token.entity';
@@ -40,9 +47,23 @@ export const entities = [
   KnowledgeBaseGrant,
   Document,
   DocumentChunk,
+  PiiPolicy,
+  LlmPolicy,
+  LlmInvocation,
+  Agent,
+  AgentVersion,
+  Conversation,
+  ConversationMessage,
 ];
 
 export {
+  Agent,
+  AgentVersion,
+  Conversation,
+  ConversationMessage,
+  LlmInvocation,
+  LlmPolicy,
+  PiiPolicy,
   ApiKey,
   AuditLog,
   Document,

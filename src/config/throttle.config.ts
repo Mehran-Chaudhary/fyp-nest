@@ -32,6 +32,8 @@ export const THROTTLE_POLICY = {
   EMAIL: 'email',
   UPLOAD: 'upload',
   RAG: 'rag',
+  INFERENCE: 'inference',
+  PRIVACY: 'privacy',
 } as const;
 
 export default registerAs(THROTTLE_CONFIG_KEY, (): ThrottleConfig => {
@@ -69,6 +71,21 @@ export default registerAs(THROTTLE_CONFIG_KEY, (): ThrottleConfig => {
       limit: Number(process.env.THROTTLE_RAG_LIMIT),
       description:
         'Retrieval queries. Each one costs an embedding call and a vector search.',
+    },
+    [THROTTLE_POLICY.INFERENCE]: {
+      name: THROTTLE_POLICY.INFERENCE,
+      ttlMs: parseDuration(process.env.THROTTLE_INFERENCE_TTL as string),
+      limit: Number(process.env.THROTTLE_INFERENCE_LIMIT),
+      description:
+        'Agent turns and direct model calls. Each one holds a GPU slot for seconds, ' +
+        'so the budget is far tighter than for ordinary traffic.',
+    },
+    [THROTTLE_POLICY.PRIVACY]: {
+      name: THROTTLE_POLICY.PRIVACY,
+      ttlMs: parseDuration(process.env.THROTTLE_PII_TTL as string),
+      limit: Number(process.env.THROTTLE_PII_LIMIT),
+      description:
+        'PII analysis previews and redaction reports. Each one runs the NER model.',
     },
   };
 

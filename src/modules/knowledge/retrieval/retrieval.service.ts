@@ -34,11 +34,25 @@ import type {
 } from './dto/retrieval.dto';
 import {
   buildWithheldFilter,
+  effectiveClearance,
   planRetrieval,
   RetrievalScopeError,
   withheldReason,
   type RetrievalPlan,
 } from './retrieval-policy';
+
+/**
+ * A retrieval as the rest of the backend asks for it: the HTTP request's
+ * fields, plus server-side-only bounds that no client can set.
+ */
+export type RetrievalRequest = RetrievalQueryDto & {
+  /** Delegation bound: an agent's knowledge bases, intersected with the caller's scope. */
+  restrictToKnowledgeBaseIds?: readonly string[];
+  /** A ceiling below the caller's clearance: the agent's and the model endpoint's. */
+  maxClassification?: Classification;
+  /** Recorded in the audit record, e.g. which agent and conversation asked. */
+  origin?: Record<string, string | number>;
+};
 
 interface HydratedRow {
   chunkId: string;
@@ -110,7 +124,7 @@ export class RetrievalService {
 
   async retrieve(
     principal: AccessPrincipal,
-    request: RetrievalQueryDto,
+    request: RetrievalRequest,
   ): Promise<RetrievalResponseDto> {
     this.readiness.assert('retrieval');
 
@@ -169,6 +183,7 @@ export class RetrievalService {
         embeddingModel: model,
         knowledgeBasesSearched: plan?.knowledgeBaseIds.length ?? 0,
         clearance: scope.clearance,
+        effectiveClearance: effectiveClearance(scope.clearance, request.maxClassification),
         results,
         timings,
       };
@@ -439,7 +454,7 @@ export class RetrievalService {
   private async auditExecuted(
     principal: AccessPrincipal,
     scope: AccessScope,
-    request: RetrievalQueryDto,
+    request: RetrievalRequest,
     response: RetrievalResponseDto,
     drift: number,
   ): Promise<void> {
@@ -460,8 +475,13 @@ export class RetrievalService {
         topK: response.topK,
         reranked: response.reranked,
         clearance: scope.clearance,
+        effectiveClearance:
+          response.effectiveClearance === scope.clearance
+            ? undefined
+            : response.effectiveClearance,
         knowledgeBasesSearched: response.knowledgeBasesSearched,
         narrowedTo: request.knowledgeBaseIds?.length ? request.knowledgeBaseIds : undefined,
+        origin: request.origin,
         results: response.results.map((result) => ({
           rank: result.rank,
           documentId: result.documentId,

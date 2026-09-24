@@ -240,6 +240,10 @@ async function bootstrap(): Promise<void> {
       .addTag('Knowledge bases', 'Document collections and access compartments')
       .addTag('Documents', 'The Document Vault: upload, processing status, download')
       .addTag('Retrieval', 'Access-controlled retrieval for RAG')
+      .addTag('Agents', 'Agent Builder and Persona Engine: versioned agents')
+      .addTag('Conversations', 'Conversations with agents: memory and streamed turns')
+      .addTag('LLM gateway', 'Models, the workspace model policy, direct inference, usage')
+      .addTag('Privacy', 'The PII redaction engine: policy, analysis and reports')
       .addTag('Health', 'Liveness and readiness probes')
       .build();
 

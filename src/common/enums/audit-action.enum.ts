@@ -69,7 +69,7 @@ export enum AuditAction {
   API_KEY_USED = 'api_key.used',
   API_KEY_REJECTED = 'api_key.rejected',
 
-  // ── Documents & knowledge (6.4, 6.5) — later phases ───────────────────────
+  // ── Documents & knowledge (6.4, 6.5) ──────────────────────────────────────
   DOCUMENT_UPLOADED = 'document.uploaded',
   DOCUMENT_PARSED = 'document.parsed',
   DOCUMENT_EMBEDDED = 'document.embedded',
@@ -90,22 +90,29 @@ export enum AuditAction {
   /** Content destroyed: vectors, chunks, stored object and the data key. */
   DOCUMENT_PURGED = 'document.purged',
 
-  // ── Secure RAG (6.6) — later phases ───────────────────────────────────────
+  // ── Secure RAG (6.6) ──────────────────────────────────────────────────────
   RAG_QUERY_EXECUTED = 'rag.query.executed',
   RAG_ACCESS_FILTERED = 'rag.access.filtered',
 
-  // ── LLM gateway (6.7) — later phases ──────────────────────────────────────
+  // ── LLM gateway (6.7) ─────────────────────────────────────────────────────
   LLM_INFERENCE_REQUESTED = 'llm.inference.requested',
   LLM_INFERENCE_COMPLETED = 'llm.inference.completed',
   LLM_INFERENCE_FAILED = 'llm.inference.failed',
+  LLM_POLICY_UPDATED = 'llm.policy.updated',
 
-  // ── Agents (6.8, 6.10) — later phases ─────────────────────────────────────
+  // ── Agents (6.8, 6.10) ────────────────────────────────────────────────────
   AGENT_CREATED = 'agent.created',
   AGENT_UPDATED = 'agent.updated',
   AGENT_DELETED = 'agent.deleted',
   AGENT_INVOKED = 'agent.invoked',
   AGENT_CONVERSATION_STARTED = 'agent.conversation.started',
   AGENT_CONVERSATION_DELETED = 'agent.conversation.deleted',
+  AGENT_PUBLISHED = 'agent.published',
+  AGENT_UNPUBLISHED = 'agent.unpublished',
+  AGENT_ACCESS_UPDATED = 'agent.access.updated',
+  AGENT_VERSION_RESTORED = 'agent.version.restored',
+  /** Someone read a conversation that is not theirs (supervision). */
+  AGENT_CONVERSATION_SUPERVISED = 'agent.conversation.supervised',
 
   // ── Workflows & tools (6.9, 6.11) — later phases ──────────────────────────
   WORKFLOW_CREATED = 'workflow.created',
@@ -118,10 +125,14 @@ export enum AuditAction {
   TOOL_EXECUTED = 'tool.executed',
   TOOL_EXECUTION_DENIED = 'tool.execution.denied',
 
-  // ── PII redaction (6.12) — later phases ───────────────────────────────────
+  // ── PII redaction (6.12) ──────────────────────────────────────────────────
   PII_REDACTED = 'pii.redacted',
   PII_UNMASKED = 'pii.unmasked',
   PII_POLICY_UPDATED = 'pii.policy.updated',
+  /** Detection was unavailable and the policy refused to proceed (fail closed). */
+  PII_REDACTION_FAILED = 'pii.redaction.failed',
+  /** The gateway's final check found sensitive data in an outgoing prompt. */
+  PII_EGRESS_BLOCKED = 'pii.egress.blocked',
 
   // ── Quota & throttling (6.14) ─────────────────────────────────────────────
   RATE_LIMIT_TRIGGERED = 'rate_limit.triggered',
@@ -158,6 +169,7 @@ const CRITICAL_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.AUDIT_CHAIN_TAMPER_DETECTED,
   AuditAction.ORGANIZATION_IP_BLOCKED,
   AuditAction.PII_UNMASKED,
+  AuditAction.PII_EGRESS_BLOCKED,
 ]);
 
 const WARNING_ACTIONS: ReadonlySet<AuditAction> = new Set([
@@ -174,6 +186,8 @@ const WARNING_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.DOCUMENT_UPLOAD_REJECTED,
   AuditAction.DOCUMENT_INGESTION_FAILED,
   AuditAction.DOCUMENT_INGESTION_DEAD_LETTERED,
+  AuditAction.PII_REDACTION_FAILED,
+  AuditAction.LLM_INFERENCE_FAILED,
 ]);
 
 const NOTICE_ACTIONS: ReadonlySet<AuditAction> = new Set([
@@ -197,6 +211,14 @@ const NOTICE_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.KNOWLEDGE_BASE_ACCESS_GRANTED,
   AuditAction.KNOWLEDGE_BASE_ACCESS_REVOKED,
   AuditAction.PII_POLICY_UPDATED,
+  AuditAction.LLM_POLICY_UPDATED,
+  AuditAction.AGENT_DELETED,
+  AuditAction.AGENT_PUBLISHED,
+  AuditAction.AGENT_UNPUBLISHED,
+  AuditAction.AGENT_ACCESS_UPDATED,
+  AuditAction.AGENT_VERSION_RESTORED,
+  AuditAction.AGENT_CONVERSATION_DELETED,
+  AuditAction.AGENT_CONVERSATION_SUPERVISED,
 ]);
 
 export function severityForAction(action: AuditAction, status: AuditStatus): AuditSeverity {

@@ -20,6 +20,7 @@ import {
   extractErrorBody,
   validateEmbeddingResponse,
   validateParseResponse,
+  validatePiiAnalyzeResponse,
   validateRerankResponse,
 } from './response-validation';
 
@@ -400,5 +401,64 @@ describe('AiServiceClient transport', () => {
     const batch = await client().embed({ inputs: [], inputType: 'document' });
     expect(batch.embeddings).toEqual([]);
     expect(calls).toHaveLength(0);
+  });
+});
+
+/**
+ * The PII detection contract (`POST /v1/pii/analyze`). Offsets come from
+ * Python, which counts code points; a span that is not converted masks the
+ * wrong characters on any text with an emoji before it.
+ */
+describe('AI service PII analysis contract', () => {
+  const span = (entity_type: string, start: number, end: number, score = 0.85) => ({
+    entity_type,
+    start,
+    end,
+    score,
+  });
+
+  it('converts code-point offsets to string offsets', () => {
+    const text = 'Thanks 🙏 from Ayesha Raza';
+    const result = validatePiiAnalyzeResponse(
+      {
+        results: [[span('PERSON', 14, 25)]],
+        detector: { name: 'presidio', version: '2.2', model: 'en_core_web_lg' },
+      },
+      { texts: [text] },
+    );
+    const [found] = result.results[0];
+    expect(text.slice(found.start, found.end)).toBe('Ayesha Raza');
+    expect(result.detector).toBe('presidio@2.2/en_core_web_lg');
+  });
+
+  it('requires one result list per text, in order', () => {
+    expect(() =>
+      validatePiiAnalyzeResponse({ results: [[]] }, { texts: ['a', 'b'] }),
+    ).toThrow(/one entry per text/);
+    expect(
+      validatePiiAnalyzeResponse({ results: [[], []] }, { texts: ['a', 'b'] }).detector,
+    ).toBe('unknown');
+  });
+
+  it('refuses offsets outside the text, empty spans and bad scores', () => {
+    const check = (item: unknown) => () =>
+      validatePiiAnalyzeResponse({ results: [[item]] }, { texts: ['short 😀'] });
+    expect(check(span('PERSON', 0, 8))).toThrow(/offsets/); // 7 code points
+    expect(check(span('PERSON', 3, 3))).toThrow(/offsets/);
+    expect(check(span('PERSON', -1, 2))).toThrow(/offsets/);
+    expect(check(span('PERSON', 0.5, 2))).toThrow(/offsets/);
+    expect(check(span('PERSON', 0, 2, 1.5))).toThrow(/score/);
+    expect(check(span('person', 0, 2))).toThrow(/entity_type/);
+    expect(check(span('PERSON', 0, 7))).not.toThrow();
+  });
+
+  it('fails as a contract violation, which is not retried', () => {
+    try {
+      validatePiiAnalyzeResponse({ results: 'nope' }, { texts: ['x'] });
+      throw new Error('expected a violation');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AiServiceError);
+      expect((error as AiServiceError).retryable).toBe(false);
+    }
   });
 });

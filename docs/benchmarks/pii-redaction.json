@@ -1,0 +1,1519 @@
+{
+  "generatedAt": "2026-09-24T19:17:28.064Z",
+  "command": "npm run benchmark:pii -- --documents 2000 --seed 20260924 --ner none",
+  "environment": {
+    "node": "v22.14.0",
+    "platform": "win32 10.0.26200 (x64)",
+    "cpu": "Intel(R) Core(TM) i5-8365U CPU @ 1.60GHz",
+    "cores": 8,
+    "memoryGb": 16
+  },
+  "corpus": {
+    "seed": 20260924,
+    "documents": 2000,
+    "characters": 1190613,
+    "entities": 20381,
+    "decoys": 12191,
+    "obfuscatedEntities": 980,
+    "byCategory": {
+      "chat": 294,
+      "clean": 205,
+      "finance": 277,
+      "hr-record": 509,
+      "it-incident": 304,
+      "support-ticket": 411
+    },
+    "generationMs": 516.5927000000011
+  },
+  "configuration": {
+    "ner": "none",
+    "nerDetector": "none",
+    "entityTypes": [
+      "CREDENTIAL",
+      "CREDIT_CARD",
+      "CUSTOM",
+      "EMAIL_ADDRESS",
+      "IBAN_CODE",
+      "IP_ADDRESS",
+      "PHONE_NUMBER",
+      "PK_CNIC",
+      "SALARY",
+      "US_SSN"
+    ],
+    "scoreThreshold": 0.5,
+    "denyList": [
+      "Project Falcon",
+      "Operation Blue Heron",
+      "Codename Nimbus"
+    ],
+    "personEntitiesNotMeasured": 4575
+  },
+  "detection": {
+    "byType": [
+      {
+        "type": "CREDENTIAL",
+        "label": "Credential or secret",
+        "gold": 963,
+        "detected": 963,
+        "predicted": 963,
+        "correct": 963,
+        "leaked": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "leakRate": 0
+      },
+      {
+        "type": "CREDIT_CARD",
+        "label": "Payment card number",
+        "gold": 2050,
+        "detected": 2050,
+        "predicted": 2050,
+        "correct": 2050,
+        "leaked": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "leakRate": 0
+      },
+      {
+        "type": "CUSTOM",
+        "label": "Custom term",
+        "gold": 616,
+        "detected": 616,
+        "predicted": 616,
+        "correct": 616,
+        "leaked": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "leakRate": 0
+      },
+      {
+        "type": "EMAIL_ADDRESS",
+        "label": "Email address",
+        "gold": 2728,
+        "detected": 2728,
+        "predicted": 2728,
+        "correct": 2728,
+        "leaked": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "leakRate": 0
+      },
+      {
+        "type": "IBAN_CODE",
+        "label": "IBAN",
+        "gold": 1713,
+        "detected": 1713,
+        "predicted": 1713,
+        "correct": 1713,
+        "leaked": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "leakRate": 0
+      },
+      {
+        "type": "IP_ADDRESS",
+        "label": "IP address",
+        "gold": 702,
+        "detected": 702,
+        "predicted": 702,
+        "correct": 702,
+        "leaked": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "leakRate": 0
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "label": "Phone number",
+        "gold": 2728,
+        "detected": 2728,
+        "predicted": 2728,
+        "correct": 2728,
+        "leaked": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "leakRate": 0
+      },
+      {
+        "type": "PK_CNIC",
+        "label": "Pakistani CNIC",
+        "gold": 1713,
+        "detected": 1713,
+        "predicted": 1713,
+        "correct": 1713,
+        "leaked": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "leakRate": 0
+      },
+      {
+        "type": "SALARY",
+        "label": "Salary or compensation",
+        "gold": 2391,
+        "detected": 2391,
+        "predicted": 2457,
+        "correct": 2391,
+        "leaked": 0,
+        "precision": 0.9731379731379731,
+        "recall": 1,
+        "f1": 0.9863861386138614,
+        "leakRate": 0
+      },
+      {
+        "type": "US_SSN",
+        "label": "US Social Security number",
+        "gold": 202,
+        "detected": 202,
+        "predicted": 203,
+        "correct": 202,
+        "leaked": 0,
+        "precision": 0.9950738916256158,
+        "recall": 1,
+        "f1": 0.9975308641975309,
+        "leakRate": 0
+      }
+    ],
+    "micro": {
+      "precision": 0.9957789957789958,
+      "recall": 1,
+      "f1": 0.9978850342498184
+    },
+    "macro": {
+      "precision": 0.9968211864763589,
+      "recall": 1,
+      "f1": 0.9983917002811392
+    },
+    "typeConfusions": {}
+  },
+  "protection": {
+    "entities": 15806,
+    "leaked": 0,
+    "leakRate": 0,
+    "byVariant": [
+      {
+        "variant": "CREDENTIAL · api-key-assignment",
+        "gold": 138,
+        "protected": 138,
+        "rate": 1
+      },
+      {
+        "variant": "CREDENTIAL · aws",
+        "gold": 131,
+        "protected": 131,
+        "rate": 1
+      },
+      {
+        "variant": "CREDENTIAL · connection-string",
+        "gold": 261,
+        "protected": 261,
+        "rate": 1
+      },
+      {
+        "variant": "CREDENTIAL · github",
+        "gold": 143,
+        "protected": 143,
+        "rate": 1
+      },
+      {
+        "variant": "CREDENTIAL · password-assignment",
+        "gold": 151,
+        "protected": 151,
+        "rate": 1
+      },
+      {
+        "variant": "CREDENTIAL · stripe",
+        "gold": 139,
+        "protected": 139,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-compact",
+        "gold": 110,
+        "protected": 110,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-compact+fullwidth",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-compact+no-break-space",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-compact+zero-width",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-dashed",
+        "gold": 95,
+        "protected": 95,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-dashed+fullwidth",
+        "gold": 7,
+        "protected": 7,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-dashed+zero-width",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-spaced",
+        "gold": 112,
+        "protected": 112,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-spaced+fullwidth",
+        "gold": 2,
+        "protected": 2,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-spaced+no-break-space",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · amex-spaced+zero-width",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-compact",
+        "gold": 102,
+        "protected": 102,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-compact+fullwidth",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-compact+no-break-space",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-compact+zero-width",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-dashed",
+        "gold": 100,
+        "protected": 100,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-dashed+fullwidth",
+        "gold": 6,
+        "protected": 6,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-dashed+no-break-space",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-dashed+zero-width",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-spaced",
+        "gold": 105,
+        "protected": 105,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-spaced+fullwidth",
+        "gold": 7,
+        "protected": 7,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-spaced+no-break-space",
+        "gold": 1,
+        "protected": 1,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · discover-spaced+zero-width",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-compact",
+        "gold": 94,
+        "protected": 94,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-compact+fullwidth",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-compact+no-break-space",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-compact+zero-width",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-dashed",
+        "gold": 104,
+        "protected": 104,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-dashed+fullwidth",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-dashed+no-break-space",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-dashed+zero-width",
+        "gold": 2,
+        "protected": 2,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-spaced",
+        "gold": 112,
+        "protected": 112,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-spaced+fullwidth",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-spaced+no-break-space",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-2-spaced+zero-width",
+        "gold": 2,
+        "protected": 2,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-compact",
+        "gold": 106,
+        "protected": 106,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-compact+fullwidth",
+        "gold": 7,
+        "protected": 7,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-compact+no-break-space",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-compact+zero-width",
+        "gold": 6,
+        "protected": 6,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-dashed",
+        "gold": 102,
+        "protected": 102,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-dashed+fullwidth",
+        "gold": 1,
+        "protected": 1,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-dashed+no-break-space",
+        "gold": 1,
+        "protected": 1,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-dashed+zero-width",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-spaced",
+        "gold": 108,
+        "protected": 108,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-spaced+fullwidth",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-spaced+no-break-space",
+        "gold": 6,
+        "protected": 6,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · mastercard-spaced+zero-width",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-compact",
+        "gold": 101,
+        "protected": 101,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-compact+fullwidth",
+        "gold": 6,
+        "protected": 6,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-compact+no-break-space",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-compact+zero-width",
+        "gold": 7,
+        "protected": 7,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-dashed",
+        "gold": 86,
+        "protected": 86,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-dashed+fullwidth",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-dashed+no-break-space",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-dashed+zero-width",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-spaced",
+        "gold": 96,
+        "protected": 96,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-spaced+fullwidth",
+        "gold": 9,
+        "protected": 9,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-spaced+no-break-space",
+        "gold": 8,
+        "protected": 8,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · unionpay-spaced+zero-width",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-compact",
+        "gold": 100,
+        "protected": 100,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-compact+fullwidth",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-compact+no-break-space",
+        "gold": 8,
+        "protected": 8,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-compact+zero-width",
+        "gold": 1,
+        "protected": 1,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-dashed",
+        "gold": 95,
+        "protected": 95,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-dashed+fullwidth",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-dashed+no-break-space",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-dashed+zero-width",
+        "gold": 2,
+        "protected": 2,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-spaced",
+        "gold": 96,
+        "protected": 96,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-spaced+fullwidth",
+        "gold": 5,
+        "protected": 5,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-spaced+no-break-space",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "CREDIT_CARD · visa-spaced+zero-width",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "CUSTOM · deny-list",
+        "gold": 616,
+        "protected": 616,
+        "rate": 1
+      },
+      {
+        "variant": "EMAIL_ADDRESS · plain",
+        "gold": 2465,
+        "protected": 2465,
+        "rate": 1
+      },
+      {
+        "variant": "EMAIL_ADDRESS · uppercase",
+        "gold": 263,
+        "protected": 263,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · AE-compact",
+        "gold": 142,
+        "protected": 142,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · AE-compact+no-break-space",
+        "gold": 16,
+        "protected": 16,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · AE-grouped",
+        "gold": 129,
+        "protected": 129,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · AE-grouped-lowercase",
+        "gold": 31,
+        "protected": 31,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · AE-grouped-lowercase+no-break-space",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · AE-grouped+no-break-space",
+        "gold": 24,
+        "protected": 24,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · DE-compact",
+        "gold": 122,
+        "protected": 122,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · DE-compact+no-break-space",
+        "gold": 20,
+        "protected": 20,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · DE-grouped",
+        "gold": 148,
+        "protected": 148,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · DE-grouped-lowercase",
+        "gold": 32,
+        "protected": 32,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · DE-grouped-lowercase+no-break-space",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · DE-grouped+no-break-space",
+        "gold": 22,
+        "protected": 22,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · GB-compact",
+        "gold": 134,
+        "protected": 134,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · GB-compact+no-break-space",
+        "gold": 23,
+        "protected": 23,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · GB-grouped",
+        "gold": 114,
+        "protected": 114,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · GB-grouped-lowercase",
+        "gold": 26,
+        "protected": 26,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · GB-grouped-lowercase+no-break-space",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · GB-grouped+no-break-space",
+        "gold": 26,
+        "protected": 26,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · PK-compact",
+        "gold": 139,
+        "protected": 139,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · PK-compact+no-break-space",
+        "gold": 17,
+        "protected": 17,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · PK-grouped",
+        "gold": 142,
+        "protected": 142,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · PK-grouped-lowercase",
+        "gold": 36,
+        "protected": 36,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · PK-grouped-lowercase+no-break-space",
+        "gold": 2,
+        "protected": 2,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · PK-grouped+no-break-space",
+        "gold": 23,
+        "protected": 23,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · SA-compact",
+        "gold": 138,
+        "protected": 138,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · SA-compact+no-break-space",
+        "gold": 24,
+        "protected": 24,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · SA-grouped",
+        "gold": 123,
+        "protected": 123,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · SA-grouped-lowercase",
+        "gold": 27,
+        "protected": 27,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · SA-grouped-lowercase+no-break-space",
+        "gold": 2,
+        "protected": 2,
+        "rate": 1
+      },
+      {
+        "variant": "IBAN_CODE · SA-grouped+no-break-space",
+        "gold": 20,
+        "protected": 20,
+        "rate": 1
+      },
+      {
+        "variant": "IP_ADDRESS · v4",
+        "gold": 571,
+        "protected": 571,
+        "rate": 1
+      },
+      {
+        "variant": "IP_ADDRESS · v6",
+        "gold": 131,
+        "protected": 131,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-00-prefix",
+        "gold": 246,
+        "protected": 246,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-00-prefix+fullwidth",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-00-prefix+no-break-space",
+        "gold": 9,
+        "protected": 9,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-00-prefix+zero-width",
+        "gold": 9,
+        "protected": 9,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-dashed",
+        "gold": 236,
+        "protected": 236,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-dashed+fullwidth",
+        "gold": 14,
+        "protected": 14,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-dashed+no-break-space",
+        "gold": 17,
+        "protected": 17,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-dashed+zero-width",
+        "gold": 7,
+        "protected": 7,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-parenthesised",
+        "gold": 273,
+        "protected": 273,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-parenthesised+fullwidth",
+        "gold": 8,
+        "protected": 8,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-parenthesised+no-break-space",
+        "gold": 12,
+        "protected": 12,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-parenthesised+zero-width",
+        "gold": 2,
+        "protected": 2,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-spaced",
+        "gold": 252,
+        "protected": 252,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-spaced+fullwidth",
+        "gold": 18,
+        "protected": 18,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-spaced+no-break-space",
+        "gold": 16,
+        "protected": 16,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · intl-spaced+zero-width",
+        "gold": 16,
+        "protected": 16,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · nanp",
+        "gold": 289,
+        "protected": 289,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · nanp+fullwidth",
+        "gold": 3,
+        "protected": 3,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · nanp+no-break-space",
+        "gold": 8,
+        "protected": 8,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · nanp+zero-width",
+        "gold": 13,
+        "protected": 13,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-compact",
+        "gold": 268,
+        "protected": 268,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-compact+fullwidth",
+        "gold": 16,
+        "protected": 16,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-compact+no-break-space",
+        "gold": 14,
+        "protected": 14,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-compact+zero-width",
+        "gold": 10,
+        "protected": 10,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-dashed",
+        "gold": 298,
+        "protected": 298,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-dashed+fullwidth",
+        "gold": 13,
+        "protected": 13,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-dashed+no-break-space",
+        "gold": 15,
+        "protected": 15,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-dashed+zero-width",
+        "gold": 13,
+        "protected": 13,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-spaced",
+        "gold": 292,
+        "protected": 292,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-spaced+fullwidth",
+        "gold": 10,
+        "protected": 10,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-spaced+no-break-space",
+        "gold": 13,
+        "protected": 13,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · pk-spaced+zero-width",
+        "gold": 15,
+        "protected": 15,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · uk",
+        "gold": 266,
+        "protected": 266,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · uk+fullwidth",
+        "gold": 4,
+        "protected": 4,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · uk+no-break-space",
+        "gold": 12,
+        "protected": 12,
+        "rate": 1
+      },
+      {
+        "variant": "PHONE_NUMBER · uk+zero-width",
+        "gold": 17,
+        "protected": 17,
+        "rate": 1
+      },
+      {
+        "variant": "PK_CNIC · dashed",
+        "gold": 1517,
+        "protected": 1517,
+        "rate": 1
+      },
+      {
+        "variant": "PK_CNIC · dashed+fullwidth",
+        "gold": 57,
+        "protected": 57,
+        "rate": 1
+      },
+      {
+        "variant": "PK_CNIC · dashed+no-break-space",
+        "gold": 80,
+        "protected": 80,
+        "rate": 1
+      },
+      {
+        "variant": "PK_CNIC · dashed+zero-width",
+        "gold": 59,
+        "protected": 59,
+        "rate": 1
+      },
+      {
+        "variant": "SALARY · in-words",
+        "gold": 325,
+        "protected": 325,
+        "rate": 1
+      },
+      {
+        "variant": "SALARY · lakh",
+        "gold": 279,
+        "protected": 279,
+        "rate": 1
+      },
+      {
+        "variant": "SALARY · pkr-prefix",
+        "gold": 309,
+        "protected": 309,
+        "rate": 1
+      },
+      {
+        "variant": "SALARY · rs-prefix",
+        "gold": 302,
+        "protected": 302,
+        "rate": 1
+      },
+      {
+        "variant": "SALARY · rupees-suffix",
+        "gold": 286,
+        "protected": 286,
+        "rate": 1
+      },
+      {
+        "variant": "SALARY · thousands-k",
+        "gold": 298,
+        "protected": 298,
+        "rate": 1
+      },
+      {
+        "variant": "SALARY · usd-prefix",
+        "gold": 275,
+        "protected": 275,
+        "rate": 1
+      },
+      {
+        "variant": "SALARY · usd-symbol",
+        "gold": 317,
+        "protected": 317,
+        "rate": 1
+      },
+      {
+        "variant": "US_SSN · dashed",
+        "gold": 182,
+        "protected": 182,
+        "rate": 1
+      },
+      {
+        "variant": "US_SSN · dashed+fullwidth",
+        "gold": 6,
+        "protected": 6,
+        "rate": 1
+      },
+      {
+        "variant": "US_SSN · dashed+no-break-space",
+        "gold": 8,
+        "protected": 8,
+        "rate": 1
+      },
+      {
+        "variant": "US_SSN · dashed+zero-width",
+        "gold": 6,
+        "protected": 6,
+        "rate": 1
+      }
+    ],
+    "documentsWithEgressFindings": 0,
+    "degradedDocuments": 0,
+    "placeholdersIssued": 15662
+  },
+  "decoys": [
+    {
+      "kind": "annual-fee",
+      "total": 810,
+      "masked": 20,
+      "falsePositiveRate": 0.024691358024691357
+    },
+    {
+      "kind": "commit",
+      "total": 803,
+      "masked": 1,
+      "falsePositiveRate": 0.0012453300124533001
+    },
+    {
+      "kind": "date-dmy",
+      "total": 782,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "date-iso",
+      "total": 824,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "employee-id",
+      "total": 790,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "extension",
+      "total": 874,
+      "masked": 26,
+      "falsePositiveRate": 0.029748283752860413
+    },
+    {
+      "kind": "invoice",
+      "total": 797,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "isbn",
+      "total": 857,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "order-number",
+      "total": 780,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "percentage",
+      "total": 792,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "price",
+      "total": 824,
+      "masked": 20,
+      "falsePositiveRate": 0.024271844660194174
+    },
+    {
+      "kind": "tracking-number",
+      "total": 787,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "uuid",
+      "total": 806,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "version",
+      "total": 854,
+      "masked": 0,
+      "falsePositiveRate": 0
+    },
+    {
+      "kind": "year",
+      "total": 811,
+      "masked": 0,
+      "falsePositiveRate": 0
+    }
+  ],
+  "falsePositiveExamples": [
+    {
+      "type": "SALARY",
+      "text": "USD 463.39",
+      "kind": "decoy:price"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 7,179",
+      "kind": "decoy:annual-fee"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 461.14",
+      "kind": "decoy:price"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 2,438",
+      "kind": "decoy:annual-fee"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 697.61",
+      "kind": "decoy:price"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 348.49",
+      "kind": "decoy:price"
+    },
+    {
+      "type": "SALARY",
+      "text": "2986",
+      "kind": "decoy:extension"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 6,251",
+      "kind": "decoy:annual-fee"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 9,262",
+      "kind": "decoy:annual-fee"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 9,598",
+      "kind": "decoy:annual-fee"
+    },
+    {
+      "type": "SALARY",
+      "text": "7373",
+      "kind": "decoy:extension"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 649.94",
+      "kind": "decoy:price"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 676.46",
+      "kind": "decoy:price"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 784.89",
+      "kind": "decoy:price"
+    },
+    {
+      "type": "SALARY",
+      "text": "5725",
+      "kind": "decoy:extension"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 4,002",
+      "kind": "decoy:annual-fee"
+    },
+    {
+      "type": "SALARY",
+      "text": "3902",
+      "kind": "decoy:extension"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 377.63",
+      "kind": "decoy:price"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 9,081",
+      "kind": "decoy:annual-fee"
+    },
+    {
+      "type": "SALARY",
+      "text": "1300",
+      "kind": "decoy:extension"
+    },
+    {
+      "type": "SALARY",
+      "text": "2808",
+      "kind": "decoy:extension"
+    },
+    {
+      "type": "SALARY",
+      "text": "1421",
+      "kind": "decoy:extension"
+    },
+    {
+      "type": "SALARY",
+      "text": "9593",
+      "kind": "decoy:extension"
+    },
+    {
+      "type": "SALARY",
+      "text": "USD 53.47",
+      "kind": "decoy:price"
+    },
+    {
+      "type": "SALARY",
+      "text": "3422",
+      "kind": "decoy:extension"
+    }
+  ],
+  "falsePositiveCount": 67,
+  "roundTrip": {
+    "documents": 2000,
+    "exact": 1995,
+    "equivalent": 2000,
+    "streaming": 2000
+  },
+  "latency": {
+    "stages": {
+      "prepare": {
+        "count": 2000,
+        "mean": 0.021666100000037658,
+        "p50": 0.01540000000022701,
+        "p95": 0.06610000000000582,
+        "p99": 0.11549999999988358,
+        "max": 0.22659999999996217
+      },
+      "patterns": {
+        "count": 2000,
+        "mean": 0.4116699999999991,
+        "p50": 0.21,
+        "p95": 1.53,
+        "p99": 4.31,
+        "max": 7.33
+      },
+      "ner": {
+        "count": 2000,
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "mask": {
+        "count": 2000,
+        "mean": 1.503259750000031,
+        "p50": 0.7932000000000698,
+        "p95": 6.615299999999479,
+        "p99": 15.210300000000643,
+        "max": 26.206999999998516
+      },
+      "egress": {
+        "count": 2000,
+        "mean": 0.4605983000000242,
+        "p50": 0.21869999999944412,
+        "p95": 1.920799999999872,
+        "p99": 5.630400000000009,
+        "max": 11.03150000000096
+      },
+      "unmask": {
+        "count": 2000,
+        "mean": 0.2392350000000206,
+        "p50": 0.120600000000195,
+        "p95": 1.1185999999997875,
+        "p99": 2.3637999999991735,
+        "max": 5.086299999999028
+      },
+      "total": {
+        "count": 2000,
+        "mean": 2.7218537000000333,
+        "p50": 1.4433000000026368,
+        "p95": 12.187099999999191,
+        "p99": 27.292900000000373,
+        "max": 41.256900000000314
+      }
+    },
+    "bySize": [
+      {
+        "size": "short (< 500 chars)",
+        "documents": 1792,
+        "meanCharacters": 258,
+        "total": {
+          "count": 1792,
+          "mean": 1.514218359375032,
+          "p50": 1.3729000000002998,
+          "p95": 2.7714000000014494,
+          "p99": 3.968800000000556,
+          "max": 7.918900000000576
+        }
+      },
+      {
+        "size": "medium (500–3,000)",
+        "documents": 76,
+        "meanCharacters": 2314,
+        "total": {
+          "count": 76,
+          "mean": 7.483685526315855,
+          "p50": 7.3082999999987805,
+          "p95": 15.762800000000425,
+          "p99": 19.22910000000047,
+          "max": 19.22910000000047
+        }
+      },
+      {
+        "size": "long (≥ 3,000)",
+        "documents": 132,
+        "meanCharacters": 4182,
+        "total": {
+          "count": 132,
+          "mean": 16.37475757575761,
+          "p50": 13.75170000000071,
+          "p95": 36.15419999999904,
+          "p99": 40.79790000000139,
+          "max": 41.256900000000314
+        }
+      }
+    ],
+    "throughputCharactersPerMs": 218.71362887725843,
+    "wallMs": 6780.346200000002
+  }
+}

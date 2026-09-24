@@ -27,15 +27,11 @@ export enum OrganizationPlan {
  * the frontend reads.
  */
 export interface OrganizationSettings {
-  /** Default local model for new agents, e.g. `llama3:8b`. Phase 3. */
-  defaultLlmModel?: string;
+  // The model and PII policies live in `llm_policies` and `pii_policies`, each
+  // behind its own permission; see OrganizationSettingsDto.
   /** Default chunk size, in tokens, for document ingestion. Phase 2. */
   defaultChunkSize?: number;
   defaultChunkOverlap?: number;
-  /** Entity types the PII engine masks before inference. Phase 3. */
-  piiEntityTypes?: string[];
-  /** Refuse inference entirely if redaction fails, rather than degrading. Phase 3. */
-  piiFailClosed?: boolean;
   /** Monthly token allowance across the workspace. Phase 5. */
   monthlyTokenQuota?: number;
   /** Days to retain audit records before archival. */

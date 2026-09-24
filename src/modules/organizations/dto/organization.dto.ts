@@ -25,21 +25,13 @@ const Trim = () =>
 /**
  * Workspace settings.
  *
- * Fields for later phases are accepted and validated now because the settings
- * object is part of the workspace contract the frontend reads, and because a
- * workspace configured today should not need re-configuring when the knowledge
- * and agent modules land.
+ * The model and redaction policies are deliberately *not* here: they have
+ * their own endpoints and permissions (`llm:manage`, `pii:policy:update`),
+ * because this object is writable with `workspace:update`, and weakening what
+ * is masked before data reaches a model must not be a side effect of renaming
+ * the workspace. See `PUT …/llm/policy` and `PUT …/pii/policy`.
  */
 export class OrganizationSettingsDto {
-  @ApiPropertyOptional({
-    description: 'Default local model for new agents.',
-    example: 'llama3:8b',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  defaultLlmModel?: string;
-
   @ApiPropertyOptional({
     description: 'Default ingestion chunk size in tokens.',
     example: 512,
@@ -59,26 +51,6 @@ export class OrganizationSettingsDto {
   @Min(0)
   @Max(1024)
   defaultChunkOverlap?: number;
-
-  @ApiPropertyOptional({
-    description: 'Entity types the PII engine masks before inference.',
-    example: ['PERSON', 'EMAIL_ADDRESS', 'CREDIT_CARD'],
-    type: [String],
-  })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ArrayMaxSize(50)
-  piiEntityTypes?: string[];
-
-  @ApiPropertyOptional({
-    description:
-      'Refuse inference outright if redaction fails, rather than proceeding with ' +
-      'unmasked text. The safe default for regulated data.',
-  })
-  @IsOptional()
-  @IsBoolean()
-  piiFailClosed?: boolean;
 
   @ApiPropertyOptional({ description: 'Monthly token allowance across the workspace.' })
   @IsOptional()

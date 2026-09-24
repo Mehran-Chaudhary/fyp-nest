@@ -1,9 +1,12 @@
+import agentsConfig, { AGENTS_CONFIG_KEY } from './agents.config';
 import aiServiceConfig, { AI_SERVICE_CONFIG_KEY } from './ai-service.config';
 import appConfig, { APP_CONFIG_KEY } from './app.config';
 import databaseConfig, { DATABASE_CONFIG_KEY } from './database.config';
 import ingestionConfig, { INGESTION_CONFIG_KEY } from './ingestion.config';
 import jwtConfig, { JWT_CONFIG_KEY } from './jwt.config';
+import llmConfig, { LLM_CONFIG_KEY } from './llm.config';
 import mailConfig, { MAIL_CONFIG_KEY } from './mail.config';
+import piiConfig, { PII_CONFIG_KEY } from './pii.config';
 import ragConfig, { RAG_CONFIG_KEY } from './rag.config';
 import redisConfig, { REDIS_CONFIG_KEY } from './redis.config';
 import securityConfig, { SECURITY_CONFIG_KEY } from './security.config';
@@ -11,12 +14,15 @@ import storageConfig, { STORAGE_CONFIG_KEY } from './storage.config';
 import throttleConfig, { THROTTLE_CONFIG_KEY } from './throttle.config';
 import vectorStoreConfig, { VECTOR_STORE_CONFIG_KEY } from './vector-store.config';
 
+export * from './agents.config';
 export * from './ai-service.config';
 export * from './app.config';
 export * from './database.config';
 export * from './ingestion.config';
 export * from './jwt.config';
+export * from './llm.config';
 export * from './mail.config';
+export * from './pii.config';
 export * from './rag.config';
 export * from './redis.config';
 export * from './security.config';
@@ -39,6 +45,9 @@ export const configurations = [
   vectorStoreConfig,
   ingestionConfig,
   ragConfig,
+  llmConfig,
+  piiConfig,
+  agentsConfig,
 ];
 
 export const CONFIG_KEYS = {
@@ -54,4 +63,7 @@ export const CONFIG_KEYS = {
   VECTOR_STORE: VECTOR_STORE_CONFIG_KEY,
   INGESTION: INGESTION_CONFIG_KEY,
   RAG: RAG_CONFIG_KEY,
+  LLM: LLM_CONFIG_KEY,
+  PII: PII_CONFIG_KEY,
+  AGENTS: AGENTS_CONFIG_KEY,
 } as const;

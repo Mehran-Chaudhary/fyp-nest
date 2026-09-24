@@ -56,6 +56,19 @@ export class RetrievalScopeError extends Error {
 export interface RetrievalNarrowing {
   knowledgeBaseIds?: readonly string[];
   documentIds?: readonly string[];
+  /**
+   * A delegation bound: search only these bases, *intersected* with the
+   * caller's scope. Unlike `knowledgeBaseIds` it never throws — an agent
+   * configured with the HR base, used by someone without HR access, simply
+   * searches nothing there. Server-side only; not part of the HTTP request.
+   */
+  restrictToKnowledgeBaseIds?: readonly string[];
+  /**
+   * A classification ceiling below the caller's clearance — an agent's own
+   * limit, or the model endpoint's. The effective clearance is the lower of the
+   * two. Server-side only.
+   */
+  maxClassification?: Classification;
 }
 
 /**
@@ -69,16 +82,24 @@ export function planRetrieval(
 ): RetrievalPlan | null {
   let knowledgeBaseIds = readableKnowledgeBaseIds(scope);
 
+  if (narrowing.restrictToKnowledgeBaseIds) {
+    const bound = new Set(narrowing.restrictToKnowledgeBaseIds);
+    knowledgeBaseIds = knowledgeBaseIds.filter((id) => bound.has(id));
+  }
+
   if (narrowing.knowledgeBaseIds && narrowing.knowledgeBaseIds.length > 0) {
     const requested = [...new Set(narrowing.knowledgeBaseIds)];
     const unresolvable = requested.filter((id) => !scope.knowledgeBases.has(id));
     if (unresolvable.length > 0) throw new RetrievalScopeError(unresolvable);
-    knowledgeBaseIds = requested.sort();
+    const bounded = new Set(knowledgeBaseIds);
+    knowledgeBaseIds = requested.filter((id) => bounded.has(id)).sort();
   }
 
   if (knowledgeBaseIds.length === 0) return null;
 
-  const classifications = classificationsWithin(scope.clearance);
+  const classifications = classificationsWithin(
+    effectiveClearance(scope.clearance, narrowing.maxClassification),
+  );
 
   const must = [
     matchValue(VECTOR_FIELD.ORGANIZATION_ID, scope.organizationId),
@@ -93,6 +114,14 @@ export function planRetrieval(
   }
 
   return { filter: { must }, knowledgeBaseIds, classifications };
+}
+
+/** The lower of a clearance and an optional ceiling: a ceiling can only narrow. */
+export function effectiveClearance(
+  clearance: Classification,
+  ceiling: Classification | undefined,
+): Classification {
+  return ceiling !== undefined && dominates(clearance, ceiling) ? ceiling : clearance;
 }
 
 /**

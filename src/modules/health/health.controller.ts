@@ -10,6 +10,7 @@ import {
 } from '@nestjs/terminus';
 import { Public, SkipOrganizationContext } from '../../common/decorators/auth.decorators';
 import { APP_CONFIG_KEY, type AppConfig } from '../../config/app.config';
+import { InferenceDependenciesHealthIndicator } from './indicators/inference-dependencies.health';
 import { KnowledgeDependenciesHealthIndicator } from './indicators/knowledge-dependencies.health';
 import { RedisHealthIndicator } from './indicators/redis.health';
 
@@ -44,6 +45,7 @@ export class HealthController {
     private readonly redis: RedisHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
     private readonly knowledge: KnowledgeDependenciesHealthIndicator,
+    private readonly inference: InferenceDependenciesHealthIndicator,
     private readonly configService: ConfigService,
   ) {
     this.appConfig = this.configService.getOrThrow<AppConfig>(APP_CONFIG_KEY);
@@ -64,6 +66,9 @@ export class HealthController {
       () => this.knowledge.vectorStoreHealth('vector_store'),
       () => this.knowledge.aiServiceHealth('ai_service'),
       () => this.knowledge.queue('queue'),
+      // Phase 3 dependencies: likewise reported, never fatal.
+      () => this.inference.llm('llm'),
+      () => this.inference.piiDetector('pii_detector'),
     ]);
   }
 

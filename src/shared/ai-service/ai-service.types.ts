@@ -69,11 +69,40 @@ export interface RerankResult {
   results: Array<{ index: number; score: number }>;
 }
 
+export interface PiiAnalyzeInput {
+  /** Canonicalised texts, analysed independently. */
+  texts: string[];
+  /** Entity types to look for. Only types the NER model can find are sent. */
+  entities: string[];
+  language: string;
+  scoreThreshold: number;
+  organizationId?: string;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
+export interface PiiAnalyzeSpan {
+  entityType: string;
+  /** UTF-16 offsets, already converted from the service's code-point offsets. */
+  start: number;
+  end: number;
+  score: number;
+}
+
+export interface PiiAnalyzeResult {
+  /** One list per input text, in input order. */
+  results: PiiAnalyzeSpan[][];
+  /** e.g. `presidio@2.2.358/en_core_web_lg`. */
+  detector: string;
+}
+
 export interface AiServiceHealth {
   status: string;
   contractVersion: number;
   embedding: { model: string; dimensions: number } | null;
   rerankAvailable: boolean;
+  /** Whether the service implements `/v1/pii/analyze` (added in phase 3). */
+  pii: { available: boolean; detector: string | null };
 }
 
 /**

@@ -4,32 +4,24 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import assert from 'node:assert/strict';
 import { DataSource } from 'typeorm';
-import type { Job } from 'bullmq';
 import { AppModule } from '../../app.module';
 import { AuditService } from '../audit/audit.service';
 import { AiServiceClient } from '../../shared/ai-service/ai-service.client';
-import {
-  AiServiceError,
-  type EmbedInput,
-  type EmbeddingBatch,
-  type ParseDocumentInput,
-  type ParsedDocument,
-} from '../../shared/ai-service/ai-service.types';
 import { RequestContextService } from '../../shared/context/request-context.service';
 import { ObjectStorageService } from '../../shared/storage/object-storage.service';
-import { matchesFilter, type VectorPayload } from '../../shared/vector-store/vector-filter';
+import { VectorStoreService } from '../../shared/vector-store/vector-store.service';
 import {
-  VectorStoreService,
-  type VectorHit,
-  type VectorPoint,
-  type VectorSearchRequest,
-} from '../../shared/vector-store/vector-store.service';
+  FakeAiService,
+  ingestionJob as job,
+  MemoryObjectStorage,
+  MemoryVectorStore,
+  RecordingJobs,
+} from '../../testing/cloud-stand-ins';
 import type { AccessPrincipal } from './domain/access';
 import { Classification } from './domain/classification';
 import { DocumentStatus } from './domain/document-status';
 import { DocumentsService } from './documents/documents.service';
 import { IngestionPipeline } from './ingestion/ingestion.pipeline';
-import type { IngestionJobData } from './ingestion/knowledge-jobs';
 import { KnowledgeJobsService } from './ingestion/knowledge-jobs.service';
 import { KnowledgeMaintenanceService } from './ingestion/knowledge-maintenance.service';
 import { RetrievalService } from './retrieval/retrieval.service';
@@ -54,240 +46,6 @@ import { RetrievalService } from './retrieval/retrieval.service';
  *   DB_HOST=… DB_NAME=… SEED_DEMO_DATA=true npm run seed
  *   DB_HOST=… DB_NAME=… KNOWLEDGE_E2E=true npm run test:e2e:knowledge
  */
-
-const DIMENSIONS = 64;
-
-// ── Cloud stand-ins ─────────────────────────────────────────────────────────
-
-class MemoryObjectStorage extends ObjectStorageService {
-  readonly objects = new Map<string, Buffer>();
-  override get isConfigured(): boolean {
-    return true;
-  }
-  override put(key: string, body: Buffer): Promise<{ etag?: string }> {
-    this.objects.set(key, Buffer.from(body));
-    return Promise.resolve({ etag: 'memory' });
-  }
-  override get(key: string): Promise<Buffer> {
-    const object = this.objects.get(key);
-    if (!object) return Promise.reject(new Error(`no object ${key}`));
-    return Promise.resolve(Buffer.from(object));
-  }
-  override delete(key: string): Promise<void> {
-    this.objects.delete(key);
-    return Promise.resolve();
-  }
-  override deletePrefix(prefix: string): Promise<number> {
-    let count = 0;
-    for (const key of [...this.objects.keys()]) {
-      if (key.startsWith(prefix)) {
-        this.objects.delete(key);
-        count += 1;
-      }
-    }
-    return Promise.resolve(count);
-  }
-  override ping(): Promise<boolean> {
-    return Promise.resolve(true);
-  }
-}
-
-class MemoryVectorStore extends VectorStoreService {
-  readonly points = new Map<string, { dense: number[]; payload: VectorPayload }>();
-  override get isConfigured(): boolean {
-    return true;
-  }
-  override get embeddingModel(): string {
-    return 'e2e-model';
-  }
-  override get embeddingDimensions(): number {
-    return DIMENSIONS;
-  }
-  override ensureCollection(): Promise<void> {
-    return Promise.resolve();
-  }
-  override upsert(_organizationId: string, points: VectorPoint[]): Promise<void> {
-    for (const point of points)
-      this.points.set(point.id, { dense: point.dense, payload: { ...point.payload } });
-    return Promise.resolve();
-  }
-  override activateVersion(
-    organizationId: string,
-    documentId: string,
-    version: number,
-  ): Promise<void> {
-    for (const [id, point] of this.points) {
-      if (
-        point.payload.organization_id !== organizationId ||
-        point.payload.document_id !== documentId
-      )
-        continue;
-      if (point.payload.index_version === version) point.payload.active = true;
-      else this.points.delete(id);
-    }
-    return Promise.resolve();
-  }
-  override deleteDocument(
-    organizationId: string,
-    documentId: string,
-    version?: number,
-  ): Promise<void> {
-    for (const [id, point] of this.points) {
-      if (
-        point.payload.organization_id === organizationId &&
-        point.payload.document_id === documentId &&
-        (version === undefined || point.payload.index_version === version)
-      ) {
-        this.points.delete(id);
-      }
-    }
-    return Promise.resolve();
-  }
-  override deleteKnowledgeBase(
-    organizationId: string,
-    knowledgeBaseId: string,
-  ): Promise<void> {
-    for (const [id, point] of this.points) {
-      if (
-        point.payload.organization_id === organizationId &&
-        point.payload.knowledge_base_id === knowledgeBaseId
-      ) {
-        this.points.delete(id);
-      }
-    }
-    return Promise.resolve();
-  }
-  override setDocumentClassification(
-    organizationId: string,
-    documentId: string,
-    classification: string,
-  ): Promise<void> {
-    for (const point of this.points.values()) {
-      if (
-        point.payload.organization_id === organizationId &&
-        point.payload.document_id === documentId
-      ) {
-        point.payload.classification = classification;
-      }
-    }
-    return Promise.resolve();
-  }
-  override search(
-    _organizationId: string,
-    request: VectorSearchRequest,
-  ): Promise<VectorHit[]> {
-    const hits = [...this.points.entries()]
-      .filter(([, point]) =>
-        matchesFilter(point.payload as unknown as Record<string, unknown>, request.filter),
-      )
-      .map(([id, point]) => ({
-        id,
-        score: cosine(request.dense, point.dense),
-        payload: point.payload,
-      }))
-      .filter(
-        (hit) =>
-          request.scoreThreshold === undefined || hit.score >= request.scoreThreshold,
-      )
-      .sort((a, b) => b.score - a.score)
-      .slice(0, request.limit);
-    return Promise.resolve(hits);
-  }
-  countFor(documentId: string): number {
-    return [...this.points.values()].filter(
-      (point) => point.payload.document_id === documentId,
-    ).length;
-  }
-}
-
-class FakeAiService extends AiServiceClient {
-  /** When set, the Nth embed call (1-based) fails transiently — simulating a crash mid-embedding. */
-  failOnEmbedCall: number | null = null;
-  embedCalls = 0;
-  override get isConfigured(): boolean {
-    return true;
-  }
-  override onApplicationBootstrap(): void {}
-  override parseDocument(input: ParseDocumentInput): Promise<ParsedDocument> {
-    const text = input.content.toString('utf8');
-    const chunks = text
-      .split(/\n\s*\n/)
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part, index) => ({
-        index,
-        text: part,
-        tokenCount: part.split(/\s+/).length,
-        pageStart: 1,
-        pageEnd: 1,
-      }));
-    return Promise.resolve({ pageCount: 1, language: 'en', chunks, parser: 'e2e-fake@1' });
-  }
-  override embed(input: EmbedInput): Promise<EmbeddingBatch> {
-    this.embedCalls += 1;
-    if (this.failOnEmbedCall !== null && this.embedCalls === this.failOnEmbedCall) {
-      return Promise.reject(
-        new AiServiceError('AI_SERVICE_TIMEOUT', 'simulated crash', true),
-      );
-    }
-    return Promise.resolve({
-      model: 'e2e-model',
-      dimensions: DIMENSIONS,
-      embeddings: input.inputs.map(embedText),
-      tokens: input.inputs.length,
-    });
-  }
-}
-
-/** Records enqueues instead of touching Redis; the test drives the pipeline itself. */
-class RecordingJobs {
-  readonly ingestion: Array<{ id: string; indexVersion: number }> = [];
-  readonly maintenance: Array<{ name: string; subjectId: string }> = [];
-  enqueueIngestion(document: { id: string; indexVersion: number }): Promise<boolean> {
-    this.ingestion.push({ id: document.id, indexVersion: document.indexVersion });
-    return Promise.resolve(true);
-  }
-  enqueueMaintenance(name: string, _data: unknown, subjectId: string): Promise<boolean> {
-    this.maintenance.push({ name, subjectId });
-    return Promise.resolve(true);
-  }
-  deadLetter(): Promise<void> {
-    return Promise.resolve();
-  }
-}
-
-function embedText(text: string): number[] {
-  const vector = new Array<number>(DIMENSIONS).fill(0.001);
-  for (const word of text
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter((w) => w.length > 2)) {
-    let hash = 0;
-    for (const char of word) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-    vector[hash % DIMENSIONS] += 1;
-  }
-  const norm = Math.hypot(...vector);
-  return vector.map((value) => value / norm);
-}
-
-function cosine(a: number[], b: number[]): number {
-  let dot = 0;
-  for (let i = 0; i < a.length; i += 1) dot += a[i] * b[i];
-  return dot;
-}
-
-function job(
-  data: Omit<IngestionJobData, 'enqueuedAt'>,
-  attemptsMade = 0,
-): Job<IngestionJobData> {
-  return {
-    id: `e2e-${data.documentId}-${data.indexVersion}-${attemptsMade}`,
-    name: 'ingest',
-    data: { ...data, enqueuedAt: Date.now() },
-    attemptsMade,
-    opts: { attempts: 5 },
-  } as unknown as Job<IngestionJobData>;
-}
 
 // ── Scenario ────────────────────────────────────────────────────────────────
 

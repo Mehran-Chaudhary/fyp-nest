@@ -74,3 +74,70 @@ describe('environment validation (phase 2)', () => {
     ).not.toThrow();
   });
 });
+
+/**
+ * Phase 3 configuration contract: the model endpoint and the NER detector are
+ * optional at boot, and the timeouts around a generation must nest — a
+ * request budget shorter than the generation it wraps would cut off answers
+ * that were still being written.
+ */
+describe('environment validation (phase 3)', () => {
+  it('boots with no model endpoint and safe privacy defaults', () => {
+    const env = validateEnvironment({ NODE_ENV: 'development' });
+    expect(env.LLM_BASE_URL).toBe('');
+    expect(env.LLM_PROVIDER).toBe('ollama');
+    expect(env.LLM_MAX_CLASSIFICATION).toBe('RESTRICTED');
+    expect(env.PII_DEFAULT_ON_FAILURE).toBe('REFUSE');
+    expect(env.PII_NER_PROVIDER).toBe('ai-service');
+    expect(String(env.PII_DEFAULT_ENTITIES)).toContain('CREDIT_CARD');
+  });
+
+  it('accepts a hosted OpenAI-compatible endpoint and a Presidio analyzer', () => {
+    expect(() =>
+      validateEnvironment({
+        ...PRODUCTION_BASE,
+        LLM_PROVIDER: 'openai',
+        LLM_BASE_URL: 'https://api.together.xyz/v1',
+        LLM_API_KEY: 'key',
+        LLM_ALLOWED_MODELS: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+        LLM_MAX_CLASSIFICATION: 'INTERNAL',
+        PII_NER_PROVIDER: 'presidio',
+        PRESIDIO_ANALYZER_URL: 'https://presidio.internal.example.com',
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects unknown providers, classifications and failure modes', () => {
+    expect(() => validateEnvironment({ LLM_PROVIDER: 'anthropic' })).toThrow(
+      /LLM_PROVIDER/,
+    );
+    expect(() => validateEnvironment({ LLM_MAX_CLASSIFICATION: 'SECRET' })).toThrow();
+    expect(() =>
+      validateEnvironment({ PII_DEFAULT_ON_FAILURE: 'SEND_UNMASKED' }),
+    ).toThrow();
+    expect(() => validateEnvironment({ PII_DEFAULT_ENTITIES: 'person;email' })).toThrow();
+    expect(() => validateEnvironment({ LLM_KEEP_ALIVE: 'forever' })).toThrow();
+  });
+
+  it('requires the request budget to outlast the longest generation', () => {
+    expect(() =>
+      validateEnvironment({ LLM_MAX_DURATION: '300s', LLM_REQUEST_TIMEOUT: '300s' }),
+    ).toThrow(/LLM_REQUEST_TIMEOUT/);
+    expect(() =>
+      validateEnvironment({ LLM_MAX_DURATION: '120s', LLM_REQUEST_TIMEOUT: '130s' }),
+    ).not.toThrow();
+  });
+
+  it('requires the first-token deadline to fit inside the total duration', () => {
+    expect(() =>
+      validateEnvironment({ LLM_FIRST_TOKEN_TIMEOUT: '300s', LLM_MAX_DURATION: '240s' }),
+    ).toThrow(/LLM_FIRST_TOKEN_TIMEOUT/);
+  });
+
+  it('requires an analyzer URL when Presidio is chosen', () => {
+    expect(() => validateEnvironment({ PII_NER_PROVIDER: 'presidio' })).toThrow(
+      /PRESIDIO_ANALYZER_URL/,
+    );
+    expect(() => validateEnvironment({ PII_NER_PROVIDER: 'none' })).not.toThrow();
+  });
+});

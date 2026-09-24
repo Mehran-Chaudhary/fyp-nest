@@ -14,6 +14,7 @@ import {
 import { Classification } from '../domain/classification';
 import {
   buildWithheldFilter,
+  effectiveClearance,
   planRetrieval,
   RetrievalScopeError,
   withheldReason,
@@ -328,6 +329,89 @@ describe('secure retrieval policy', () => {
             payload.embedding_model === MODEL,
         ).length,
       );
+    });
+  });
+
+  // Phase 3: agents retrieve on behalf of the person using them. An agent's
+  // knowledge bases and classification ceiling are *delegation bounds*: they
+  // can only narrow what the person could reach anyway — never widen it, and
+  // never turn into an error that would reveal a compartment exists.
+  describe('delegation bounds (agents)', () => {
+    it('an agent configured with HR searches nothing there for a member without HR access', () => {
+      const scope = computeAccessScope(
+        principal(['rag:query', 'clearance:internal']),
+        ROWS,
+      );
+      const plan = planRetrieval(scope, { restrictToKnowledgeBaseIds: [HR] }, MODEL);
+      expect(plan).toBeNull();
+    });
+
+    it('an agent configured with HR and the handbook searches only the handbook for that member', () => {
+      const scope = computeAccessScope(
+        principal(['rag:query', 'clearance:internal']),
+        ROWS,
+      );
+      const plan = planRetrieval(
+        scope,
+        { restrictToKnowledgeBaseIds: [HR, HANDBOOK] },
+        MODEL,
+      );
+      expect(plan?.knowledgeBaseIds).toEqual([HANDBOOK]);
+    });
+
+    it('the same agent reaches HR for someone who holds the grant', () => {
+      const scope = computeAccessScope(
+        principal(['rag:query', 'clearance:restricted']),
+        withGrant(ROWS, HR, AccessLevel.READ),
+      );
+      const plan = planRetrieval(scope, { restrictToKnowledgeBaseIds: [HR] }, MODEL);
+      expect(
+        admitted(plan!.filter).some((payload) => payload.document_id === 'payroll'),
+      ).toBe(true);
+    });
+
+    it('a classification ceiling withholds payroll even from someone cleared for it', () => {
+      const scope = computeAccessScope(
+        principal(['rag:query', 'clearance:restricted']),
+        withGrant(ROWS, HR, AccessLevel.READ),
+      );
+      const plan = planRetrieval(
+        scope,
+        {
+          restrictToKnowledgeBaseIds: [HR],
+          maxClassification: Classification.CONFIDENTIAL,
+        },
+        MODEL,
+      );
+      const results = admitted(plan!.filter);
+      expect(results.some((payload) => payload.document_id === 'payroll')).toBe(false);
+      expect(results.some((payload) => payload.knowledge_base_id === HR)).toBe(true);
+    });
+
+    it('a ceiling above the caller’s clearance changes nothing', () => {
+      expect(effectiveClearance(Classification.INTERNAL, Classification.RESTRICTED)).toBe(
+        Classification.INTERNAL,
+      );
+      expect(effectiveClearance(Classification.RESTRICTED, Classification.INTERNAL)).toBe(
+        Classification.INTERNAL,
+      );
+      expect(effectiveClearance(Classification.CONFIDENTIAL, undefined)).toBe(
+        Classification.CONFIDENTIAL,
+      );
+    });
+
+    it('explicit narrowing still refuses bases outside the scope', () => {
+      const scope = computeAccessScope(
+        principal(['rag:query', 'clearance:internal']),
+        ROWS,
+      );
+      expect(() =>
+        planRetrieval(
+          scope,
+          { knowledgeBaseIds: [HR], restrictToKnowledgeBaseIds: [HR] },
+          MODEL,
+        ),
+      ).toThrow(RetrievalScopeError);
     });
   });
 });

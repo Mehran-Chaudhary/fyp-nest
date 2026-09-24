@@ -20,6 +20,8 @@ import {
   type EmbeddingBatch,
   type ParseDocumentInput,
   type ParsedDocument,
+  type PiiAnalyzeInput,
+  type PiiAnalyzeResult,
   type RerankInput,
   type RerankResult,
 } from './ai-service.types';
@@ -29,6 +31,7 @@ import {
   validateEmbeddingResponse,
   validateHealthResponse,
   validateParseResponse,
+  validatePiiAnalyzeResponse,
   validateRerankResponse,
 } from './response-validation';
 
@@ -203,6 +206,37 @@ export class AiServiceClient implements OnApplicationBootstrap {
       signal: input.signal,
       parse: (json) =>
         validateRerankResponse(json, { documentCount: input.documents.length }),
+    });
+  }
+
+  /**
+   * Named-entity detection for the PII engine (added in phase 3; additive, so
+   * the contract stays v1).
+   *
+   * The texts are the ones about to be sent to the language model. The AI
+   * service is inside the platform's trust boundary — it already sees every
+   * document in plaintext to parse and embed it — which is why detection runs
+   * here and never at the model provider.
+   */
+  async analyzePii(input: PiiAnalyzeInput): Promise<PiiAnalyzeResult> {
+    if (input.texts.length === 0) return { results: [], detector: 'none' };
+
+    return this.call({
+      method: 'POST',
+      path: '/v1/pii/analyze',
+      body: Buffer.from(
+        JSON.stringify({
+          texts: input.texts,
+          entities: input.entities,
+          language: input.language,
+          score_threshold: input.scoreThreshold,
+        }),
+      ),
+      contentType: 'application/json',
+      timeoutMs: input.timeoutMs ?? this.config.timeoutMs,
+      organizationId: input.organizationId,
+      signal: input.signal,
+      parse: (json) => validatePiiAnalyzeResponse(json, { texts: input.texts }),
     });
   }
 

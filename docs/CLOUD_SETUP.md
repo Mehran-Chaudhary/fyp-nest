@@ -9,8 +9,8 @@ deploy that phase, not before.
 > and validated at boot by `src/config/env.validation.ts`. If a value is wrong
 > the process refuses to start and names the variable. Phase 2+ services are
 > optional at boot: the API runs without them and answers
-> `503 KNOWLEDGE_LAYER_NOT_CONFIGURED` (naming what's missing) on the endpoints
-> that need them.
+> `503 KNOWLEDGE_LAYER_NOT_CONFIGURED` or `503 LLM_NOT_CONFIGURED` (naming
+> what's missing) on the endpoints that need them.
 
 ---
 
@@ -26,15 +26,20 @@ deploy that phase, not before.
                 └──────────────────────────┘  │     ├─────────────────────┤
                           │                    ├───▶ │ Object storage (S3) │  Cloudflare R2
                           │  HMAC-signed       │     ├─────────────────────┤
-                          ▼  requests          └───▶ │ Qdrant              │  Qdrant Cloud
-                ┌──────────────────────────┐         └─────────────────────┘
-                │ Python AI service        │  Hugging Face Spaces / Render / Railway
-                └──────────────────────────┘
+                          ▼  requests          ├───▶ │ Qdrant              │  Qdrant Cloud
+                ┌──────────────────────────┐   │     └─────────────────────┘
+                │ Python AI service        │   │  masked prompts only (phase 3)
+                │ parse · embed · NER      │   │     ┌─────────────────────┐
+                └──────────────────────────┘   └───▶ │ LLM endpoint        │  Ollama on a GPU VM
+                  Hugging Face / Render / Railway    │ (behind a proxy)    │  / vLLM / hosted API
+                                                     └─────────────────────┘
 ```
 
 The AI service never talks to Qdrant or the database. It only computes: bytes
-in, chunks out; text in, vectors out. The backend stores results and enforces
-access. See [ADR 0002](adr/0002-knowledge-layer-security.md) for why.
+in, chunks out; text in, vectors out; text in, entity spans out. The backend
+stores results and enforces access. See [ADR 0002](adr/0002-knowledge-layer-security.md)
+for why. The language model receives only masked prompts, through one gateway
+([ADR 0003](adr/0003-inference-and-privacy.md)).
 
 ---
 
@@ -257,6 +262,257 @@ not take the API out of rotation.
 | `QUEUE_WORKERS_ENABLED` | `false` if a worker runs | (forced `true`) | |
 | Redis `noeviction` | ✓ | ✓ | |
 
+## Phase 3: inference, agents and privacy
+
+Two new dependencies — **a language model endpoint** and **a name detector
+(NER)** — and one migration. Both are optional at boot:
+
+- without `LLM_BASE_URL`, the agent and chat endpoints answer
+  `503 LLM_NOT_CONFIGURED` (naming the variable);
+- without a working NER detector, each workspace's PII policy decides: refuse
+  (`503 PII_DETECTION_UNAVAILABLE`, the default) or continue with the in-process
+  pattern recognizers only. Nothing is ever sent to a model unmasked because a
+  dependency is down.
+
+Everything a model sees passes through the PII engine first: detected on the
+way in, masked with placeholders (`[PERSON_1]`), re-scanned at the gateway
+boundary, and unmasked in the answer. See [ADR 0003](adr/0003-inference-and-privacy.md).
+
+### Step 1: a language model endpoint
+
+Where the model runs is a privacy decision as well as a cost one. Prompts are
+masked, but a masked prompt still carries the surrounding text of your
+documents, so `LLM_MAX_CLASSIFICATION` tells the platform how far to trust the
+endpoint: passages and conversation history above it are never put into a
+prompt for that endpoint at all.
+
+| Option | Good for | `LLM_PROVIDER` | `LLM_BASE_URL` | `LLM_MAX_CLASSIFICATION` |
+|---|---|---|---|---|
+| **Ollama on a GPU VM you control** (RunPod, Vast.ai, Lambda, a GCP/AWS/Azure GPU instance) | the proposal's "local LLM": data never leaves infrastructure you run | `ollama` | `https://ollama.<your-domain>` (through the proxy below) | `RESTRICTED` |
+| **vLLM, TGI or llama.cpp** on a GPU VM you control | many concurrent users (continuous batching) | `openai` | `https://llm.<your-domain>/v1` | `RESTRICTED` |
+| **Ollama's hosted models** | no GPU to manage | `ollama` | `https://ollama.com` | `INTERNAL` (third party) |
+| **A hosted open-weight API**: Groq, Together, Fireworks, DeepInfra, OpenRouter | the cheapest start; development | `openai` | the provider's OpenAI-compatible base URL, e.g. `https://api.groq.com/openai/v1`, `https://api.together.xyz/v1`, `https://openrouter.ai/api/v1` | `INTERNAL` or `PUBLIC` |
+
+`LLM_BASE_URL` for `ollama` is the server root with no path; for `openai` it
+includes the version path, exactly as the provider documents it.
+
+#### Recipe A: Ollama on your own GPU, behind an authenticating proxy
+
+1. Rent a GPU VM. An 8B model at 4-bit needs about 6 GB of VRAM; a 24 GB card
+   (RTX 4090, L4, A10) runs one comfortably with room for four concurrent
+   requests. 70B models need 48 GB or more.
+2. Install Ollama and pull the models you will allow:
+
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh
+   ollama pull llama3.1:8b        # or qwen2.5:7b, mistral:7b, gemma2:9b
+   ```
+
+3. Configure the Ollama service (`sudo systemctl edit ollama`) to serve several
+   requests at once and keep models loaded, and leave it bound to localhost
+   (the default):
+
+   ```ini
+   [Service]
+   Environment="OLLAMA_NUM_PARALLEL=4"
+   Environment="OLLAMA_KEEP_ALIVE=30m"
+   ```
+
+4. **Never expose port 11434.** Ollama has no authentication: anyone who finds
+   it can use your GPU, and pull or delete models. Put a TLS proxy with a
+   bearer token in front. With Caddy (`/etc/caddy/Caddyfile`, token in
+   Caddy's environment as `OLLAMA_PROXY_TOKEN`):
+
+   ```caddy
+   ollama.example.com {
+       @authorized header Authorization "Bearer {env.OLLAMA_PROXY_TOKEN}"
+       handle @authorized {
+           reverse_proxy 127.0.0.1:11434 {
+               flush_interval -1    # stream tokens as they are generated
+           }
+       }
+       respond 401
+   }
+   ```
+
+5. Set on the **API**:
+
+   ```ini
+   LLM_PROVIDER=ollama
+   LLM_BASE_URL=https://ollama.example.com
+   LLM_API_KEY=<OLLAMA_PROXY_TOKEN>
+   LLM_DEFAULT_MODEL=llama3.1:8b
+   LLM_ALLOWED_MODELS=llama3.1:8b,qwen2.5:7b
+   LLM_MAX_CLASSIFICATION=RESTRICTED
+   LLM_MAX_CONCURRENCY=4          # see "Sizing" below
+   ```
+
+#### Recipe B: a hosted API (fastest start)
+
+```ini
+LLM_PROVIDER=openai
+LLM_BASE_URL=https://api.groq.com/openai/v1      # or your provider's base URL
+LLM_API_KEY=<provider API key>
+LLM_DEFAULT_MODEL=<a model id from the provider's list>
+LLM_ALLOWED_MODELS=<the same id, plus any others you allow>
+LLM_MAX_CLASSIFICATION=INTERNAL
+```
+
+Model ids are the provider's own (`GET …/llm/models` shows what the endpoint
+reports). Where a provider does not report token counts, usage is estimated and
+flagged as such in the usage ledger.
+
+#### Sizing and timeouts
+
+- **Concurrency.** `LLM_MAX_CONCURRENCY` is per API process. With *N* API
+  instances the model sees up to *N* × `LLM_MAX_CONCURRENCY` requests, so keep
+  that at or below what it serves in parallel (`OLLAMA_NUM_PARALLEL`). Excess
+  requests wait up to `LLM_QUEUE_TIMEOUT`, then get `503 LLM_BUSY` with
+  `Retry-After`.
+- **Context.** `num_ctx` is sent with every Ollama request, sized from the
+  model's own context length within `LLM_MAX_CONTEXT_WINDOW`. Larger windows
+  cost GPU memory per concurrent request.
+- **Timeouts.** A cold model load can take tens of seconds, which is why
+  `LLM_FIRST_TOKEN_TIMEOUT` defaults to 120 s. `LLM_REQUEST_TIMEOUT` must exceed
+  `LLM_MAX_DURATION` by at least 10 s; the process refuses to start otherwise.
+- **Streaming through your host.** Answers stream over Server-Sent Events with
+  `Cache-Control: no-transform` and `X-Accel-Buffering: no`, so compression and
+  nginx-style proxies pass them through unbuffered, and a heartbeat every 15 s
+  keeps idle-connection reapers away. If your platform has a configurable
+  request timeout, set it at or above `LLM_REQUEST_TIMEOUT`.
+
+### Step 2: name detection (NER)
+
+The pattern recognizers in the API find everything structural — cards, IBANs,
+CNIC and SSN numbers, phones, emails, IPs, salaries, credentials, and the
+workspace's deny list. **Names** need a statistical model. Choose one:
+
+**Option 1 (recommended): the AI service you deployed in phase 2.** Implement
+`POST /v1/pii/analyze` as specified in the
+[contract](contracts/ai-service-v1.md#post-v1piianalyze-phase-3) — the
+reference implementation is twenty lines of FastAPI around Presidio. It is
+HMAC-signed like every other AI call, so there is nothing new to secure.
+
+```bash
+# in the AI service's image
+pip install presidio-analyzer
+python -m spacy download en_core_web_lg     # ~1 GB RAM
+```
+
+Then, on the **API**: `PII_NER_PROVIDER=ai-service` (the default). The AI
+service's `/v1/health` should report `"pii": {"available": true, …}`.
+
+**Option 2: a stock Presidio analyzer container**
+(`mcr.microsoft.com/presidio-analyzer`). It has **no authentication**: run it
+on a private network only (Railway private networking, a Render private
+service, Cloud Run with internal ingress) or behind an authenticating proxy.
+
+```ini
+PII_NER_PROVIDER=presidio
+PRESIDIO_ANALYZER_URL=http://presidio-analyzer.railway.internal:3000
+PRESIDIO_API_KEY=                     # only if a proxy in front checks a token
+```
+
+**Option 3: no NER** (`PII_NER_PROVIDER=none`). Structural data is still masked,
+but names are not detected. Workspaces on the default `REFUSE` policy will then
+refuse every request that needs name detection; switch them deliberately to
+`DEGRADE_TO_PATTERNS` (below) only if that trade-off is acceptable.
+
+### Step 3: apply the migration and seed
+
+```bash
+npm run migration:run   # applies 1758700000000-InferenceAgentsPrivacy
+npm run seed            # syncs the phase 3 permissions into every workspace's roles
+```
+
+In a demo database, `SEED_DEMO_DATA=true npm run seed` also creates two agents:
+*Company Helpdesk* (handbook) and *HR Assistant* (HR policies, restricted to
+the HR Manager role), and a PII policy with a deny-list term.
+
+### Step 4: workspace policies (through the API, not the environment)
+
+The environment sets platform defaults and ceilings; each workspace narrows
+them, and every change is audited:
+
+| Endpoint | Permission | What it controls |
+|---|---|---|
+| `PUT /v1/organizations/{org}/llm/policy` | `llm:manage` | allowed models (a subset of the platform's), default model, lower output and context ceilings |
+| `PUT /v1/organizations/{org}/pii/policy` | `pii:policy:update` | entity types, score threshold, allow list (e.g. the company's own name), deny list (project code names), failure mode, or redaction off entirely |
+
+Weakening the PII policy — dropping a type, raising the threshold, choosing
+`DEGRADE_TO_PATTERNS`, turning redaction off — is audited with `weakened: true`.
+
+### Step 5: verify
+
+1. `GET /health` shows `llm` and `pii_detector` as `up` (both report
+   `degraded`, never `down`, when unreachable, so they cannot take the API out
+   of rotation).
+2. `GET /v1/organizations/{org}/llm/models` lists your models, each marked
+   allowed or not.
+3. See the redaction work without calling the model:
+
+   ```bash
+   curl -X POST $API/api/v1/organizations/$ORG/pii/analyze \
+     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+     -d '{"text":"Ayesha Raza (ayesha@acme.test) earns PKR 950,000; card 4111 1111 1111 1111."}'
+
+   # the exact, masked prompt an agent would send
+   curl -X POST $API/api/v1/organizations/$ORG/agents/$AGENT/prompt-preview \
+     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+     -d '{"content":"What does Ayesha Raza earn?"}'
+   ```
+
+4. Talk to an agent, streaming (`-N` disables curl's buffering):
+
+   ```bash
+   CONV=$(curl -s -X POST $API/api/v1/organizations/$ORG/conversations \
+     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+     -d "{\"agentId\":\"$AGENT\"}" | jq -r .data.id)
+   curl -N -X POST $API/api/v1/organizations/$ORG/conversations/$CONV/messages/stream \
+     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+     -d '{"content":"How many days of annual leave do I get?"}'
+   ```
+
+   Events: `meta`, then `status` (`retrieving`, `redacting`, `queued`,
+   `generating`), `delta` with the text, and `done` with citations, usage and
+   timings — or `error` with the same `code`, `status` and `details` a JSON
+   error would carry.
+5. End to end against a **disposable** database. The suite runs the real
+   application against in-process stand-ins for the model and the NER service,
+   so it needs only PostgreSQL and Redis:
+
+   ```bash
+   npm run migration:run
+   SEED_DEMO_DATA=true npm run seed
+   AGENTS_E2E=true npm run test:e2e:agents
+   ```
+
+6. Measure the redaction engine (`docs/benchmarks/pii-redaction.md`), and once
+   the AI service implements `/v1/pii/analyze`, with names too:
+
+   ```bash
+   npm run benchmark:pii
+   AI_SERVICE_URL=... AI_SERVICE_SIGNING_SECRET=... npm run benchmark:pii -- --ner ai-service
+   ```
+
+7. `GET /v1/organizations/{org}/llm/usage` reports invocations by outcome,
+   tokens, latency percentiles and the **redaction overhead** (p50/p95/p99 and
+   its share of total time) from live traffic.
+
+### Phase 3 checklist
+
+| Variable | API | Worker | AI service | GPU host / proxy |
+|---|:-:|:-:|:-:|:-:|
+| `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_API_KEY` | ✓ | (same env group is fine) | | proxy token = `LLM_API_KEY` |
+| `LLM_DEFAULT_MODEL`, `LLM_ALLOWED_MODELS` | ✓ | | | models pulled |
+| `LLM_MAX_CLASSIFICATION` | ✓ (`RESTRICTED` only for a model you control) | | | |
+| `LLM_MAX_CONCURRENCY` | ✓ | | | ≥ instances × this: `OLLAMA_NUM_PARALLEL` |
+| `LLM_REQUEST_TIMEOUT` > `LLM_MAX_DURATION` + 10 s | ✓ (validated at boot) | | | |
+| `PII_NER_PROVIDER` | ✓ | | implements `/v1/pii/analyze` | |
+| `PRESIDIO_ANALYZER_URL` (option 2 only) | ✓ | | | private network |
+| `PII_DEFAULT_ON_FAILURE` | ✓ (keep `REFUSE`) | | | |
+| Migration `1758700000000` and `npm run seed` | once | | | |
+
 ---
 
 ## Operations
@@ -307,13 +563,37 @@ stored objects and vectors are then removed by a background purge. A deleted
 workspace keeps its knowledge for `ORGANIZATION_PURGE_GRACE` (7 days), after
 which it is destroyed the same way. Its audit log is kept.
 
+### When the NER detector is down
+
+With the default `REFUSE` policy, agent turns and chat answer
+`503 PII_DETECTION_UNAVAILABLE` (audited as `pii.redaction.failed`, and recorded
+as `REFUSED` in the usage ledger) until it is back. Nothing is sent. If a
+workspace must keep working, an administrator can switch it to
+`DEGRADE_TO_PATTERNS` with `PUT …/pii/policy` — structural data stays masked,
+names do not — and switch it back afterwards. Both changes are audited.
+
+### `PII_EGRESS_BLOCKED`
+
+The gateway re-scans every outgoing prompt. A finding means a value that was
+supposed to be masked was about to leave: the request is refused with `500
+PII_EGRESS_BLOCKED` and audited as **CRITICAL** (`pii.egress.blocked`, entity
+types only, never values). It indicates a defect in the masking pipeline, not a
+user error: capture the request id from the audit record and investigate.
+
+### Changing models
+
+Add the model to the GPU host (`ollama pull …`) and to `LLM_ALLOWED_MODELS`,
+redeploy, then allow it per workspace with `PUT …/llm/policy`. An agent pinned
+to a model that is no longer allowed answers `422 LLM_MODEL_NOT_ALLOWED`, and
+one the endpoint no longer serves `422 LLM_MODEL_NOT_FOUND`, both listing the
+models that can be used; edit the agent (a new version) to switch.
+
 ---
 
 ## Later phases (not needed yet)
 
 | Phase | You will provision |
 |---|---|
-| 3 | An Ollama host with a GPU for inference; Presidio analyzer/anonymizer for PII redaction |
 | 4 | Nothing new: the workflow engine reuses Redis/BullMQ |
 | 5 | An OpenTelemetry collector (e.g. Grafana Cloud free tier); mTLS certificates between API and AI service |
 

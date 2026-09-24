@@ -13,13 +13,22 @@ Supervisor: Ms. Maryam Wardah · Co-Supervisor: Mr. Qaiser Manzoor
 
 ## Status
 
-**Phases 1 and 2 of 5 are implemented.**
+**Phases 1, 2 and 3 of 5 are implemented.**
 
 - **Phase 1:** foundation, identity, multi-tenancy, RBAC and the tamper-evident
   audit log.
 - **Phase 2:** the knowledge layer. Encrypted document storage, an async
   ingestion pipeline, hybrid vector search, and access-controlled retrieval
   that enforces compartments and clearance *inside* the search.
+- **Phase 3:** inference, agents and privacy.
+  - An LLM gateway for Ollama or any OpenAI-compatible server, streaming over
+    SSE, which is also the privacy boundary.
+  - The **PII Redaction Engine**: detect → mask → unmask, with the mapping
+    destroyed at the end of each request and every outgoing prompt
+    re-checked.
+  - Versioned agents that act only with their user's access.
+  - Token-budgeted conversational memory whose messages carry the sensitivity
+    of what they were derived from.
 
 See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the
 five-phase plan and [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md) for what to
@@ -28,11 +37,13 @@ provision.
 | Check | Result |
 |-------|--------|
 | `npm run typecheck` / `lint` / `build` | clean |
-| `npm test` | 343 tests, 16 suites, passing |
-| `npm audit` | 0 vulnerabilities |
-| Migrations + seed on real PostgreSQL 18 | ✅ both migrations apply, revert and re-apply |
-| Live HTTP (auth, workspaces, knowledge bases, grants) | ✅ |
+| `npm test` | 583 tests, 25 suites, passing |
+| `npm audit --omit=dev` | 0 vulnerabilities |
+| Migrations + seed on real PostgreSQL 18 | ✅ all three migrations apply, revert and re-apply |
+| Live HTTP (auth, workspaces, knowledge bases, grants; SSE agent turns against a mock model) | ✅ |
 | `npm run test:e2e:knowledge` (real PostgreSQL, in-memory cloud stand-ins) | ✅ 13/13 |
+| `npm run test:e2e:agents` (real PostgreSQL, stand-in model and NER) | ✅ 18/18 |
+| `npm run benchmark:pii` ([report](docs/benchmarks/pii-redaction.md)) | 0 leaks in 15,806 entities; F1 99.79%; overhead p50 1.4 ms |
 | `npm run test:integration` (live Qdrant) | ⏳ runs once `QDRANT_URL` is set |
 
 ### Outstanding
@@ -45,6 +56,10 @@ provision.
   are configured, upload and retrieval return `503
   KNOWLEDGE_LAYER_NOT_CONFIGURED` and name the missing variables; everything else
   works.
+- Agents and chat need a model endpoint (`LLM_BASE_URL`; `503 LLM_NOT_CONFIGURED`
+  until set), and name detection needs the AI service to implement
+  `POST /v1/pii/analyze` (or a Presidio analyzer). See the phase 3 section of
+  [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md).
 
 ---
 
@@ -57,7 +72,8 @@ provision.
 | Redis | ≥ 6 | `maxmemory-policy noeviction` (it holds BullMQ jobs) |
 | S3-compatible storage | any | phase 2: Cloudflare R2 recommended |
 | Qdrant | ≥ 1.10 | phase 2: Qdrant Cloud; needs the Query API for hybrid search |
-| Python AI service | contract v1 | phase 2: see `docs/contracts/ai-service-v1.md` |
+| Python AI service | contract v1 | phase 2: see `docs/contracts/ai-service-v1.md`; phase 3 adds `/v1/pii/analyze` |
+| LLM endpoint | Ollama ≥ 0.5, or OpenAI-compatible | phase 3: a GPU host behind an authenticating proxy, or a hosted API |
 
 All of these run as managed cloud services. [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md)
 walks through provisioning each one and which variables to set where. Docker
@@ -192,10 +208,27 @@ curl -X POST http://localhost:3000/api/v1/organizations/acme-corporation/rag/que
   -d '{"query":"How many days of annual leave do I get?"}'
 ```
 
+```bash
+# Phase 3: see what the model would receive, masked, without calling it.
+curl -X POST http://localhost:3000/api/v1/organizations/acme-corp/pii/analyze \
+  -H 'Authorization: Bearer <accessToken>' -H 'Content-Type: application/json' \
+  -d '{"text":"Ayesha Raza (ayesha.raza@acme.test) earns PKR 950,000; card 4111 1111 1111 1111."}'
+
+# Talk to an agent, streaming. -N stops curl buffering the events.
+curl -X POST http://localhost:3000/api/v1/organizations/acme-corp/conversations \
+  -H 'Authorization: Bearer <accessToken>' -H 'Content-Type: application/json' \
+  -d '{"agentId":"<agentId>"}'
+curl -N -X POST http://localhost:3000/api/v1/organizations/acme-corp/conversations/<conversationId>/messages/stream \
+  -H 'Authorization: Bearer <accessToken>' -H 'Content-Type: application/json' \
+  -d '{"content":"How many days of annual leave do I get?"}'
+```
+
 With `SEED_DEMO_DATA=true`, the demo workspace `acme-corp` has an open
 **Company Handbook** and a RESTRICTED **HR Policies** compartment admitting only
 the HR Manager (MANAGE) and Compliance Auditor (READ) roles. Sign in as
 `employee@acme.test` or `admin@acme.test` and HR Policies does not exist for you.
+It also has two agents: **Company Helpdesk** (the handbook) and **HR Assistant**
+(HR Policies, usable only by the HR Manager role).
 
 ---
 
@@ -212,6 +245,8 @@ the HR Manager (MANAGE) and Compliance Auditor (READ) roles. Sign in as
 | `npm test` | Unit tests |
 | `npm run test:integration` | Live tests against cloud services (skipped unless configured) |
 | `npm run test:e2e:knowledge` | Knowledge layer end to end on a **disposable** database (`KNOWLEDGE_E2E=true`) |
+| `npm run test:e2e:agents` | Agents, memory and PII redaction end to end on a **disposable** database (`AGENTS_E2E=true`) |
+| `npm run benchmark:pii` | PII Redaction Engine accuracy and overhead → `docs/benchmarks/` (`-- --ner ai-service` to include names) |
 | `npm run test:cov` | Coverage |
 | `npm run lint` | ESLint with `--fix` |
 | `npm run migration:run` | Apply pending migrations |
@@ -248,7 +283,16 @@ src/
     │   ├── documents/       Upload inspection, encryption, the Document Vault
     │   ├── ingestion/       BullMQ pipeline, reconciliation sweep, purges
     │   └── retrieval/       Policy filters and two-point enforcement
+    ├── privacy/         Phase 3: the PII Redaction Engine
+    │   ├── domain/          Recognizers, masking session, sealed vault, stream unmasker
+    │   └── detection/       Pattern + NER detection (AI service or Presidio), NER cache
+    ├── llm/             Phase 3: the gateway (egress check, bulkhead, breaker, deadlines),
+    │                    providers (Ollama, OpenAI-compatible), policies, usage ledger
+    ├── agents/          Phase 3: versioned agents, persona engine, conversations,
+    │                    token-budgeted memory with information-flow labels
     └── health/          Liveness and readiness probes
+src/benchmarks/pii/      The redaction benchmark: synthetic annotated corpus and scoring
+src/testing/             Stand-ins for the cloud services, used by the end-to-end suites
 ```
 
 ### Request pipeline
@@ -320,6 +364,21 @@ Worth knowing before changing anything in this codebase.
   `Content-Type`. Macro-enabled and zip-bomb DOCX files are refused.
 - **Requests to the AI service are HMAC-signed** with replay protection, and
   its responses are validated as untrusted input.
+- **Nothing reaches a language model except through the gateway, and nothing
+  sensitive leaves it.** The gateway re-scans every outgoing prompt; a value that
+  should have been masked blocks the request, which is audited as CRITICAL.
+  There is no "send unmasked if detection fails" mode: the default refuses.
+- **The placeholder mapping never touches storage.** It is sealed under a key
+  that exists only for the request and is zeroed at its end.
+- **Agents never hold access of their own.** An agent retrieves with its user's
+  access, narrowed by its own knowledge bases and ceiling, so attaching HR to a
+  public agent does not show HR to the public.
+- **Answers inherit the sensitivity of their sources.** A conversation message
+  carries the classification and compartments of what it was derived from, and
+  is withheld from anyone, owner included, who can no longer read them.
+- **Agent versions are append-only** (a trigger rejects UPDATE), so what an agent
+  said can always be traced to the exact configuration and prompt template that
+  produced it.
 
 ### Before deploying
 
@@ -349,10 +408,16 @@ without them, and bootstrap throws if it detects a development default.
   guarantee
 - [`docs/adr/0002-knowledge-layer-security.md`](docs/adr/0002-knowledge-layer-security.md) —
   the access lattice, two-point enforcement, crypto-shredding, convergence
+- [`docs/adr/0003-inference-and-privacy.md`](docs/adr/0003-inference-and-privacy.md) —
+  the gateway as privacy boundary, request-scoped masking, fail-closed
+  detection, agents as delegates, information-flow labels
+- [`docs/benchmarks/pii-redaction.md`](docs/benchmarks/pii-redaction.md) — measured
+  accuracy and overhead of the PII Redaction Engine, reproducible
 - [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md) — provisioning each cloud service,
   per phase, and which variables go where
 - [`docs/contracts/ai-service-v1.md`](docs/contracts/ai-service-v1.md) — the
-  Python AI service contract, with a reference signature verifier
+  Python AI service contract, with a reference signature verifier and a
+  Presidio reference for `/v1/pii/analyze`
 
 ---
 

@@ -212,13 +212,84 @@ process memory and into whatever logs the retrieval path writes.
 
 ---
 
-## Phase 3 — Inference, Agents & Privacy
+## Phase 3 — Inference, Agents & Privacy · **IMPLEMENTED**
 
 Local LLM inference, the agent abstraction, conversational memory, and the
 project's research component.
 
 **Proposal modules:** 6.7 Local LLM Gateway · 6.8 Agent Builder & Persona Engine ·
 6.10 Agent Memory & Context · 6.12 PII Redaction Engine
+
+### Delivered
+
+| Area | What was built |
+|------|----------------|
+| **LLM gateway** | One gateway for every model call, and the privacy boundary: an **egress check** re-scans the exact outgoing payload on every request (known values + context-free recognizers) and refuses with `PII_EGRESS_BLOCKED`, audited CRITICAL. Ollama's native API and any OpenAI-compatible server (vLLM, TGI, hosted open-weight APIs). Model allowlists at three levels (endpoint, platform, workspace); an authoritative model check before any work. Bulkhead with a bounded, cancellable queue; circuit breaker for endpoint faults only; retries **only before the first token**; first-token, idle and total deadlines; output ceiling; `num_ctx` and `keep_alive` always sent; reasoning blocks (`<think>`) removed; a self-calibrating token estimator. A **model trust tier** (`LLM_MAX_CLASSIFICATION`) keeps passages above it out of prompts for a third-party endpoint. |
+| **PII Redaction Engine** | Detect → mask → unmask. **Detection** in two layers: validated in-process recognizers (Luhn + issuer, IBAN mod-97, CNIC/SSN ranges, phones incl. `00`/`+` prefixes, emails, IPs, salaries in figures and words, credentials, deny lists) and NER for names through the AI service's `/v1/pii/analyze` or a Presidio analyzer. Unicode canonicalisation defeats full-width and zero-width evasion; Python code-point offsets converted. NER cache keyed by HMAC, holding offsets only. **Masking** in one request-scoped session per prompt: consistent placeholders, partial-name linking, propagation to undetected mentions; the mapping sealed with a per-request AES-256-GCM key and destroyed with the request — never stored. **Unmasking** as tokens stream, never exposing half a placeholder, tolerant of mangled ones, measuring invented placeholders. |
+| **Fail-closed policy** | Per-workspace PII policy (types, threshold, allow/deny lists, failure mode): `REFUSE` by default when NER is down, or an explicit `DEGRADE_TO_PATTERNS`; no "send unmasked" mode exists. Every weakening is audited with `weakened: true`. |
+| **Agents** | Persona engine (identity, tone, language, grounding, citations) compiled with fixed platform rules: retrieved text is data, placeholders are copied exactly. **Append-only versions** (UPDATE blocked by a trigger), config digests, rollback by appending, prompt-template version recorded with each answer, instructions encrypted. Visibility (draft/published) and role-restricted access. **An agent is a delegate, not a principal**: retrieval runs with the user's access, narrowed by the agent's knowledge bases and classification ceiling — the confused-deputy problem is removed by construction. Editors cannot attach what they cannot read; hidden bases survive their edits. |
+| **Conversations & memory** | Token-budgeted context window (answer reserved, margin, mandatory system + question, passages by rank, contiguous newest-first history). **Information-flow labels** on every message (the high-water mark of its inputs), re-checked against current access on every read and prompt inclusion — deleting a document withdraws the answers derived from it. Per-conversation keys with crypto-shredding. Supervisors see masked content; `reveal=true` needs `pii:reveal`, audited CRITICAL. Turn lease against interleaving, idempotent sends, partial answers kept on interruption. |
+| **Streaming API** | SSE over POST: JSON errors before the stream opens, `error` events (with status and retry hint) after; `meta` / `status` / `delta` / `done`; heartbeats; `no-transform` and `X-Accel-Buffering: no` so compression and proxies pass it through; client disconnect cancels generation on the GPU. |
+| **Measurement** | A content-free usage ledger (`llm_invocations`): outcome, reported or estimated tokens, TTFT, queue time, redaction time split into detection, egress and unmasking; `GET …/llm/usage` with percentiles and the redaction share of total time. A deterministic **benchmark harness** (`npm run benchmark:pii`) over a documented synthetic corpus with obfuscations and decoys. |
+| **Cloud & configuration** | All optional at boot with 503s naming missing variables; cross-field validation of timeouts; degraded-never-down health indicators for the model and the NER detector; Phase 3 section in `docs/CLOUD_SETUP.md` (GPU host behind an authenticating proxy, hosted APIs, NER options). |
+
+### Verification status
+
+- `npm run typecheck`, `npm run lint`, `npm run build` — clean
+- `npm test` — **583 tests, 25 suites, all passing** (240 new). Covers:
+  - the recognizers against look-alikes;
+  - masking, linking and propagation;
+  - a streaming-unmask fuzz over 300 random chunkings per output;
+  - the gateway against a scripted provider (egress block, bulkhead, breaker,
+    retry-before-first-token, every deadline, client abort, placeholder
+    unmasking across tokens);
+  - both provider dialects against scripted HTTP;
+  - agent access, versioning, labels, budgeting and prompt escaping;
+  - the detection service's cache isolation and failure policy.
+- **Against real PostgreSQL 18:** the migration applies, reverts and re-applies;
+  the full application boots; the seed creates the demo agents and PII policy.
+- **End-to-end (`npm run test:e2e:agents`), real PostgreSQL, in-process
+  stand-ins for the model and NER — 18/18.** The main checks:
+  - none of 11 sensitive values reach the prompt at the gateway boundary;
+  - the answer is unmasked for HR, labelled RESTRICTED and cited;
+  - ciphertext at rest, and an audit log with no PII;
+  - streaming never splits a placeholder;
+  - the confused deputy is refused;
+  - an auditor sees content masked, and reveal is audited;
+  - NER down gives 503 under `REFUSE` and proceeds under `DEGRADE`;
+  - a simulated masking bug is blocked at egress;
+  - version restore is verified by digest, and `UPDATE` is blocked by the trigger;
+  - deleting a document withdraws derived answers;
+  - conversation deletion shreds its key;
+  - the audit chain verifies.
+- **Live HTTP smoke test** (built server, real HTTP, a mock Ollama speaking
+  NDJSON) — 11/11:
+  - SSE streams uncompressed and incrementally despite gzip negotiation;
+  - an unknown model gets 422 JSON before the stream opens;
+  - a missing vector store is an in-stream 503 naming the variables, and the
+    model is never called;
+  - idempotent sends return 409;
+  - a client disconnect aborts the upstream generation and is recorded as
+    CANCELLED.
+- **Benchmark** ([`docs/benchmarks/pii-redaction.md`](benchmarks/pii-redaction.md)),
+  2,000 documents, 15,806 entities:
+  - **0 leaks**;
+  - micro precision / recall / F1 of 99.58% / 100% / 99.79% on structural
+    types;
+  - 0 false egress blocks;
+  - every document round-trips to the same entities;
+  - redaction overhead p50 1.4 ms, p95 12 ms per prompt.
+
+  The harness found and drove fixes for:
+  - propagation corrupting years;
+  - context-sensitive egress false blocks;
+  - phone and ISBN look-alikes;
+  - a 5× masking slowdown from per-request Unicode regex compilation.
+- **Pending the cloud services:** a real model endpoint, and the AI service
+  implementing `/v1/pii/analyze` (then `npm run benchmark:pii -- --ner
+  ai-service` measures names).
+
+### Original plan (for reference)
 
 ### Deliverables
 
@@ -260,10 +331,24 @@ recreate exactly the exposure the engine exists to prevent.
 
 ### Exit criteria
 
-- A synthetic HR document containing names, salaries and card numbers produces
-  an LLM prompt (captured at the gateway boundary) containing **none** of them.
-- Measured redaction overhead reported against a documented corpus — a result
-  the report can cite.
+- ✅ A synthetic HR document containing names, salaries and card numbers produces
+  an LLM prompt (captured at the gateway boundary) containing **none** of them —
+  proven end to end with 11 values, and enforced in production by the gateway's
+  egress check on every request.
+- ✅ Measured redaction overhead reported against a documented corpus —
+  `docs/benchmarks/pii-redaction.md` (reproducible with `npm run benchmark:pii`),
+  plus live per-workspace figures from `GET …/llm/usage`.
+
+### Design decisions worth defending in the report
+
+See [`docs/adr/0003-inference-and-privacy.md`](adr/0003-inference-and-privacy.md).
+The short version:
+
+- the gateway is the privacy boundary and re-checks every payload;
+- the mapping lives and dies with the request;
+- the system fails closed;
+- an agent is a delegate, never a principal;
+- derived answers carry the labels of what they were derived from.
 
 ---
 
@@ -394,10 +479,12 @@ the frontend authenticates against and what the Python service calls back into.
 |-------|--------|
 | 1 — Foundation, Identity & Multi-Tenancy | ✅ Implemented; verified against real PostgreSQL during phase 2 |
 | 2 — Knowledge Layer & Secure Retrieval | ✅ Implemented; verified end to end against real PostgreSQL. Live runs await the cloud services and the Python AI service (see `docs/CLOUD_SETUP.md`) |
-| 3 — Inference, Agents & Privacy | Next |
-| 4 — Orchestration, Tools & Real-Time | Planned |
+| 3 — Inference, Agents & Privacy | ✅ Implemented; verified end to end against real PostgreSQL and over live HTTP with a mock model endpoint; benchmarked. Live runs await a model endpoint and the AI service's `/v1/pii/analyze` (see `docs/CLOUD_SETUP.md`) |
+| 4 — Orchestration, Tools & Real-Time | Next |
 | 5 — Governance, Hardening & Operations | Planned |
 
-**Three phases remain.** Phase 3 builds directly on phase 2: agents retrieve
-through the exported `RetrievalService`, and the PII engine masks exactly the
-passages it returns, after retrieval and before the prompt is assembled.
+**Two phases remain.** Phase 4 builds directly on phase 3: the workflow engine
+routes work between the agents built here, every model call still goes through
+the same gateway and privacy boundary, and the Tool Execution Engine adds the
+granted tools that phase 3 deliberately left out. Phase 5 then hardens and
+measures the whole system.

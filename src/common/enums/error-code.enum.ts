@@ -125,6 +125,32 @@ export enum ErrorCode {
   AI_SERVICE_UNAVAILABLE = 'AI_SERVICE_UNAVAILABLE',
   VECTOR_STORE_UNAVAILABLE = 'VECTOR_STORE_UNAVAILABLE',
   OBJECT_STORAGE_UNAVAILABLE = 'OBJECT_STORAGE_UNAVAILABLE',
+
+  // ── LLM gateway ───────────────────────────────────────────────────────────
+  LLM_NOT_CONFIGURED = 'LLM_NOT_CONFIGURED',
+  LLM_UNAVAILABLE = 'LLM_UNAVAILABLE',
+  LLM_BUSY = 'LLM_BUSY',
+  LLM_TIMEOUT = 'LLM_TIMEOUT',
+  LLM_MODEL_NOT_ALLOWED = 'LLM_MODEL_NOT_ALLOWED',
+  LLM_MODEL_NOT_FOUND = 'LLM_MODEL_NOT_FOUND',
+  LLM_CONTEXT_OVERFLOW = 'LLM_CONTEXT_OVERFLOW',
+  LLM_REJECTED = 'LLM_REJECTED',
+  LLM_RESPONSE_INVALID = 'LLM_RESPONSE_INVALID',
+
+  // ── Agents & conversations ────────────────────────────────────────────────
+  AGENT_NOT_FOUND = 'AGENT_NOT_FOUND',
+  AGENT_NAME_TAKEN = 'AGENT_NAME_TAKEN',
+  AGENT_VERSION_NOT_FOUND = 'AGENT_VERSION_NOT_FOUND',
+  AGENT_VERSION_CONFLICT = 'AGENT_VERSION_CONFLICT',
+  AGENT_UNAVAILABLE = 'AGENT_UNAVAILABLE',
+  CONVERSATION_NOT_FOUND = 'CONVERSATION_NOT_FOUND',
+  CONVERSATION_BUSY = 'CONVERSATION_BUSY',
+  CONVERSATION_ARCHIVED = 'CONVERSATION_ARCHIVED',
+  MESSAGE_DUPLICATE = 'MESSAGE_DUPLICATE',
+
+  // ── PII redaction ─────────────────────────────────────────────────────────
+  PII_DETECTION_UNAVAILABLE = 'PII_DETECTION_UNAVAILABLE',
+  PII_EGRESS_BLOCKED = 'PII_EGRESS_BLOCKED',
 }
 
 /**
@@ -256,4 +282,35 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.AI_SERVICE_UNAVAILABLE]: 'The AI service is temporarily unavailable.',
   [ErrorCode.VECTOR_STORE_UNAVAILABLE]: 'The vector store is temporarily unavailable.',
   [ErrorCode.OBJECT_STORAGE_UNAVAILABLE]: 'Document storage is temporarily unavailable.',
+
+  [ErrorCode.LLM_NOT_CONFIGURED]: 'No language model is configured on this deployment.',
+  [ErrorCode.LLM_UNAVAILABLE]: 'The language model is temporarily unavailable.',
+  [ErrorCode.LLM_BUSY]:
+    'The language model is serving other requests. Try again in a few seconds.',
+  [ErrorCode.LLM_TIMEOUT]: 'The language model took too long to respond.',
+  [ErrorCode.LLM_MODEL_NOT_ALLOWED]: 'That model is not enabled for this workspace.',
+  [ErrorCode.LLM_MODEL_NOT_FOUND]: 'The model endpoint does not serve that model.',
+  [ErrorCode.LLM_CONTEXT_OVERFLOW]:
+    'The message is too long for the model’s context window.',
+  [ErrorCode.LLM_REJECTED]: 'The language model rejected the request.',
+  [ErrorCode.LLM_RESPONSE_INVALID]: 'The language model returned an unusable response.',
+
+  [ErrorCode.AGENT_NOT_FOUND]: 'The agent was not found.',
+  [ErrorCode.AGENT_NAME_TAKEN]: 'An agent with this name already exists in this workspace.',
+  [ErrorCode.AGENT_VERSION_NOT_FOUND]: 'That version of the agent does not exist.',
+  [ErrorCode.AGENT_VERSION_CONFLICT]:
+    'The agent was changed by someone else. Reload it and apply your change again.',
+  [ErrorCode.AGENT_UNAVAILABLE]: 'The agent behind this conversation has been deleted.',
+  [ErrorCode.CONVERSATION_NOT_FOUND]: 'The conversation was not found.',
+  [ErrorCode.CONVERSATION_BUSY]:
+    'This conversation is still answering the previous message.',
+  [ErrorCode.CONVERSATION_ARCHIVED]:
+    'This conversation is archived. Unarchive it to continue.',
+  [ErrorCode.MESSAGE_DUPLICATE]: 'This message has already been sent.',
+
+  [ErrorCode.PII_DETECTION_UNAVAILABLE]:
+    'Sensitive-data detection is unavailable, and this workspace refuses to send ' +
+    'unprotected text to the model.',
+  [ErrorCode.PII_EGRESS_BLOCKED]:
+    'The request was stopped because sensitive data would have reached the model.',
 };

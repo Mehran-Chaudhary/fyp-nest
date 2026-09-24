@@ -196,7 +196,8 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
     key: 'usage:read',
     category: PermissionCategory.OBSERVABILITY,
     description: 'View token consumption and usage analytics.',
-    phase: 5,
+    // Enforced from phase 3, when the LLM gateway starts recording usage.
+    phase: 3,
   },
   {
     key: 'quota:manage',
@@ -635,7 +636,9 @@ export const DEFAULT_SYSTEM_ROLE_SLUG = SystemRoleSlug.MEMBER;
  *
  * `clearance:restricted` is deliberately absent. The most sensitive tier is
  * reachable only by a person, never by a machine credential that can be copied
- * into a config file and forgotten.
+ * into a config file and forgotten. So are `pii:reveal` and
+ * `conversation:read_all`, for the same reason: seeing raw personal data and
+ * supervising other people's conversations are acts a person must answer for.
  */
 export const API_KEY_SCOPES: readonly string[] = [
   'rag:query',
@@ -647,6 +650,9 @@ export const API_KEY_SCOPES: readonly string[] = [
   'clearance:confidential',
   'agent:read',
   'agent:execute',
+  // A key reads and deletes only the conversations it started itself.
+  'conversation:read',
+  'conversation:delete',
   'llm:invoke',
   'workflow:execute',
   'tool:execute',

@@ -71,6 +71,9 @@ import { RetrievalService } from './retrieval/retrieval.service';
     KnowledgeWorkersService,
     RetrievalService,
   ],
-  exports: [RetrievalService, KnowledgeBaseAccessService],
+  // Phase 3 builds on these: agents retrieve through RetrievalService, and the
+  // PII engine's document reports read chunks through DocumentsService, so
+  // both inherit this module's access checks rather than copying them.
+  exports: [RetrievalService, KnowledgeBaseAccessService, DocumentsService],
 })
 export class KnowledgeModule {}

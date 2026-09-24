@@ -13,6 +13,8 @@ export interface AppExceptionOptions {
    * Redacted before storage like any other metadata.
    */
   auditMetadata?: Record<string, unknown>;
+  /** Sent as `Retry-After` — for a temporarily saturated dependency, not only rate limits. */
+  retryAfterSeconds?: number;
 }
 
 /**
@@ -28,6 +30,7 @@ export class AppException extends HttpException {
   readonly code: ErrorCode;
   readonly details?: Record<string, unknown> | Array<Record<string, unknown>>;
   readonly auditMetadata?: Record<string, unknown>;
+  readonly retryAfterSeconds?: number;
 
   constructor(code: ErrorCode, status: HttpStatus, options: AppExceptionOptions = {}) {
     const message = options.message ?? ERROR_CODE_MESSAGES[code] ?? 'An error occurred.';
@@ -36,6 +39,7 @@ export class AppException extends HttpException {
     this.code = code;
     this.details = options.details;
     this.auditMetadata = options.auditMetadata;
+    this.retryAfterSeconds = options.retryAfterSeconds;
     this.name = new.target.name;
   }
 
@@ -120,7 +124,7 @@ export class ConflictError extends AppException {
 // ── 429 ─────────────────────────────────────────────────────────────────────
 
 export class RateLimitError extends AppException {
-  readonly retryAfterSeconds: number;
+  declare readonly retryAfterSeconds: number;
 
   constructor(
     retryAfterSeconds: number,
@@ -129,9 +133,9 @@ export class RateLimitError extends AppException {
   ) {
     super(code, HttpStatus.TOO_MANY_REQUESTS, {
       ...options,
+      retryAfterSeconds,
       details: { retryAfterSeconds, ...(options?.details as object) },
     });
-    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 

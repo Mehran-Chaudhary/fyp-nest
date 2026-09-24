@@ -45,6 +45,35 @@ export const DEFAULT_SENSITIVE_KEYS: readonly string[] = [
   'pepper',
 ];
 
+/**
+ * Keys that carry free text — chat messages, prompts, analysed text, agent
+ * instructions, custom term lists.
+ *
+ * Not in {@link DEFAULT_SENSITIVE_KEYS}, because audit metadata legitimately
+ * uses some of these names for non-sensitive values. Used where a whole
+ * request body may be written to a log: an unexpected error during a chat
+ * request must not copy the user's message into the application log, which is
+ * the one store the PII engine never sees.
+ */
+export const FREE_TEXT_KEYS: readonly string[] = [
+  'content',
+  'text',
+  'messages',
+  'prompt',
+  'query',
+  'instructions',
+  'greeting',
+  'title',
+  'allowlist',
+  'denylist',
+];
+
+/** The key list for logging request bodies: secrets and free text alike. */
+export const LOG_SENSITIVE_KEYS: readonly string[] = [
+  ...DEFAULT_SENSITIVE_KEYS,
+  ...FREE_TEXT_KEYS,
+];
+
 export const REDACTED_PLACEHOLDER = '[REDACTED]';
 
 const MAX_DEPTH = 8;

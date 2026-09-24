@@ -1,10 +1,13 @@
 import { stripControlCharacters } from '../../common/utils/text.util';
+import { codePointLength, codePointOffsetMapper } from '../../common/utils/unicode.util';
 import {
   AiServiceError,
   type AiServiceHealth,
   type EmbeddingBatch,
   type ParsedChunk,
   type ParsedDocument,
+  type PiiAnalyzeResult,
+  type PiiAnalyzeSpan,
   type RerankResult,
 } from './ai-service.types';
 
@@ -213,6 +216,8 @@ export function validateHealthResponse(json: unknown): AiServiceHealth {
     root.rerank === undefined || root.rerank === null
       ? null
       : asRecord(root.rerank, 'rerank');
+  const pii =
+    root.pii === undefined || root.pii === null ? null : asRecord(root.pii, 'pii');
 
   return {
     status: optionalString(root.status, 'status', 32) ?? 'unknown',
@@ -225,6 +230,77 @@ export function validateHealthResponse(json: unknown): AiServiceHealth {
           }
         : null,
     rerankAvailable: rerank?.available === true,
+    pii: {
+      available: pii?.available === true,
+      detector: pii ? optionalString(pii.detector, 'pii.detector', 128) : null,
+    },
+  };
+}
+
+const ENTITY_TYPE = /^[A-Z][A-Z0-9_]{1,40}$/;
+
+/**
+ * Validates `/v1/pii/analyze` and converts its offsets.
+ *
+ * The service is Python, which indexes strings by code point; JavaScript
+ * indexes by UTF-16 code unit. On text containing an emoji the two differ, and
+ * an unconverted span would mask the wrong characters — leaving the name it
+ * was meant to hide in clear text. Offsets are checked against each text's
+ * code-point length, then converted.
+ */
+export function validatePiiAnalyzeResponse(
+  json: unknown,
+  expected: { texts: readonly string[] },
+): PiiAnalyzeResult {
+  const root = asRecord(json, 'response');
+  if (!Array.isArray(root.results) || root.results.length !== expected.texts.length) {
+    throw violation(
+      `results must be an array with one entry per text (${expected.texts.length}).`,
+    );
+  }
+
+  const results = root.results.map((rawList: unknown, textIndex): PiiAnalyzeSpan[] => {
+    if (!Array.isArray(rawList)) throw violation(`results[${textIndex}] must be an array.`);
+
+    const text = expected.texts[textIndex];
+    const length = codePointLength(text);
+    const toUtf16 = codePointOffsetMapper(text);
+
+    return rawList.map((raw: unknown, spanIndex): PiiAnalyzeSpan => {
+      const label = `results[${textIndex}][${spanIndex}]`;
+      const span = asRecord(raw, label);
+      const { entity_type: type, start, end, score } = span;
+
+      if (typeof type !== 'string' || !ENTITY_TYPE.test(type)) {
+        throw violation(`${label}.entity_type must be an upper-case entity name.`);
+      }
+      if (
+        typeof start !== 'number' ||
+        typeof end !== 'number' ||
+        !Number.isInteger(start) ||
+        !Number.isInteger(end) ||
+        start < 0 ||
+        end <= start ||
+        end > length
+      ) {
+        throw violation(`${label} has offsets outside its text.`);
+      }
+      if (typeof score !== 'number' || !Number.isFinite(score) || score < 0 || score > 1) {
+        throw violation(`${label}.score must be a number between 0 and 1.`);
+      }
+
+      return { entityType: type, start: toUtf16(start), end: toUtf16(end), score };
+    });
+  });
+
+  const detector = root.detector === undefined ? {} : asRecord(root.detector, 'detector');
+  const name = optionalString(detector.name, 'detector.name', 40) ?? 'unknown';
+  const version = optionalString(detector.version, 'detector.version', 24);
+  const model = optionalString(detector.model, 'detector.model', 64);
+
+  return {
+    results,
+    detector: name + (version ? `@${version}` : '') + (model ? `/${model}` : ''),
   };
 }
 

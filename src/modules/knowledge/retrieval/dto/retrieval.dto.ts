@@ -171,6 +171,14 @@ export class RetrievalResponseDto {
   })
   clearance: Classification;
 
+  @ApiProperty({
+    enum: Classification,
+    description:
+      'The clearance actually applied: yours, or lower when an agent or the model endpoint ' +
+      'imposes a ceiling.',
+  })
+  effectiveClearance: Classification;
+
   @ApiProperty({ type: [RetrievedChunkDto] })
   results: RetrievedChunkDto[];
 

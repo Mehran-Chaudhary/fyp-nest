@@ -2,6 +2,9 @@ import { Logger } from '@nestjs/common';
 import type { INestApplicationContext } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { SystemRoleSlug } from '../../common/constants/permissions.constants';
+import { AgentsService } from '../../modules/agents/agents.service';
+import { AgentAccessMode } from '../../modules/agents/domain/agent-config';
+import { ListAgentsQueryDto } from '../../modules/agents/dto/agent.dto';
 import {
   AccessLevel,
   KnowledgeBaseAccessMode,
@@ -15,6 +18,7 @@ import {
   OrganizationMember,
 } from '../../modules/memberships/entities/organization-member.entity';
 import { OrganizationsService } from '../../modules/organizations/organizations.service';
+import { PiiPolicyService } from '../../modules/privacy/pii-policy.service';
 import { RbacService } from '../../modules/rbac/rbac.service';
 import { User, UserStatus } from '../../modules/users/entities/user.entity';
 import { UsersService } from '../../modules/users/users.service';
@@ -172,6 +176,7 @@ export async function seedDemoData(app: INestApplicationContext): Promise<void> 
     if (existing) {
       logger.log('Demo workspace "acme-corp" already exists.');
       await seedDemoKnowledge(app, existing.id, owner.id, logger);
+      await seedDemoAgents(app, existing.id, owner.id, logger);
       return;
     }
 
@@ -232,6 +237,7 @@ export async function seedDemoData(app: INestApplicationContext): Promise<void> 
 
     await organizationsService.refreshMemberCount(organization.id);
     await seedDemoKnowledge(app, organization.id, owner.id, logger);
+    await seedDemoAgents(app, organization.id, owner.id, logger);
   });
 
   logger.log('');
@@ -323,6 +329,106 @@ async function seedDemoKnowledge(
     logger.log(
       '  knowledge base: HR Policies (RESTRICTED, CONFIDENTIAL; HR Manager + Auditor)',
     );
+  }
+}
+
+/**
+ * Phase 3: two agents and a redaction policy that make the privacy design
+ * demonstrable.
+ *
+ *  - **Company Helpdesk** — published to the whole workspace, answers from the
+ *    Company Handbook.
+ *  - **HR Assistant** — published but RESTRICTED to the HR Manager role, and
+ *    answers from the HR Policies compartment. Even if someone else could use
+ *    it, it would retrieve only what *they* may read.
+ *
+ * The demo policy degrades to pattern-only detection when the NER detector is
+ * unreachable, so the demo works before the AI service implements
+ * `/v1/pii/analyze`. The platform default, and the right production setting,
+ * is to refuse instead.
+ */
+async function seedDemoAgents(
+  app: INestApplicationContext,
+  organizationId: string,
+  ownerUserId: string,
+  logger: Logger,
+): Promise<void> {
+  const agents = app.get(AgentsService);
+  const knowledgeBases = app.get(KnowledgeBasesService);
+  const policies = app.get(PiiPolicyService);
+  const rbacService = app.get(RbacService);
+  const dataSource = app.get(DataSource);
+
+  const [membership]: Array<{ id: string }> = await dataSource.query(
+    `SELECT id FROM organization_members
+      WHERE organization_id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+    [organizationId, ownerUserId],
+  );
+  const owner: AccessPrincipal = {
+    organizationId,
+    kind: 'user',
+    userId: ownerUserId,
+    membershipId: membership?.id,
+    permissions: ['*:*'],
+  };
+
+  const policy = await policies.getEffective(organizationId);
+  if (policy.source === 'default') {
+    await policies.update(organizationId, ownerUserId, {
+      onDetectorFailure: 'DEGRADE_TO_PATTERNS',
+      allowList: ['Acme Corporation'],
+      denyList: ['Project Falcon'],
+    });
+    logger.log('  PII policy: defaults, degrade-to-patterns, deny list "Project Falcon"');
+  }
+
+  const bases = new Map(
+    (
+      await knowledgeBases.list(owner, { page: 1, limit: 100, sortDirection: 'ASC' })
+    ).items.map((base) => [base.name, base.id]),
+  );
+  const existing = new Set(
+    (
+      await agents.list(owner, Object.assign(new ListAgentsQueryDto(), { limit: 100 }))
+    ).items.map((agent) => agent.name),
+  );
+
+  if (!existing.has('Company Helpdesk') && bases.has('Company Handbook')) {
+    const helpdesk = await agents.create(owner, {
+      name: 'Company Helpdesk',
+      description: 'Answers questions about company policies from the handbook.',
+      persona: {
+        role: 'the company helpdesk',
+        tone: 'friendly',
+        greeting: 'Hi! Ask me anything about our policies.',
+      },
+      instructions:
+        'Help employees understand company policy. Keep answers short and point to the ' +
+        'relevant section of the handbook.',
+      retrieval: { knowledgeBaseIds: [bases.get('Company Handbook') as string] },
+    });
+    await agents.setPublished(owner, helpdesk.id, true);
+    logger.log('  agent: Company Helpdesk (published, handbook)');
+  }
+
+  if (!existing.has('HR Assistant') && bases.has('HR Policies')) {
+    const roles = new Map(
+      (await rbacService.listRoles(organizationId)).map((role) => [role.slug, role.id]),
+    );
+    const hrManager = roles.get('hr-manager');
+    const assistant = await agents.create(owner, {
+      name: 'HR Assistant',
+      description: 'Answers HR questions, including compensation, for the HR team.',
+      persona: { role: 'a careful HR policy assistant', tone: 'formal' },
+      instructions:
+        'You support the HR team. Be precise about figures and always cite the source. ' +
+        'Never speculate about individual employees beyond what the sources say.',
+      retrieval: { knowledgeBaseIds: [bases.get('HR Policies') as string] },
+      accessMode: AgentAccessMode.RESTRICTED,
+      allowedRoleIds: hrManager ? [hrManager] : [],
+    });
+    await agents.setPublished(owner, assistant.id, true);
+    logger.log('  agent: HR Assistant (published, RESTRICTED to HR Manager, HR Policies)');
   }
 }
 

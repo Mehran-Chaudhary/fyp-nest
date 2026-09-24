@@ -1,4 +1,5 @@
 import * as Joi from 'joi';
+import { parseDuration } from '../common/utils/duration.util';
 
 /**
  * Authoritative environment variable contract.
@@ -263,6 +264,12 @@ export const envValidationSchema = Joi.object({
   /** Retrieval queries: each one costs an embedding call and a vector search. */
   THROTTLE_RAG_TTL: duration('60s'),
   THROTTLE_RAG_LIMIT: Joi.number().integer().min(1).default(60),
+  /** Agent turns and direct model calls: each holds a GPU slot for seconds. */
+  THROTTLE_INFERENCE_TTL: duration('60s'),
+  THROTTLE_INFERENCE_LIMIT: Joi.number().integer().min(1).default(20),
+  /** PII analysis previews and redaction reports. */
+  THROTTLE_PII_TTL: duration('60s'),
+  THROTTLE_PII_LIMIT: Joi.number().integer().min(1).default(30),
 
   // ───────────────────────────────────────────────────────────────────────────
   // Phase 2 — object storage (S3-compatible: AWS S3, Cloudflare R2, Backblaze
@@ -404,6 +411,93 @@ export const envValidationSchema = Joi.object({
   RAG_REQUEST_TIMEOUT: duration('60s'),
 
   // ───────────────────────────────────────────────────────────────────────────
+  // Phase 3 — LLM gateway (module 6.7). Optional at boot: without
+  // LLM_BASE_URL the inference endpoints answer 503 LLM_NOT_CONFIGURED.
+  // ───────────────────────────────────────────────────────────────────────────
+  /** `ollama`: Ollama's native API. `openai`: any OpenAI-compatible server. */
+  LLM_PROVIDER: Joi.string().valid('ollama', 'openai').default('ollama'),
+  LLM_BASE_URL: Joi.string().uri().allow('').default(''),
+  /** Bearer token for an authenticating proxy, Ollama Cloud or a hosted API. */
+  LLM_API_KEY: Joi.string().allow('').default(''),
+  LLM_DEFAULT_MODEL: Joi.string().max(200).default('llama3.1:8b'),
+  /** Comma-separated platform allowlist. Empty: whatever the endpoint serves. */
+  LLM_ALLOWED_MODELS: Joi.string().allow('').default(''),
+  LLM_DEFAULT_CONTEXT_WINDOW: Joi.number().integer().min(512).max(1_048_576).default(8192),
+  /** Ceiling on the context window requested from the model (bounds GPU memory). */
+  LLM_MAX_CONTEXT_WINDOW: Joi.number().integer().min(512).max(1_048_576).default(32_768),
+  LLM_DEFAULT_MAX_OUTPUT_TOKENS: Joi.number().integer().min(16).max(65_536).default(1024),
+  LLM_MAX_OUTPUT_TOKENS: Joi.number().integer().min(16).max(65_536).default(4096),
+  LLM_DEFAULT_TEMPERATURE: Joi.number().min(0).max(2).default(0.3),
+  /** Until the first token: generous, because it includes loading the model. */
+  LLM_FIRST_TOKEN_TIMEOUT: duration('120s'),
+  LLM_IDLE_TIMEOUT: duration('30s'),
+  LLM_MAX_DURATION: duration('240s'),
+  /** HTTP budget of the inference routes. Must exceed LLM_MAX_DURATION. */
+  LLM_REQUEST_TIMEOUT: duration('300s'),
+  /** Concurrent generations per process. One GPU serves only a few at once. */
+  LLM_MAX_CONCURRENCY: Joi.number().integer().min(1).max(256).default(4),
+  LLM_QUEUE_TIMEOUT: duration('30s'),
+  LLM_MAX_RETRIES: Joi.number().integer().min(0).max(5).default(1),
+  LLM_MAX_RESPONSE_SIZE: byteSize('4mb'),
+  LLM_CIRCUIT_THRESHOLD: Joi.number().integer().min(1).max(100).default(5),
+  LLM_CIRCUIT_COOLDOWN: duration('30s'),
+  /** Ollama only: how long a model stays loaded after a request. */
+  LLM_KEEP_ALIVE: Joi.string()
+    .pattern(/^-?\d+(ms|s|m|h)?$/)
+    .default('30m'),
+  /**
+   * The most sensitive classification whose masked content may be sent to
+   * this endpoint. RESTRICTED for a model you host; lower for a third party.
+   */
+  LLM_MAX_CLASSIFICATION: Joi.string()
+    .valid('PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'RESTRICTED')
+    .default('RESTRICTED'),
+  LLM_MODEL_CACHE_TTL: duration('60s'),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 3 — PII redaction engine (module 6.12)
+  // ───────────────────────────────────────────────────────────────────────────
+  /**
+   * Where names and other free-text entities are detected. `ai-service`: the
+   * Python AI service's /v1/pii/analyze (HMAC-signed). `presidio`: a stock
+   * Presidio analyzer. `none`: validated pattern recognizers only.
+   */
+  PII_NER_PROVIDER: Joi.string()
+    .valid('ai-service', 'presidio', 'none')
+    .default('ai-service'),
+  PRESIDIO_ANALYZER_URL: Joi.string().uri().allow('').default(''),
+  PRESIDIO_API_KEY: Joi.string().allow('').default(''),
+  PRESIDIO_CONCURRENCY: Joi.number().integer().min(1).max(32).default(4),
+  PII_TIMEOUT: duration('10s'),
+  PII_DEFAULT_ENTITIES: Joi.string()
+    .pattern(/^\s*[A-Z][A-Z0-9_]{1,40}(\s*,\s*[A-Z][A-Z0-9_]{1,40})*\s*$/)
+    .default(
+      'PERSON,EMAIL_ADDRESS,PHONE_NUMBER,CREDIT_CARD,IBAN_CODE,US_SSN,PK_CNIC,IP_ADDRESS,SALARY,CREDENTIAL',
+    ),
+  /** REFUSE: fail closed. DEGRADE_TO_PATTERNS: continue with pattern recognizers only. */
+  PII_DEFAULT_ON_FAILURE: Joi.string()
+    .valid('REFUSE', 'DEGRADE_TO_PATTERNS')
+    .default('REFUSE'),
+  PII_SCORE_THRESHOLD: Joi.number().min(0).max(1).default(0.5),
+  PII_LANGUAGE: Joi.string()
+    .pattern(/^[a-z]{2}(-[A-Z]{2})?$/)
+    .default('en'),
+  /** NER results cached by keyed fingerprint (never text). 0 disables. */
+  PII_DETECTION_CACHE_TTL: duration('1h'),
+  PII_CIRCUIT_THRESHOLD: Joi.number().integer().min(1).max(100).default(5),
+  PII_CIRCUIT_COOLDOWN: duration('30s'),
+  PII_MAX_ANALYZE_LENGTH: Joi.number().integer().min(100).max(200_000).default(20_000),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 3 — agents and conversational memory (modules 6.8, 6.10)
+  // ───────────────────────────────────────────────────────────────────────────
+  AGENT_MEMORY_MAX_MESSAGES: Joi.number().integer().min(0).max(500).default(20),
+  AGENT_MEMORY_MAX_MESSAGES_CEILING: Joi.number().integer().min(0).max(500).default(100),
+  AGENT_MEMORY_MAX_TOKENS: Joi.number().integer().min(0).max(262_144).default(3000),
+  AGENT_CONTEXT_MAX_TOKENS: Joi.number().integer().min(0).max(262_144).default(3000),
+  AGENT_MAX_MESSAGE_LENGTH: Joi.number().integer().min(100).max(100_000).default(16_000),
+
+  // ───────────────────────────────────────────────────────────────────────────
   // Outbound email
   // ───────────────────────────────────────────────────────────────────────────
   /** `log` prints messages to the console; nothing is sent. Ideal for development. */
@@ -446,7 +540,7 @@ export const envValidationSchema = Joi.object({
   MAX_MEMBERS_PER_ORGANIZATION: Joi.number().integer().min(0).default(0),
 })
   // Unknown keys are allowed: the shell environment always carries far more than
-  // we declare (PATH, HOME, CI variables, and the phase 2+ keys documented in
+  // we declare (PATH, HOME, CI variables, and the later-phase keys documented in
   // .env.example but not yet read by any code).
   .unknown(true);
 
@@ -473,8 +567,11 @@ export function validateEnvironment(raw: Record<string, unknown>): Record<string
 
   const { error, value } = result;
 
-  if (error) {
-    const details = error.details.map((detail) => `  - ${detail.message}`).join('\n');
+  const problems = error ? error.details.map((detail) => detail.message) : [];
+  if (!error) problems.push(...crossFieldProblems(value));
+
+  if (problems.length > 0) {
+    const details = problems.map((problem) => `  - ${problem}`).join('\n');
     throw new Error(
       `Environment validation failed. The application will not start with an invalid configuration.\n${details}\n\n` +
         'See .env.example for the full list of supported variables.',
@@ -482,6 +579,35 @@ export function validateEnvironment(raw: Record<string, unknown>): Record<string
   }
 
   return value;
+}
+
+/**
+ * Relationships between variables that per-field rules cannot express.
+ *
+ * Each one is a configuration that would otherwise fail confusingly at run
+ * time — an HTTP budget shorter than the generation it wraps turns every long
+ * answer into a 408 with the model still running.
+ */
+function crossFieldProblems(values: Record<string, unknown>): string[] {
+  const problems: string[] = [];
+  const ms = (key: string): number => parseDuration(values[key] as string);
+
+  if (ms('LLM_REQUEST_TIMEOUT') < ms('LLM_MAX_DURATION') + 10_000) {
+    problems.push(
+      '"LLM_REQUEST_TIMEOUT" must exceed "LLM_MAX_DURATION" by at least 10s, so a generation ' +
+        'can finish and be saved before the HTTP budget runs out.',
+    );
+  }
+  if (ms('LLM_FIRST_TOKEN_TIMEOUT') > ms('LLM_MAX_DURATION')) {
+    problems.push('"LLM_FIRST_TOKEN_TIMEOUT" cannot exceed "LLM_MAX_DURATION".');
+  }
+  if (values.PII_NER_PROVIDER === 'presidio' && !values.PRESIDIO_ANALYZER_URL) {
+    problems.push(
+      '"PRESIDIO_ANALYZER_URL" is required when "PII_NER_PROVIDER" is presidio.',
+    );
+  }
+
+  return problems;
 }
 
 /**
