@@ -26,6 +26,7 @@
     "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./jest.integration.config.mjs --runInBand",
     "test:e2e:knowledge": "ts-node -r tsconfig-paths/register src/modules/knowledge/knowledge.e2e-spec.ts",
     "test:e2e:agents": "ts-node -r tsconfig-paths/register src/modules/agents/agents.e2e-spec.ts",
+    "test:e2e:workflows": "ts-node -r tsconfig-paths/register src/modules/workflows/workflows.e2e-spec.ts",
     "benchmark:pii": "ts-node -r tsconfig-paths/register src/benchmarks/pii/run-pii-benchmark.ts",
     "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.config.mjs --runInBand",
     "typeorm": "typeorm-ts-node-commonjs -d src/database/data-source.ts",

@@ -13,7 +13,7 @@ Supervisor: Ms. Maryam Wardah · Co-Supervisor: Mr. Qaiser Manzoor
 
 ## Status
 
-**Phases 1, 2 and 3 of 5 are implemented.**
+**Phases 1 to 4 of 5 are implemented. One phase remains.**
 
 - **Phase 1:** foundation, identity, multi-tenancy, RBAC and the tamper-evident
   audit log.
@@ -29,6 +29,18 @@ Supervisor: Ms. Maryam Wardah · Co-Supervisor: Mr. Qaiser Manzoor
   - Versioned agents that act only with their user's access.
   - Token-budgeted conversational memory whose messages carry the sensitivity
     of what they were derived from.
+- **Phase 4:** orchestration, tools and real-time.
+  - A multi-agent **workflow engine** for the React Flow canvas: explicit
+    bounded loops, supervisors, conditions and human approvals, with every
+    step persisted, resumable and traceable from the audit log alone.
+  - Queued jobs carry references and a MAC, never content; each run's messages
+    are encrypted under its own key. A step ceiling and a token budget stop
+    runaway loops before they reach the queue.
+  - A **tool execution engine**: per-agent grants, strict schemas,
+    information-flow control against prompt injection, and SSRF-safe HTTP
+    tools.
+  - **Live events over WebSocket**: authenticated at the handshake, scoped to
+    the workspace, metadata only, and closed the moment access is revoked.
 
 See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the
 five-phase plan and [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md) for what to
@@ -37,12 +49,13 @@ provision.
 | Check | Result |
 |-------|--------|
 | `npm run typecheck` / `lint` / `build` | clean |
-| `npm test` | 583 tests, 25 suites, passing |
+| `npm test` | 671 tests, 29 suites, passing |
 | `npm audit --omit=dev` | 0 vulnerabilities |
-| Migrations + seed on real PostgreSQL 18 | ✅ all three migrations apply, revert and re-apply |
-| Live HTTP (auth, workspaces, knowledge bases, grants; SSE agent turns against a mock model) | ✅ |
+| Migrations + seed on real PostgreSQL 18 | ✅ all four migrations apply, revert and re-apply |
+| Live HTTP and WebSocket (auth, workspaces, knowledge bases, grants; SSE agent turns against a mock model; workflow runs, live events, dead letters, health) | ✅ |
 | `npm run test:e2e:knowledge` (real PostgreSQL, in-memory cloud stand-ins) | ✅ 13/13 |
 | `npm run test:e2e:agents` (real PostgreSQL, stand-in model and NER) | ✅ 18/18 |
+| `npm run test:e2e:workflows` (real PostgreSQL, Redis, BullMQ workers and Socket.IO; scripted model) | ✅ 26/26 — the three phase 4 exit criteria |
 | `npm run benchmark:pii` ([report](docs/benchmarks/pii-redaction.md)) | 0 leaks in 15,806 entities; F1 99.79%; overhead p50 1.4 ms |
 | `npm run test:integration` (live Qdrant) | ⏳ runs once `QDRANT_URL` is set |
 
@@ -60,6 +73,10 @@ provision.
   until set), and name detection needs the AI service to implement
   `POST /v1/pii/analyze` (or a Presidio analyzer). See the phase 3 section of
   [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md).
+- Workflows with agent steps need that same model endpoint; workflows made of
+  tools, conditions and approvals run today (the seeded *Bonus calculator* is
+  one). HTTP tools stay off until `TOOL_HTTP_ALLOWED_HOSTS` lists their hosts.
+  See the phase 4 section of [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md).
 
 ---
 
@@ -69,7 +86,7 @@ provision.
 |---|---|---|
 | Node.js | ≥ 20.11 | Developed on 22.14 |
 | PostgreSQL | ≥ 13 | Needs `gen_random_uuid()`; verified on 18 |
-| Redis | ≥ 6 | `maxmemory-policy noeviction` (it holds BullMQ jobs) |
+| Redis | ≥ 6 | `maxmemory-policy noeviction` (it holds BullMQ jobs); streams, pub/sub and Lua (phase 4 events) |
 | S3-compatible storage | any | phase 2: Cloudflare R2 recommended |
 | Qdrant | ≥ 1.10 | phase 2: Qdrant Cloud; needs the Query API for hybrid search |
 | Python AI service | contract v1 | phase 2: see `docs/contracts/ai-service-v1.md`; phase 3 adds `/v1/pii/analyze` |
@@ -223,12 +240,30 @@ curl -N -X POST http://localhost:3000/api/v1/organizations/acme-corp/conversatio
   -d '{"content":"How many days of annual leave do I get?"}'
 ```
 
+```bash
+# Phase 4: run the seeded workflow (it needs no model) and read its trace.
+curl -X POST http://localhost:3000/api/v1/organizations/acme-corp/workflows/<workflowId>/runs \
+  -H 'Authorization: Bearer <accessToken>' -H 'Content-Type: application/json' \
+  -d '{"input":{"salary":950000}}'
+curl http://localhost:3000/api/v1/organizations/acme-corp/workflow-runs/<runId>/content \
+  -H 'Authorization: Bearer <accessToken>'     # {"output":"Bonus: 95000", …}
+curl http://localhost:3000/api/v1/organizations/acme-corp/workflow-runs/<runId>/trace \
+  -H 'Authorization: Bearer <accessToken>'     # rebuilt from the audit log alone
+```
+
+Live events: connect Socket.IO to `ws://localhost:3000` with path `/realtime`
+and `auth: { token, organizationId }`, then `emit('subscribe', { runId })` —
+see [`docs/contracts/realtime-v1.md`](docs/contracts/realtime-v1.md).
+
 With `SEED_DEMO_DATA=true`, the demo workspace `acme-corp` has an open
 **Company Handbook** and a RESTRICTED **HR Policies** compartment admitting only
 the HR Manager (MANAGE) and Compliance Auditor (READ) roles. Sign in as
 `employee@acme.test` or `admin@acme.test` and HR Policies does not exist for you.
-It also has two agents: **Company Helpdesk** (the handbook) and **HR Assistant**
-(HR Policies, usable only by the HR Manager role).
+It also has three agents: **Company Helpdesk** (the handbook), **HR Assistant**
+(HR Policies, usable only by the HR Manager role) and **Operations Assistant**
+(calculator, date and email tools); and two published workflows: **Bonus
+calculator** (no model needed) and **Handbook answer with sign-off** (the
+Helpdesk drafts, a person approves — not the one who asked).
 
 ---
 
@@ -246,6 +281,7 @@ It also has two agents: **Company Helpdesk** (the handbook) and **HR Assistant**
 | `npm run test:integration` | Live tests against cloud services (skipped unless configured) |
 | `npm run test:e2e:knowledge` | Knowledge layer end to end on a **disposable** database (`KNOWLEDGE_E2E=true`) |
 | `npm run test:e2e:agents` | Agents, memory and PII redaction end to end on a **disposable** database (`AGENTS_E2E=true`) |
+| `npm run test:e2e:workflows` | Workflows, tools and real-time end to end on a **disposable** database and Redis (`WORKFLOWS_E2E=true`) |
 | `npm run benchmark:pii` | PII Redaction Engine accuracy and overhead → `docs/benchmarks/` (`-- --ner ai-service` to include names) |
 | `npm run test:cov` | Coverage |
 | `npm run lint` | ESLint with `--fix` |
@@ -266,7 +302,8 @@ src/
 ├── common/          Cross-cutting: guards, decorators, filters, interceptors, utils
 ├── database/        Entities registry, data source, migrations, seeds
 ├── shared/          Infrastructure: crypto, redis, mail, logging, request context,
-│                    object storage (S3), vector store (Qdrant), AI service client, queues
+│                    object storage (S3), vector store (Qdrant), AI service client, queues,
+│                    the event bus (Redis Streams + pub/sub) behind real-time events
 ├── worker.ts        Optional dedicated background worker entry point
 └── modules/         Feature modules
     ├── auth/            Sign-in, token rotation, sessions, recovery
@@ -289,7 +326,13 @@ src/
     ├── llm/             Phase 3: the gateway (egress check, bulkhead, breaker, deadlines),
     │                    providers (Ollama, OpenAI-compatible), policies, usage ledger
     ├── agents/          Phase 3: versioned agents, persona engine, conversations,
-    │                    token-budgeted memory with information-flow labels
+    │                    token-budgeted memory with information-flow labels;
+    │                    phase 4: the ReAct tool loop, agents as workflow steps
+    ├── tools/           Phase 4: tool registry, executor (checks, IFC, budgets, ledger),
+    │                    built-ins, SSRF-safe HTTP tools
+    ├── workflows/       Phase 4: graph validation, scheduler, engine (claims, leases,
+    │                    settlement, sweep), per-run encryption, approvals, traces
+    ├── realtime/        Phase 4: the Socket.IO gateway, handshake auth, rooms, revocation
     └── health/          Liveness and readiness probes
 src/benchmarks/pii/      The redaction benchmark: synthetic annotated corpus and scoring
 src/testing/             Stand-ins for the cloud services, used by the end-to-end suites
@@ -379,6 +422,23 @@ Worth knowing before changing anything in this codebase.
 - **Agent versions are append-only** (a trigger rejects UPDATE), so what an agent
   said can always be traced to the exact configuration and prompt template that
   produced it.
+- **The queue is not trusted.** A workflow job carries references and a MAC
+  keyed from its run's key — no content — so a compromised Redis can neither
+  read a run nor forge or redirect a step (rejections are audited CRITICAL).
+  Inter-agent messages are encrypted under a key per run; deleting a run
+  destroys it.
+- **A run acts as whoever started it,** re-checked before every step: removing
+  a member stops their running workflows at the next step.
+- **Tools are checked at the sink.** Every call is granted, permitted, schema-
+  checked and flow-checked: after an agent reads untrusted content, tools with
+  side effects are disabled; data above a tool's clearance never reaches it.
+  Every call, refusals included, is in the ledger and the audit log.
+- **HTTP tools cannot be pointed inward.** Allowlisted hosts only, public
+  addresses only (pinned against DNS rebinding), no redirects, and the cloud
+  metadata service refused even in development.
+- **A WebSocket is only as good as its latest check.** Sockets authenticate at
+  the handshake, receive only rooms derived from verified ids, and are closed
+  as soon as access changes. Events carry no content.
 
 ### Before deploying
 
@@ -392,6 +452,7 @@ REDIS_TLS=true
 REQUIRE_EMAIL_VERIFICATION=true
 MAIL_TRANSPORT=smtp
 TRUST_PROXY=<number of proxies in front of the app>
+TOOL_HTTP_ALLOWED_HOSTS=<only the partner APIs your tools need>
 ```
 
 All four secrets are **required** in production — the schema refuses to start
@@ -411,6 +472,10 @@ without them, and bootstrap throws if it detects a development default.
 - [`docs/adr/0003-inference-and-privacy.md`](docs/adr/0003-inference-and-privacy.md) —
   the gateway as privacy boundary, request-scoped masking, fail-closed
   detection, agents as delegates, information-flow labels
+- [`docs/adr/0004-orchestration-tools-realtime.md`](docs/adr/0004-orchestration-tools-realtime.md) —
+  PostgreSQL as the source of truth, references-only jobs, bounded loops and
+  circuit breakers, tool checks and information-flow control, egress control,
+  metadata-only real-time events, traces from the audit log
 - [`docs/benchmarks/pii-redaction.md`](docs/benchmarks/pii-redaction.md) — measured
   accuracy and overhead of the PII Redaction Engine, reproducible
 - [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md) — provisioning each cloud service,
@@ -418,6 +483,12 @@ without them, and bootstrap throws if it detects a development default.
 - [`docs/contracts/ai-service-v1.md`](docs/contracts/ai-service-v1.md) — the
   Python AI service contract, with a reference signature verifier and a
   Presidio reference for `/v1/pii/analyze`
+- [`docs/contracts/workflow-graph-v1.md`](docs/contracts/workflow-graph-v1.md) —
+  the workflow JSON the canvas produces: node types, handles, templates, loops,
+  validation errors, the tool schema dialect
+- [`docs/contracts/realtime-v1.md`](docs/contracts/realtime-v1.md) — the
+  WebSocket protocol: handshake, rooms, subscriptions, events, replay,
+  revocation
 
 ---
 

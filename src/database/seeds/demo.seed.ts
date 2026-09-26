@@ -20,6 +20,9 @@ import {
 import { OrganizationsService } from '../../modules/organizations/organizations.service';
 import { PiiPolicyService } from '../../modules/privacy/pii-policy.service';
 import { RbacService } from '../../modules/rbac/rbac.service';
+import { builtinToolId } from '../../modules/tools/domain/tool-definition';
+import { ListWorkflowsQueryDto } from '../../modules/workflows/dto/workflow.dto';
+import { WorkflowsService } from '../../modules/workflows/workflows.service';
 import { User, UserStatus } from '../../modules/users/entities/user.entity';
 import { UsersService } from '../../modules/users/users.service';
 import { RequestContextService } from '../../shared/context/request-context.service';
@@ -35,7 +38,7 @@ import { RequestContextService } from '../../shared/context/request-context.serv
  * Every account uses the same well-known password. That is acceptable precisely
  * because this never runs outside development, which the guard below enforces.
  */
-const DEMO_PASSWORD = 'Demo-Workspace-2026!';
+export const DEMO_PASSWORD = 'Demo-Workspace-2026!';
 
 interface DemoPerson {
   email: string;
@@ -177,6 +180,7 @@ export async function seedDemoData(app: INestApplicationContext): Promise<void> 
       logger.log('Demo workspace "acme-corp" already exists.');
       await seedDemoKnowledge(app, existing.id, owner.id, logger);
       await seedDemoAgents(app, existing.id, owner.id, logger);
+      await seedDemoWorkflows(app, existing.id, owner.id, logger);
       return;
     }
 
@@ -238,6 +242,7 @@ export async function seedDemoData(app: INestApplicationContext): Promise<void> 
     await organizationsService.refreshMemberCount(organization.id);
     await seedDemoKnowledge(app, organization.id, owner.id, logger);
     await seedDemoAgents(app, organization.id, owner.id, logger);
+    await seedDemoWorkflows(app, organization.id, owner.id, logger);
   });
 
   logger.log('');
@@ -429,6 +434,191 @@ async function seedDemoAgents(
     });
     await agents.setPublished(owner, assistant.id, true);
     logger.log('  agent: HR Assistant (published, RESTRICTED to HR Manager, HR Policies)');
+  }
+}
+
+/**
+ * Phase 4: an agent that uses tools, and two published workflows that make the
+ * engine demonstrable:
+ *
+ *  - **Bonus calculator**: a typed trigger, a calculator step, an output.
+ *    Deterministic, and it needs no model, so the engine, its real-time events
+ *    and its audit trace can be shown before any LLM endpoint is configured.
+ *  - **Handbook answer with sign-off**: the Company Helpdesk drafts an answer
+ *    from the handbook and a person releases it (human in the loop; whoever
+ *    asked cannot approve their own request).
+ */
+async function seedDemoWorkflows(
+  app: INestApplicationContext,
+  organizationId: string,
+  ownerUserId: string,
+  logger: Logger,
+): Promise<void> {
+  const agents = app.get(AgentsService);
+  const workflows = app.get(WorkflowsService);
+  const dataSource = app.get(DataSource);
+
+  const [membership]: Array<{ id: string }> = await dataSource.query(
+    `SELECT id FROM organization_members
+      WHERE organization_id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+    [organizationId, ownerUserId],
+  );
+  const owner: AccessPrincipal = {
+    organizationId,
+    kind: 'user',
+    userId: ownerUserId,
+    membershipId: membership?.id,
+    permissions: ['*:*'],
+  };
+
+  const agentIds = new Map(
+    (
+      await agents.list(owner, Object.assign(new ListAgentsQueryDto(), { limit: 100 }))
+    ).items.map((agent) => [agent.name, agent.id]),
+  );
+  if (!agentIds.has('Operations Assistant')) {
+    const operations = await agents.create(owner, {
+      name: 'Operations Assistant',
+      description: 'Works out figures, checks dates and notifies colleagues by email.',
+      persona: { role: 'an operations assistant', tone: 'concise' },
+      instructions:
+        'Use the calculator for every figure rather than working it out yourself. Email a ' +
+        'colleague only when you are asked to.',
+      tools: {
+        toolIds: [
+          builtinToolId('calculator'),
+          builtinToolId('current_datetime'),
+          builtinToolId('send_email'),
+        ],
+        maxIterations: 4,
+      },
+    });
+    await agents.setPublished(owner, operations.id, true);
+    logger.log('  agent: Operations Assistant (published; calculator, date, email)');
+  }
+
+  const existing = new Set(
+    (
+      await workflows.list(
+        owner,
+        Object.assign(new ListWorkflowsQueryDto(), { limit: 100 }),
+      )
+    ).items.map((workflow) => workflow.name),
+  );
+  const publish = async (
+    name: string,
+    description: string,
+    graph: Record<string, unknown>,
+  ): Promise<void> => {
+    if (existing.has(name)) return;
+    const created = await workflows.create(owner, { name, description, graph });
+    if (!created.definition.valid) {
+      logger.warn(`  workflow "${name}" is not valid; left as a draft.`);
+      return;
+    }
+    await workflows.publish(owner, created.id, {});
+    logger.log(`  workflow: ${name} (published)`);
+  };
+
+  await publish(
+    'Bonus calculator',
+    'Computes a bonus from a salary and a percentage. Runs without a model.',
+    {
+      schemaVersion: 1,
+      nodes: [
+        {
+          id: 'start',
+          type: 'trigger',
+          position: { x: 0, y: 0 },
+          data: {
+            inputSchema: {
+              type: 'object',
+              properties: {
+                salary: { type: 'number', minimum: 0, description: 'Annual salary' },
+                bonusPercent: { type: 'number', minimum: 0, maximum: 100, default: 10 },
+              },
+              required: ['salary'],
+              additionalProperties: false,
+            },
+          },
+        },
+        {
+          id: 'bonus',
+          type: 'tool',
+          position: { x: 280, y: 0 },
+          data: {
+            toolId: builtinToolId('calculator'),
+            arguments: {
+              expression: 'round({{input.salary}} * {{input.bonusPercent}} / 100, 2)',
+            },
+          },
+        },
+        {
+          id: 'result',
+          type: 'output',
+          position: { x: 560, y: 0 },
+          data: { value: 'Bonus: {{nodes.bonus.output}}' },
+        },
+      ],
+      edges: [
+        { id: 'start-bonus', source: 'start', target: 'bonus' },
+        { id: 'bonus-result', source: 'bonus', target: 'result' },
+      ],
+    },
+  );
+
+  const helpdesk = agentIds.get('Company Helpdesk');
+  if (helpdesk) {
+    await publish(
+      'Handbook answer with sign-off',
+      'The Company Helpdesk drafts an answer from the handbook; a person releases it.',
+      {
+        schemaVersion: 1,
+        nodes: [
+          { id: 'start', type: 'trigger', position: { x: 0, y: 80 }, data: {} },
+          {
+            id: 'draft',
+            type: 'agent',
+            position: { x: 260, y: 80 },
+            data: { agentId: helpdesk, prompt: '{{input.input}}' },
+          },
+          {
+            id: 'signoff',
+            type: 'approval',
+            position: { x: 520, y: 80 },
+            data: { message: 'Release this answer?\n\n{{nodes.draft.output}}' },
+          },
+          {
+            id: 'released',
+            type: 'output',
+            position: { x: 780, y: 0 },
+            data: { value: '{{nodes.draft.output}}' },
+          },
+          {
+            id: 'withheld',
+            type: 'output',
+            position: { x: 780, y: 160 },
+            data: { value: 'The answer was not released.' },
+          },
+        ],
+        edges: [
+          { id: 'start-draft', source: 'start', target: 'draft' },
+          { id: 'draft-signoff', source: 'draft', target: 'signoff' },
+          {
+            id: 'signoff-released',
+            source: 'signoff',
+            sourceHandle: 'approved',
+            target: 'released',
+          },
+          {
+            id: 'signoff-withheld',
+            source: 'signoff',
+            sourceHandle: 'rejected',
+            target: 'withheld',
+          },
+        ],
+      },
+    );
   }
 }
 

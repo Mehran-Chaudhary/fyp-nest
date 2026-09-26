@@ -415,6 +415,14 @@ export class OrchestrationToolsRealtime1758800000000 implements MigrationInterfa
       CREATE INDEX "idx_llm_invocations_workflow_run"
         ON "llm_invocations" ("workflow_run_id") WHERE "workflow_run_id" IS NOT NULL
     `);
+    // A run's trace is rebuilt from the audit log alone; every record about a
+    // run carries its id in metadata. Without this, the trace query would scan
+    // a workspace's entire audit history.
+    await queryRunner.query(`
+      CREATE INDEX "idx_audit_logs_run"
+        ON "audit_logs" (("metadata"->>'runId'), "sequence")
+        WHERE ("metadata"->>'runId') IS NOT NULL
+    `);
 
     await queryRunner.query(`
       ALTER TABLE "conversation_messages"
@@ -451,6 +459,7 @@ export class OrchestrationToolsRealtime1758800000000 implements MigrationInterfa
         DROP COLUMN IF EXISTS "integrity"
     `);
 
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_audit_logs_run"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_llm_invocations_workflow_run"`);
     // Phase 4 purposes cannot survive the narrower constraint.
     await queryRunner.query(

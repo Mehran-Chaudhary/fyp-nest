@@ -430,8 +430,10 @@ export function resolvePointer(value: unknown, pointer: string | undefined): unk
   for (const raw of pointer.split('/').slice(1)) {
     const segment = raw.replace(/~1/g, '/').replace(/~0/g, '~');
     if (Array.isArray(current)) current = current[Number(segment)];
-    else if (isPlainObject(current)) current = current[segment];
-    else return undefined;
+    else if (isPlainObject(current)) {
+      // Own properties only: a pointer selects data, never what an object inherits.
+      current = Object.hasOwn(current, segment) ? current[segment] : undefined;
+    } else return undefined;
   }
   return current;
 }

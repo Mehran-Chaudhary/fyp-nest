@@ -1,4 +1,4 @@
-import type { FailureClass } from './run-state';
+import { FailureClass } from './run-state';
 
 /**
  * What the dead-letter queue keeps about a workflow step that exhausted its
@@ -96,7 +96,9 @@ export function buildDeadLetterRecord(input: {
     iteration: integer(input.iteration) ?? 0,
     attempts: integer(input.attempts) ?? 0,
     failureCode: CODE.test(input.failureCode) ? input.failureCode : 'UNKNOWN',
-    failureClass: input.failureClass,
+    failureClass: Object.values(FailureClass).includes(input.failureClass)
+      ? input.failureClass
+      : FailureClass.PERMANENT,
     retryable: input.retryable === true,
     firstAttemptAt: input.firstAttemptAt ? input.firstAttemptAt.toISOString() : null,
     deadLetteredAt: new Date().toISOString(),

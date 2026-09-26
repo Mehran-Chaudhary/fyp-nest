@@ -5,7 +5,7 @@ import type { LookupFunction } from 'node:net';
 import { performance } from 'node:perf_hooks';
 import {
   assertUrlAllowed,
-  classifyAddress,
+  blockedReason,
   EgressBlockedError,
   type AllowlistEntry,
 } from '../domain/egress-guard';
@@ -163,15 +163,13 @@ export class SafeHttpClient {
           if (addresses.length === 0) {
             throw new EgressBlockedError('DNS_FAILURE', `${hostname} did not resolve.`);
           }
-          if (!allowPrivate) {
-            for (const { address } of addresses) {
-              const reason = classifyAddress(address);
-              if (reason) {
-                throw new EgressBlockedError(
-                  'ADDRESS_NOT_PUBLIC',
-                  `${hostname} resolves to ${address}, which is ${reason}.`,
-                );
-              }
+          for (const { address } of addresses) {
+            const reason = blockedReason(address, allowPrivate);
+            if (reason) {
+              throw new EgressBlockedError(
+                'ADDRESS_NOT_PUBLIC',
+                `${hostname} resolves to ${address}, which is ${reason}.`,
+              );
             }
           }
           const chosen = addresses[0];

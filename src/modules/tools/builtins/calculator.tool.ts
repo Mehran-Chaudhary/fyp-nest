@@ -52,7 +52,8 @@ export class CalculatorTool implements BuiltinTool {
       const value = evaluateExpression(String(args.expression));
       return Promise.resolve({
         content: formatNumber(value),
-        data: { value },
+        // The bare number: a workflow reads it as `{{nodes.<id>.output}}`.
+        data: value,
         metadata: { operators: countOperators(String(args.expression)) },
       });
     } catch (error) {

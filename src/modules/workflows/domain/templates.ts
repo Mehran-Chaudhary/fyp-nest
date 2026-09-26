@@ -119,7 +119,11 @@ export function resolveRef(ref: TemplateRef, scope: TemplateScope): unknown {
   if (ref.root === 'input') {
     value = scope.input;
   } else {
-    const node = scope.nodes[ref.nodeId];
+    // Own properties only, here and below: a path reads data, never what an
+    // object inherits (`constructor`, `__proto__`).
+    const node = Object.hasOwn(scope.nodes, ref.nodeId)
+      ? scope.nodes[ref.nodeId]
+      : undefined;
     if (!node) {
       if (ref.optional) return '';
       throw new TemplateError(
@@ -132,7 +136,9 @@ export function resolveRef(ref: TemplateRef, scope: TemplateScope): unknown {
   for (const segment of ref.path) {
     if (Array.isArray(value) && /^\d+$/.test(segment)) value = value[Number(segment)];
     else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      value = (value as Record<string, unknown>)[segment];
+      value = Object.hasOwn(value, segment)
+        ? (value as Record<string, unknown>)[segment]
+        : undefined;
     } else {
       value = undefined;
     }

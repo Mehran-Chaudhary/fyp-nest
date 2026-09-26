@@ -17,6 +17,6 @@ import { RealtimeSecurityListener } from './realtime-security.listener';
 @Module({
   imports: [AuthModule, UsersModule, ApiKeysModule, OrganizationsModule],
   providers: [RealtimeAuthService, RealtimeGateway, RealtimeSecurityListener],
-  exports: [RealtimeAuthService],
+  exports: [RealtimeAuthService, RealtimeGateway],
 })
 export class RealtimeModule {}

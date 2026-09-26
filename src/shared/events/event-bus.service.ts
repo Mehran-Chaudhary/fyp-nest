@@ -1,4 +1,9 @@
-import { Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  type OnApplicationBootstrap,
+  type OnApplicationShutdown,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type Redis from 'ioredis';
 import { CacheKeys, PubSubChannels } from '../../common/constants/cache-keys.constants';
@@ -43,11 +48,17 @@ type ControlHandler = (message: ControlMessage) => void;
  * notification could not be sent would get the priorities backwards.
  */
 @Injectable()
-export class EventBusService implements OnApplicationShutdown {
+export class EventBusService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(EventBusService.name);
   private readonly config: RealtimeConfig;
   private readonly keyPrefix: string;
   private subscriber: Redis | null = null;
+  /**
+   * Subscribing waits for bootstrap. The Redis client is created in
+   * `RedisService.onModuleInit`, and Nest initialises WebSocket gateways
+   * (whose `afterInit` registers handlers) before any `onModuleInit` runs.
+   */
+  private bootstrapped = false;
   private readonly eventHandlers = new Set<EventHandler>();
   private readonly controlHandlers = new Set<ControlHandler>();
 
@@ -157,8 +168,15 @@ export class EventBusService implements OnApplicationShutdown {
     return this.subscriber?.status === 'ready';
   }
 
+  onApplicationBootstrap(): void {
+    this.bootstrapped = true;
+    if (this.eventHandlers.size > 0 || this.controlHandlers.size > 0) {
+      this.ensureSubscriber();
+    }
+  }
+
   private ensureSubscriber(): void {
-    if (this.subscriber) return;
+    if (this.subscriber || !this.bootstrapped) return;
 
     const subscriber = this.redis.redis.duplicate();
     this.subscriber = subscriber;

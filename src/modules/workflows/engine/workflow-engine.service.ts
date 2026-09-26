@@ -175,14 +175,17 @@ export class WorkflowEngineService implements OnModuleInit {
   private async runJob(job: Job<StepJobData>): Promise<{ outcome: string }> {
     const data = job.data;
     const run = await this.loadRunWithKey(data?.runId);
-    if (!run || run.organizationId !== data.organizationId || !run.wrappedDataKey) {
+    if (!run || !run.wrappedDataKey) {
       // A deleted run's jobs cannot be verified any more (its key is gone): stale, not hostile.
       return { outcome: 'skipped: run not found' };
     }
 
     const key = this.crypto.unwrap(run.id, run.wrappedDataKey);
     try {
-      if (!verifyStepJob(jobMacKey(key), data)) {
+      // The MAC covers the workspace too, so a job naming another workspace
+      // than its run's has been tampered with: rejected like a bad MAC.
+      const redirected = run.organizationId !== data.organizationId;
+      if (redirected || !verifyStepJob(jobMacKey(key), data)) {
         await this.auditService.recordSafe({
           action: AuditAction.WORKFLOW_STEP_REJECTED,
           status: AuditStatus.DENIED,
@@ -193,7 +196,7 @@ export class WorkflowEngineService implements OnModuleInit {
           metadata: {
             runId: run.id,
             jobId: String(job.id).slice(0, 128),
-            reason: 'MAC_INVALID',
+            reason: redirected ? 'ORGANIZATION_MISMATCH' : 'MAC_INVALID',
             queue: QUEUE_NAME.WORKFLOW_STEPS,
           },
         });
@@ -225,7 +228,7 @@ export class WorkflowEngineService implements OnModuleInit {
       return { outcome: 'timed out' };
     }
 
-    const step = await this.claim(data.stepId, run.id);
+    const step = await this.claim(data.stepId, run.id, data.dispatch);
     if (!step) return { outcome: 'skipped: not claimable' };
 
     const graph = await this.graphs.get(
@@ -240,6 +243,24 @@ export class WorkflowEngineService implements OnModuleInit {
         step,
         key,
         new StepFailure(ErrorCode.WORKFLOW_INVALID, FailureClass.PERMANENT, 'unknown node'),
+        graph,
+        0,
+      );
+      return { outcome: 'failed' };
+    }
+    if (step.attempt > step.maxAttempts) {
+      // Every attempt ended with its worker going silent (a crash or an
+      // out-of-memory kill) and was taken over. A poison step: stop it rather
+      // than crash worker after worker.
+      await this.fail(
+        run,
+        step,
+        key,
+        new StepFailure(
+          ErrorCode.WORKFLOW_STEP_TIMEOUT,
+          FailureClass.TIMEOUT,
+          'The worker running this step stopped responding on every attempt.',
+        ),
         graph,
         0,
       );
@@ -331,20 +352,27 @@ export class WorkflowEngineService implements OnModuleInit {
 
   /**
    * QUEUED → RUNNING, or takeover of a RUNNING step whose worker went silent.
-   * Exactly one caller wins; everyone else gets null.
+   * Exactly one caller wins; everyone else gets null. Only the step's current
+   * dispatch may claim it: every re-dispatch (retry, recovery, resume) bumps
+   * the number, so a stale or replayed job is a no-op.
    */
-  private async claim(id: string, runId: string): Promise<WorkflowStep | null> {
+  private async claim(
+    id: string,
+    runId: string,
+    dispatch: number,
+  ): Promise<WorkflowStep | null> {
+    if (!Number.isSafeInteger(dispatch)) return null;
     const rows = returnedRows<{ id: string }>(
       await this.dataSource.query(
         `UPDATE workflow_steps
             SET status = 'RUNNING', attempt = attempt + 1, started_at = now(),
                 heartbeat_at = now(), first_attempt_at = COALESCE(first_attempt_at, now()),
                 next_attempt_at = NULL, updated_at = now()
-          WHERE id = $1 AND run_id = $2
+          WHERE id = $1 AND run_id = $2 AND dispatch = $4
             AND ((status = 'QUEUED' AND (next_attempt_at IS NULL OR next_attempt_at <= now() + interval '2 seconds'))
               OR (status = 'RUNNING' AND heartbeat_at < now() - $3 * interval '1 millisecond'))
           RETURNING id`,
-        [id, runId, this.config.stallThresholdMs],
+        [id, runId, this.config.stallThresholdMs, dispatch],
       ),
     );
     if (rows.length === 0) return null;
@@ -386,7 +414,10 @@ export class WorkflowEngineService implements OnModuleInit {
     graph: CompiledGraph,
     settlement: Settlement,
     expectStatus: StepStatus = StepStatus.RUNNING,
-  ): Promise<void> {
+    /** Further records that must commit with the settlement (an approval decision). */
+    alsoRecord?: (manager: EntityManager) => Promise<unknown>,
+  ): Promise<boolean> {
+    let settled = false;
     const after: AfterCommit = { dispatch: [], events: [], cancelRunning: false };
 
     await this.dataSource.transaction(async (manager) => {
@@ -457,6 +488,8 @@ export class WorkflowEngineService implements OnModuleInit {
       if (!updated.affected) return; // taken over by another worker: its result stands
 
       await this.auditStep(manager, locked, step, settlement);
+      await alsoRecord?.(manager);
+      settled = true;
 
       // The run's labels: the high-water mark of every step, the low-water mark of trust.
       const runLabel = joinLabels(labelOfRun(locked), settlement.label);
@@ -495,6 +528,7 @@ export class WorkflowEngineService implements OnModuleInit {
     });
 
     await this.afterCommit(run, key, after);
+    return settled;
   }
 
   /** An approval node reached: the step waits for a person. */
@@ -594,7 +628,7 @@ export class WorkflowEngineService implements OnModuleInit {
               .ciphertext
           : null,
       };
-      await this.settle(
+      const settled = await this.settle(
         run,
         step,
         key,
@@ -617,26 +651,32 @@ export class WorkflowEngineService implements OnModuleInit {
           durationMs: Date.now() - new Date(step.approval.requestedAt).getTime(),
         },
         StepStatus.WAITING_APPROVAL,
+        // Who decided commits with the decision itself, so the trace never lacks it.
+        (manager) =>
+          this.auditService.record(
+            {
+              action:
+                input.decision === 'approved'
+                  ? AuditAction.WORKFLOW_APPROVAL_GRANTED
+                  : AuditAction.WORKFLOW_APPROVAL_REJECTED,
+              organizationId: run.organizationId,
+              resourceType: 'workflow_step',
+              resourceId: step.id,
+              ...(input.decidedBy === 'timeout'
+                ? { actor: { type: ActorType.SYSTEM, label: 'approval timeout' } }
+                : {}),
+              metadata: {
+                runId: run.id,
+                stepId: step.id,
+                nodeId: step.nodeId,
+                decidedBy: input.decidedBy,
+                commented: Boolean(input.comment),
+              },
+            },
+            manager,
+          ),
       );
-      await this.auditService.recordSafe({
-        action:
-          input.decision === 'approved'
-            ? AuditAction.WORKFLOW_APPROVAL_GRANTED
-            : AuditAction.WORKFLOW_APPROVAL_REJECTED,
-        organizationId: run.organizationId,
-        resourceType: 'workflow_step',
-        resourceId: step.id,
-        ...(input.decidedBy === 'timeout'
-          ? { actor: { type: ActorType.SYSTEM, label: 'approval timeout' } }
-          : {}),
-        metadata: {
-          runId: run.id,
-          stepId: step.id,
-          nodeId: step.nodeId,
-          decidedBy: input.decidedBy,
-          commented: Boolean(input.comment),
-        },
-      });
+      if (!settled) return false; // decided concurrently, or the run ended meanwhile
       await this.publish(run, 'approval.decided', step, {
         decision: input.decision,
         decidedBy: input.decidedBy,

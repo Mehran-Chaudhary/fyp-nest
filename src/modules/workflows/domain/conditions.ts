@@ -1,4 +1,4 @@
-import { HANDLE, type ConditionRule } from './graph';
+import type { ConditionRule } from './graph';
 import {
   resolveRef,
   stringify,
@@ -66,23 +66,6 @@ export function evaluateRule(rule: ConditionRule, value: unknown): boolean {
     default:
       return false;
   }
-}
-
-/**
- * The handle a condition takes: the first rule that matches and is still
- * allowed (a loop rule whose iterations are used up is not), else `else`.
- */
-export function chooseBranch(
-  rules: readonly ConditionRule[],
-  scope: TemplateScope,
-  allowed: (ruleId: string) => boolean = () => true,
-): { handle: string; matchedRule: string | null } {
-  for (const rule of rules) {
-    if (!allowed(rule.id)) continue;
-    if (evaluateRule(rule, ruleValue(rule, scope)))
-      return { handle: rule.id, matchedRule: rule.id };
-  }
-  return { handle: HANDLE.ELSE, matchedRule: null };
 }
 
 function normalize(text: string, caseSensitive: boolean): string {

@@ -23,7 +23,11 @@ import { BlockList, isIP } from 'node:net';
  *     which closes the DNS-rebinding window between checking and connecting.
  */
 
+const CLOUD_METADATA = 'cloud metadata';
+
 const IPV4_SPECIAL: ReadonlyArray<[string, number, string]> = [
+  // First, so it is reported by name rather than as carrier-grade NAT.
+  ['100.100.100.200', 32, CLOUD_METADATA], // Alibaba Cloud
   ['0.0.0.0', 8, 'unspecified'],
   ['10.0.0.0', 8, 'private'],
   ['100.64.0.0', 10, 'carrier-grade NAT'],
@@ -42,6 +46,7 @@ const IPV4_SPECIAL: ReadonlyArray<[string, number, string]> = [
 ];
 
 const IPV6_SPECIAL: ReadonlyArray<[string, number, string]> = [
+  ['fd00:ec2::254', 128, CLOUD_METADATA], // AWS IMDS over IPv6
   ['::', 128, 'unspecified'],
   ['::1', 128, 'loopback'],
   ['64:ff9b::', 96, 'NAT64'],
@@ -70,6 +75,29 @@ const blockLists = (() => {
   }
   return byReason;
 })();
+
+/**
+ * Refused even when `TOOL_HTTP_ALLOW_PRIVATE_NETWORKS` is on (a development
+ * convenience for reaching a local mock API): no tool has a reason to reach
+ * the cloud metadata service, whose answer is the host's own credentials, or
+ * an unspecified address.
+ */
+const ALWAYS_BLOCKED: ReadonlySet<string> = new Set([
+  CLOUD_METADATA,
+  'link-local (cloud metadata)',
+  'link-local',
+  'unspecified',
+]);
+
+/** Why `address` may not be contacted under the given policy, or null if it may. */
+export function blockedReason(
+  address: string,
+  allowPrivateNetworks: boolean,
+): string | null {
+  const reason = classifyAddress(address);
+  if (!reason) return null;
+  return !allowPrivateNetworks || ALWAYS_BLOCKED.has(reason) ? reason : null;
+}
 
 /** Why an address may not be contacted, or null for a public unicast address. */
 export function classifyAddress(address: string): string | null {
@@ -206,8 +234,8 @@ export function assertUrlAllowed(
   }
 
   const literal = normalizeHost(url.hostname);
-  if (isIP(literal) && !options.allowPrivateNetworks) {
-    const reason = classifyAddress(literal);
+  if (isIP(literal)) {
+    const reason = blockedReason(literal, options.allowPrivateNetworks);
     if (reason) {
       throw new EgressBlockedError(
         'ADDRESS_NOT_PUBLIC',

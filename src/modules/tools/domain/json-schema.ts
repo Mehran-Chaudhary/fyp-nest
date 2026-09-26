@@ -111,6 +111,17 @@ const KNOWN_KEYWORDS: ReadonlySet<string> = new Set([
 
 const PROPERTY_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
+/**
+ * Names that reach an object's prototype machinery. Model-written arguments
+ * carrying one are refused outright: `Object.assign` on such an object would
+ * replace the target's prototype.
+ */
+const FORBIDDEN_NAMES: ReadonlySet<string> = new Set([
+  '__proto__',
+  'constructor',
+  'prototype',
+]);
+
 // ── Checking a schema (at registration) ─────────────────────────────────────
 
 /**
@@ -258,7 +269,8 @@ function checkNode(
         counter.properties += 1;
         if (
           !PROPERTY_NAME.test(name) ||
-          name.length > SCHEMA_LIMITS.maxPropertyNameLength
+          name.length > SCHEMA_LIMITS.maxPropertyNameLength ||
+          FORBIDDEN_NAMES.has(name)
         ) {
           issues.push({
             path: `${path}/properties/${name}`,
@@ -423,12 +435,17 @@ function validateInto(
   if (isPlainObject(value) && (types.length === 0 || types.includes('object'))) {
     const properties = schema.properties ?? {};
     for (const name of schema.required ?? []) {
-      if (value[name] === undefined) {
+      if (!Object.hasOwn(value, name) || value[name] === undefined) {
         issues.push({ path: `${path}/${name}`, message: 'is required' });
       }
     }
     for (const [name, child] of Object.entries(value)) {
-      const childSchema = properties[name];
+      if (FORBIDDEN_NAMES.has(name)) {
+        issues.push({ path: `${path}/${name}`, message: 'is not an accepted property' });
+        continue;
+      }
+      // Own properties only: `properties.constructor` is Object's, not a schema.
+      const childSchema = Object.hasOwn(properties, name) ? properties[name] : undefined;
       if (childSchema) {
         validateInto(childSchema, child, `${path}/${name}`, issues);
       } else if (schema.additionalProperties === false) {
@@ -446,6 +463,7 @@ export function applyDefaults(schema: JsonSchema, value: unknown): unknown {
   if (!isPlainObject(value) || !schema.properties) return value;
   const result: Record<string, unknown> = { ...value };
   for (const [name, child] of Object.entries(schema.properties)) {
+    if (FORBIDDEN_NAMES.has(name)) continue;
     if (result[name] === undefined && child.default !== undefined) {
       result[name] = structuredClone(child.default);
     } else if (result[name] !== undefined) {

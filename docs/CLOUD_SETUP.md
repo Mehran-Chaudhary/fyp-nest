@@ -10,15 +10,17 @@ deploy that phase, not before.
 > the process refuses to start and names the variable. Phase 2+ services are
 > optional at boot: the API runs without them and answers
 > `503 KNOWLEDGE_LAYER_NOT_CONFIGURED` or `503 LLM_NOT_CONFIGURED` (naming
-> what's missing) on the endpoints that need them.
+> what's missing) on the endpoints that need them. Phase 4 adds no new service
+> at all: it runs on the PostgreSQL, Redis and model endpoint you already have.
 
 ---
 
 ## The shape of the deployment
 
 ```
+     HTTPS + WebSocket (phase 4)
                 ┌──────────────────────────┐
-  browser ────▶ │ API  (npm run start:prod)│──┐
+  browser ◀───▶ │ API  (npm run start:prod)│──┐
                 └──────────────────────────┘  │     ┌─────────────────────┐
                 ┌──────────────────────────┐  ├───▶ │ PostgreSQL          │  Neon / Supabase
                 │ Worker (optional,        │──┤     ├─────────────────────┤
@@ -33,13 +35,17 @@ deploy that phase, not before.
                 └──────────────────────────┘   └───▶ │ LLM endpoint        │  Ollama on a GPU VM
                   Hugging Face / Render / Railway    │ (behind a proxy)    │  / vLLM / hosted API
                                                      └─────────────────────┘
+                                         HTTP tools, allowlisted hosts only (phase 4)
+                                          ─────────▶ partner APIs you choose
 ```
 
 The AI service never talks to Qdrant or the database. It only computes: bytes
 in, chunks out; text in, vectors out; text in, entity spans out. The backend
 stores results and enforces access. See [ADR 0002](adr/0002-knowledge-layer-security.md)
 for why. The language model receives only masked prompts, through one gateway
-([ADR 0003](adr/0003-inference-and-privacy.md)).
+([ADR 0003](adr/0003-inference-and-privacy.md)). Workflow steps travel through
+Redis as references only; their content stays in PostgreSQL, encrypted per run
+([ADR 0004](adr/0004-orchestration-tools-realtime.md)).
 
 ---
 
@@ -515,6 +521,168 @@ Weakening the PII policy — dropping a type, raising the threshold, choosing
 
 ---
 
+## Phase 4: orchestration, tools and real-time
+
+**Nothing new to provision.** The workflow engine runs on the Redis/BullMQ of
+phase 2, agent steps call the model endpoint of phase 3 through the same
+gateway, and the WebSocket is served by the API on its own HTTP port. What
+changes is configuration — four things to get right — and one migration.
+
+How it fits together ([ADR 0004](adr/0004-orchestration-tools-realtime.md)):
+
+- A **workflow** is the JSON graph the React Flow canvas produces
+  ([contract](contracts/workflow-graph-v1.md)): agents, tools, retrieval,
+  conditions, supervisors, approvals. Each step is a BullMQ job that carries
+  *references and a MAC* — never content. Inputs and outputs of every step
+  (the inter-agent messages) are stored in PostgreSQL, encrypted under a key
+  per run; deleting a run destroys its key.
+- **Tools** are granted per agent. Every call is checked (permission, schema,
+  information flow, personal data, budget), executed with a timeout, and
+  recorded — refusals included — in the tool ledger and the audit log.
+- **Real-time events** (Socket.IO) tell the canvas which step is running,
+  what finished, what waits for approval. Events are metadata only; content is
+  fetched over HTTP with its access checks ([contract](contracts/realtime-v1.md)).
+
+### Step 1: give the worker the same environment as the API
+
+From this phase, whoever runs the queue workers runs **agents and tools**:
+workflow steps call the model, send email and call partner APIs from the
+worker process. If you run a separate worker (phase 2, step 5), it needs
+**every** variable the API has — `LLM_*`, `PII_*`, `TOOL_*`, `MAIL_*`/`SMTP_*`,
+`WORKFLOW_*` included. The simplest way on Railway or Render is one shared
+environment group for both services.
+
+Any number of workers may run side by side, and the API can keep
+`QUEUE_WORKERS_ENABLED=true` as well: a step is claimed with a compare-and-set
+in PostgreSQL, so no step ever runs twice. Throughput is
+`workers × WORKFLOW_CONCURRENCY` steps at once; model calls are further
+limited per process by `LLM_MAX_CONCURRENCY`, so size the GPU host for
+`(API + workers) × LLM_MAX_CONCURRENCY` parallel requests (Ollama:
+`OLLAMA_NUM_PARALLEL`).
+
+### Step 2: WebSocket through your platform and load balancer
+
+Clients connect to `wss://<your API host>/realtime` (`REALTIME_PATH`) and
+authenticate **in the handshake**: `{ token, organizationId }` for a person,
+`{ apiKey }` for an API key. Credentials in the URL are refused.
+
+- **Run the API as a long-lived service** (Railway, Render web service, Fly
+  machine, a VM, Cloud Run with a request timeout of at least an hour). A
+  serverless function platform cannot hold a socket open.
+- **Transports.** Keep `REALTIME_TRANSPORTS=websocket` (the default): it needs
+  **no sticky sessions**, however many API instances run — events reach
+  whichever instance holds the socket through Redis pub/sub. Only if you add
+  `polling` (for networks that block WebSocket) do you need session affinity
+  on the load balancer.
+- **Idle timeouts.** Keep `REALTIME_PING_INTERVAL` (25 s) below the proxy's
+  idle timeout (commonly 60 s; Cloudflare 100 s; AWS ALB 60 s by default).
+- **Origins.** Browsers may open a socket only from an origin in
+  `CORS_ORIGINS` — add your frontend's production origin there.
+- **Client IPs.** Handshakes are throttled per IP
+  (`REALTIME_MAX_HANDSHAKES_PER_MINUTE`); behind a proxy, set `TRUST_PROXY`
+  (phase 1) so the real client IP is used.
+
+### Step 3: the HTTP tool allowlist (egress)
+
+HTTP tools (a workspace administrator defines them through the API) can call
+**nothing** until you list the hosts they may reach:
+
+```bash
+TOOL_HTTP_ALLOWED_HOSTS=api.partner.com,*.crm.example.com,erp.example.com:8443
+```
+
+A tool's host is fixed when it is defined — the model's arguments only fill
+the path, query and body — and must match this list. Whatever the host
+resolves to must be a public address: private, loopback and link-local ranges
+are refused, the cloud metadata service (`169.254.169.254`, `fd00:ec2::254`)
+**always**, and the connection is pinned to the address that was checked.
+Redirects are not followed. Leave `TOOL_HTTP_ALLOW_PRIVATE_NETWORKS` and
+`TOOL_HTTP_ALLOW_INSECURE` false; the service refuses to boot with them on in
+production or staging.
+
+Credentials for a partner API (bearer token, API key header, basic auth) are
+given when the tool is created and stored encrypted with the master key; they
+are never returned by the API and never shown to the model.
+
+The built-in `send_email` tool sends through `MAIL_TRANSPORT`: set
+`MAIL_TRANSPORT=smtp` and the `SMTP_*` variables (phase 1) for real delivery.
+It only ever reaches members of the workspace, and only those allowed to see
+what the conversation contains.
+
+### Step 4: apply the migration and seed
+
+```bash
+npm run migration:run   # applies 1758800000000-OrchestrationToolsRealtime
+npm run seed            # syncs the phase 4 permissions (tool:*, workflow:approve, …) into roles
+```
+
+In a demo database, `SEED_DEMO_DATA=true npm run seed` also creates an
+*Operations Assistant* agent (calculator, date, email) and two published
+workflows: **Bonus calculator** — a calculator step that runs with no model
+configured — and **Handbook answer with sign-off** — the Company Helpdesk
+drafts, a person approves.
+
+### Step 5: verify
+
+1. `GET /health` shows `workflow_engine` and `realtime` as `up`. Like every
+   probe since phase 2 they report `degraded`, never `down`.
+   `workflow_engine` turns `degraded` with `stalledSteps` or `overdueSteps`
+   above zero when no process is consuming the queue — the usual cause is a
+   worker service without `QUEUE_WORKERS_ENABLED=true`.
+2. Run the seeded workflow (no model needed):
+
+   ```bash
+   WF=$(curl -s "$API/api/v1/organizations/$ORG/workflows?limit=100" \
+     -H "Authorization: Bearer $TOKEN" | jq -r '.data[] | select(.name=="Bonus calculator") | .id')
+   RUN=$(curl -s -X POST $API/api/v1/organizations/$ORG/workflows/$WF/runs \
+     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+     -d '{"input":{"salary":950000}}' | jq -r .data.id)
+   curl -s $API/api/v1/organizations/$ORG/workflow-runs/$RUN/content \
+     -H "Authorization: Bearer $TOKEN"          # "Bonus: 95000"
+   curl -s $API/api/v1/organizations/$ORG/workflow-runs/$RUN/trace \
+     -H "Authorization: Bearer $TOKEN"          # rebuilt from the audit log alone
+   ```
+
+3. Watch a run live (Node, `npm i socket.io-client`):
+
+   ```js
+   const { io } = require('socket.io-client');
+   const socket = io(API, { path: '/realtime', transports: ['websocket'],
+                            auth: { token: TOKEN, organizationId: ORG } });
+   socket.on('ready', () => socket.emit('subscribe', { runId: RUN }, console.log));
+   socket.on('event', (e) => console.log(e.type, e.nodeId ?? '', e.data));
+   ```
+
+4. End to end against a **disposable** PostgreSQL and Redis. The suite runs
+   the real application — queues, workers, sockets — with a scripted model,
+   and proves the phase's exit criteria: a three-agent run traced from the
+   audit log alone; a failing step dead-lettered with no sensitive value left
+   anywhere in Redis or PostgreSQL; a runaway loop stopped by the step ceiling.
+
+   ```bash
+   npm run migration:run
+   SEED_DEMO_DATA=true npm run seed
+   WORKFLOWS_E2E=true npm run test:e2e:workflows
+   ```
+
+### Phase 4 checklist
+
+| Variable / action | API | Worker | Load balancer / platform |
+|---|:-:|:-:|:-:|
+| Same environment as the API (`LLM_*`, `PII_*`, `TOOL_*`, `MAIL_*`, `SMTP_*`, `WORKFLOW_*`) | ✓ | **✓ (now required)** | |
+| `QUEUE_WORKERS_ENABLED` | `true`, or `false` if workers run | (forced `true`) | |
+| `REALTIME_TRANSPORTS=websocket` | ✓ | | WebSocket upgrades allowed; no sticky sessions needed |
+| `REALTIME_PING_INTERVAL` below the proxy idle timeout | ✓ | | idle timeout ≥ 60 s |
+| `CORS_ORIGINS` includes the frontend origin (also the socket origin) | ✓ | | |
+| `TRUST_PROXY` set behind a proxy | ✓ | | |
+| `TOOL_HTTP_ALLOWED_HOSTS` (empty = no HTTP tools) | ✓ | ✓ | outbound HTTPS to those hosts |
+| `TOOL_HTTP_ALLOW_PRIVATE_NETWORKS=false`, `TOOL_HTTP_ALLOW_INSECURE=false` | ✓ | ✓ | |
+| `MAIL_TRANSPORT=smtp` + `SMTP_*` for `send_email` | ✓ | ✓ | |
+| GPU host sized for `(API + workers) × LLM_MAX_CONCURRENCY` | | | `OLLAMA_NUM_PARALLEL` |
+| Migration `1758800000000` and `npm run seed` | once | | |
+
+---
+
 ## Operations
 
 ### Rotating the AI signing secret without downtime
@@ -580,6 +748,38 @@ PII_EGRESS_BLOCKED` and audited as **CRITICAL** (`pii.egress.blocked`, entity
 types only, never values). It indicates a defect in the masking pipeline, not a
 user error: capture the request id from the audit record and investigate.
 
+### A workflow run failed or looks stuck
+
+- `GET /v1/organizations/{org}/workflow-runs/{run}` shows every step with its
+  status, attempts, error code and failure class (`TRANSIENT`, `TIMEOUT`,
+  `POLICY`, `PERMANENT`); `…/trace` rebuilds the run from the audit log.
+- `GET /v1/organizations/{org}/workflow-runs/dead-letters` lists steps that
+  failed for good — metadata only, by design: debugging works without anyone
+  reading the payloads. `inputFingerprint` repeats when the same input keeps
+  failing.
+- Fix the cause, then `POST …/workflow-runs/{run}/resume`: failed steps run
+  again, finished ones keep their outputs. `POST …/cancel` stops a run and
+  aborts its in-flight model calls wherever they run.
+- Steps whose worker died are taken over automatically after
+  `WORKFLOW_STALL_THRESHOLD` by the reconciliation sweep (every
+  `WORKFLOW_SWEEP_INTERVAL`); a step that kills its worker on every attempt is
+  stopped and dead-lettered instead of crashing workers forever.
+- `WORKFLOW_STEP_LIMIT_EXCEEDED` / `WORKFLOW_TOKEN_BUDGET_EXCEEDED`: a circuit
+  breaker stopped the run (audited as `agent.circuit_broken`). Raise the
+  workflow's own `maxSteps` / `maxTokens` settings if the work is legitimate.
+
+### Adding an HTTP tool
+
+1. Add its host to `TOOL_HTTP_ALLOWED_HOSTS` (and redeploy API and worker).
+2. `POST /v1/organizations/{org}/tools` with the definition (`http.url` with
+   `{{parameter}}` placeholders in the path or query, a JSON Schema for the
+   parameters, and `secret` for its credential); `POST …/tools/{id}/test`
+   calls it once with sample arguments.
+3. Grant it to an agent (`tools.toolIds` on the agent). By default an external
+   tool accepts only `PUBLIC` context and refuses arguments carrying personal
+   data; loosen its `dataPolicy` deliberately, if at all — every weakening is
+   audited.
+
 ### Changing models
 
 Add the model to the GPU host (`ollama pull …`) and to `LLM_ALLOWED_MODELS`,
@@ -594,7 +794,6 @@ models that can be used; edit the agent (a new version) to switch.
 
 | Phase | You will provision |
 |---|---|
-| 4 | Nothing new: the workflow engine reuses Redis/BullMQ |
 | 5 | An OpenTelemetry collector (e.g. Grafana Cloud free tier); mTLS certificates between API and AI service |
 
 Each phase's section will be added here when it is implemented.

@@ -397,7 +397,13 @@ export class WorkflowRunsService {
     const run = await this.visibleRun(principal, runId);
     const steps = await this.steps.find({
       where: { runId: run.id },
-      order: { createdAt: 'ASC', iteration: 'ASC' },
+      // Steps scheduled together share a transaction timestamp; the start time
+      // then orders them as they ran (the trigger first).
+      order: {
+        createdAt: 'ASC',
+        iteration: 'ASC',
+        startedAt: { direction: 'ASC', nulls: 'LAST' },
+      },
     });
     return { ...this.toRunDto(run), steps: steps.map((step) => this.toStepDto(step)) };
   }
@@ -840,7 +846,9 @@ export class WorkflowRunsService {
     }> = await this.dataSource.query(
       `SELECT sequence, action, status, actor_id, resource_id, error_code, metadata
          FROM audit_logs
-        WHERE organization_id = $1 AND (resource_id = $2 OR metadata->>'runId' = $2)
+        WHERE organization_id = $1
+          AND (metadata->>'runId' = $2
+               OR (resource_type = 'workflow_run' AND resource_id = $2))
         ORDER BY sequence ASC
         LIMIT 20000`,
       [principal.organizationId, runId],

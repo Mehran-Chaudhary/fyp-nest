@@ -44,6 +44,7 @@ export interface TraceStep {
   nodeId: string;
   nodeType: string;
   iteration: number;
+  /** The step's settled status, or `RETRYING` when its last record is a failed attempt. */
   status: string;
   attempts: number;
   /** `nodeId#iteration` of the steps that made this one ready. */
@@ -77,12 +78,15 @@ export interface RunTrace {
   edges: Array<{ from: string; to: string }>;
   approvals: TraceApproval[];
   skipped: string[];
+  /** Times the run was resumed after failing. */
+  resumptions: number;
   /** Every fact the run's final record promised is present. */
   complete: boolean;
   problems: string[];
 }
 
 const STARTED = 'workflow.execution.started';
+const RESUMED = 'workflow.execution.resumed';
 const FINISHED = new Set([
   'workflow.execution.completed',
   'workflow.execution.failed',
@@ -95,6 +99,8 @@ const TOOL: Record<string, TraceToolCall['outcome']> = {
   'tool.execution.failed': 'failed',
   'tool.execution.denied': 'denied',
 };
+const RETRYING = 'RETRYING';
+const PENDING = 'PENDING';
 const APPROVAL: Record<string, TraceApproval['decision']> = {
   'workflow.approval.requested': 'requested',
   'workflow.approval.granted': 'granted',
@@ -115,6 +121,7 @@ export function reconstructTrace(runId: string, records: readonly AuditLike[]): 
     edges: [],
     approvals: [],
     skipped: [],
+    resumptions: 0,
     complete: false,
     problems,
   };
@@ -132,6 +139,8 @@ export function reconstructTrace(runId: string, records: readonly AuditLike[]): 
       trace.workflowVersion = num(metadata.workflowVersion);
       trace.definitionDigest = str(metadata.definitionDigest);
       trace.startedBy = record.actorId;
+    } else if (record.action === RESUMED) {
+      trace.resumptions += 1;
     } else if (FINISHED.has(record.action)) {
       trace.finalStatus = str(metadata.status) ?? record.action.split('.').pop() ?? null;
       expectedSteps = num(metadata.steps);
@@ -139,14 +148,17 @@ export function reconstructTrace(runId: string, records: readonly AuditLike[]): 
     } else if (STEP.has(record.action)) {
       const stepId = str(metadata.stepId) ?? record.resourceId ?? '';
       const existing = steps.get(stepId);
+      // A failed attempt that will be retried is a fact, not an outcome.
+      const final = metadata.final !== false;
       const step: TraceStep = {
         stepId,
         nodeId: str(metadata.nodeId) ?? '?',
         nodeType: str(metadata.nodeType) ?? '?',
         iteration: num(metadata.iteration) ?? 0,
-        status:
-          str(metadata.status) ??
-          (record.action === 'workflow.step.failed' ? 'FAILED' : 'SUCCEEDED'),
+        status: !final
+          ? RETRYING
+          : (str(metadata.status) ??
+            (record.action === 'workflow.step.failed' ? 'FAILED' : 'SUCCEEDED')),
         attempts: num(metadata.attempt) ?? 1,
         predecessors: Array.isArray(metadata.predecessors)
           ? metadata.predecessors.map(String)
@@ -189,7 +201,7 @@ export function reconstructTrace(runId: string, records: readonly AuditLike[]): 
           nodeId: '?',
           nodeType: '?',
           iteration: 0,
-          status: 'PENDING',
+          status: PENDING,
           attempts: 0,
           predecessors: [],
           handles: [],
@@ -226,9 +238,13 @@ export function reconstructTrace(runId: string, records: readonly AuditLike[]): 
 
   if (!trace.workflowId) problems.push('The run’s start was not recorded.');
   if (!trace.finalStatus) problems.push('The run’s end was not recorded.');
-  if (expectedSteps !== null && expectedSteps !== trace.steps.length) {
+  // Steps that never settled (retrying when the run was cancelled) are not counted.
+  const settled = trace.steps.filter(
+    (step) => step.status !== RETRYING && step.status !== PENDING,
+  ).length;
+  if (expectedSteps !== null && expectedSteps !== settled) {
     problems.push(
-      `The run recorded ${expectedSteps} steps; ${trace.steps.length} step records were found.`,
+      `The run recorded ${expectedSteps} steps; ${settled} settled step records were found.`,
     );
   }
   trace.complete = problems.length === 0;

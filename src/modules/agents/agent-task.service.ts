@@ -525,8 +525,9 @@ export class AgentTaskService {
         metadata: {
           agentVersion: executable.version.version,
           promptTemplateVersion: PROMPT_TEMPLATE_VERSION,
-          workflowRunId: input.origin.runId,
-          workflowStepId: input.origin.stepId,
+          // The keys every run-related record uses, so a run's records are one query.
+          runId: input.origin.runId,
+          stepId: input.origin.stepId,
           model: result.model,
           invocationIds,
           passages: sources.length,

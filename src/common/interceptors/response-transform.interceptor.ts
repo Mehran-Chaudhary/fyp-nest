@@ -46,6 +46,11 @@ export class ResponseTransformInterceptor<T> implements NestInterceptor<T, unkno
   constructor(private readonly reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler<T>): Observable<unknown> {
+    // The envelope is an HTTP contract. A WebSocket acknowledgement has its own
+    // shape (`docs/contracts/realtime-v1.md`), and global interceptors also run
+    // for gateway handlers.
+    if (context.getType() !== 'http') return next.handle();
+
     const skip = this.reflector.getAllAndOverride<boolean>(
       METADATA_KEY.SKIP_RESPONSE_ENVELOPE,
       [context.getHandler(), context.getClass()],

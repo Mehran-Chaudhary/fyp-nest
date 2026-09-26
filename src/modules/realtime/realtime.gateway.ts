@@ -117,6 +117,11 @@ export class RealtimeGateway
     );
   }
 
+  /** Sockets held by this instance, for the health report. */
+  get connectionCount(): number {
+    return this.state.size;
+  }
+
   handleConnection(socket: Socket): void {
     const session = (socket.data as { session?: SocketSession }).session;
     if (!session) {

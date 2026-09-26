@@ -270,14 +270,39 @@ export class RecordingJobs {
   }
 }
 
+/** One chat request as the scripted model sees it. */
+export interface FakeChatRequest {
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  /** Stop sequences the caller asked for (`options.stop`). */
+  stop: string[];
+  /** The system prompt: which agent is being asked. */
+  system: string;
+  /** The latest user message: the task, or a tool result. */
+  lastUser: string;
+}
+
+/**
+ * What the scripted model does with a request: answer with this text (cut at
+ * the first stop sequence, as Ollama does), answer slowly, fail with an HTTP
+ * status, or — `undefined` — fall back to the default answer.
+ */
+export type FakeReply =
+  | string
+  | { text: string; delayMs?: number }
+  | { status: number; body?: string }
+  | undefined;
+
 /**
  * A scripted Ollama. Speaks the real `/api/*` wire format — NDJSON streaming
  * included — behind the real provider, and records every request it receives:
  * exactly what left the gateway.
  *
- * Its "model" answers with the placeholders it was shown, split into
+ * Its default "model" answers with the placeholders it was shown, split into
  * three-character chunks so that placeholders straddle chunk boundaries and
- * the streaming unmasker is exercised for real.
+ * the streaming unmasker is exercised for real. A suite can install a
+ * `script` to play specific agents: tool calls, JSON answers, outages, and
+ * slow answers that honour cancellation.
  */
 export class FakeOllama {
   readonly captured: Array<{
@@ -286,6 +311,9 @@ export class FakeOllama {
   }> = [];
   model = 'e2e-model:latest';
   contextLength = 8192;
+  script: ((request: FakeChatRequest) => FakeReply | Promise<FakeReply>) | null = null;
+  /** Requests abandoned by the caller (a cancelled step) while being answered. */
+  aborted = 0;
 
   readonly fetch = (input: string, init: RequestInit): Promise<Response> => {
     const url = new URL(input);
@@ -320,14 +348,59 @@ export class FakeOllama {
         const body = JSON.parse(typeof init.body === 'string' ? init.body : '{}') as {
           model: string;
           messages: Array<{ role: string; content: string }>;
+          options?: { stop?: string[] };
         };
         this.captured.push({ model: body.model, messages: body.messages });
-        return Promise.resolve(this.stream(this.answer(body.messages), body.messages));
+        return this.chat(body, init.signal ?? undefined);
       }
       default:
         return Promise.resolve(new Response('not found', { status: 404 }));
     }
   };
+
+  private async chat(
+    body: {
+      model: string;
+      messages: Array<{ role: string; content: string }>;
+      options?: { stop?: string[] };
+    },
+    signal: AbortSignal | undefined,
+  ): Promise<Response> {
+    const stop = body.options?.stop ?? [];
+    const reply = this.script
+      ? await this.script({
+          model: body.model,
+          messages: body.messages,
+          stop,
+          system: body.messages.find((message) => message.role === 'system')?.content ?? '',
+          lastUser:
+            [...body.messages].reverse().find((message) => message.role === 'user')
+              ?.content ?? '',
+        })
+      : undefined;
+
+    if (reply !== undefined && typeof reply === 'object' && 'status' in reply) {
+      return new Response(reply.body ?? 'scripted failure', { status: reply.status });
+    }
+    const text =
+      typeof reply === 'string' ? reply : (reply?.text ?? this.answer(body.messages));
+    const delayMs = typeof reply === 'object' ? (reply.delayMs ?? 0) : 0;
+    if (delayMs > 0) {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, delayMs);
+        signal?.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer);
+            this.aborted += 1;
+            reject(signal.reason instanceof Error ? signal.reason : new Error('aborted'));
+          },
+          { once: true },
+        );
+      });
+    }
+    return this.stream(cutAtStop(text, stop), body.messages);
+  }
 
   /** Everything the model has been sent, as one string. */
   get everythingSent(): string {
@@ -396,6 +469,16 @@ export class FakeOllama {
       headers: { 'content-type': 'application/x-ndjson' },
     });
   }
+}
+
+/** What Ollama returns when a stop sequence is hit: the text before it. */
+function cutAtStop(text: string, stop: readonly string[]): string {
+  let end = text.length;
+  for (const sequence of stop) {
+    const at = sequence ? text.indexOf(sequence) : -1;
+    if (at !== -1 && at < end) end = at;
+  }
+  return text.slice(0, end);
 }
 
 export function embedText(text: string): number[] {

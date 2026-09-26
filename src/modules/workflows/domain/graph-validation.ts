@@ -93,7 +93,12 @@ export interface GraphReport {
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const RULE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
-const RESERVED_HANDLES: ReadonlySet<string> = new Set(Object.values(HANDLE));
+/** A condition node's own fixed handles: a rule may not take one of these ids. */
+const RESERVED_RULE_IDS: ReadonlySet<string> = new Set([
+  HANDLE.ELSE,
+  HANDLE.ERROR,
+  HANDLE.OUT,
+]);
 
 /**
  * Validates a workflow definition and compiles it for execution.
@@ -754,7 +759,11 @@ function normalizeRule(
     issue('Each rule must be an object.');
     return null;
   }
-  if (typeof raw.id !== 'string' || !RULE_ID.test(raw.id) || RESERVED_HANDLES.has(raw.id)) {
+  if (
+    typeof raw.id !== 'string' ||
+    !RULE_ID.test(raw.id) ||
+    RESERVED_RULE_IDS.has(raw.id)
+  ) {
     issue('Each rule needs an id (a short identifier, not "else", "error" or "out").');
     return null;
   }
@@ -1080,7 +1089,7 @@ function checkReference(
   if (ref.root === 'input') {
     const first = ref.path[0];
     const properties = context.triggerSchema.properties ?? {};
-    if (first && !(first in properties)) {
+    if (first && !Object.hasOwn(properties, first)) {
       context.warnings.push({
         code: 'INPUT_FIELD_UNKNOWN',
         message: `${where}: ${source} names a field the trigger’s input schema does not declare.`,
@@ -1121,7 +1130,65 @@ function checkReference(
         'agent a JSON output schema to read fields from it.',
       nodeId: node.id,
     });
+    return;
   }
+  // An agent's JSON output is held to its schema, so a path it cannot have is
+  // a design error, caught here rather than as a failed run.
+  if (
+    ref.path.length > 0 &&
+    referenced.type === 'agent' &&
+    referenced.data.output?.format === 'json'
+  ) {
+    const problem = undeclaredPath(referenced.data.output.schema, ref.path);
+    if (problem) {
+      (problem.certain ? context.errors : context.warnings).push({
+        code: 'TYPE_MISMATCH',
+        message: `${where}: ${source} reads ${problem.what} in the output schema of "${ref.nodeId}".`,
+        nodeId: node.id,
+      });
+    }
+  }
+}
+
+/**
+ * Why `path` may not exist in values of `schema`: `certain` when the schema
+ * rules it out, otherwise a likely typo (an undeclared field the schema does
+ * not forbid). Null when the path is declared, or the schema leaves it open.
+ */
+function undeclaredPath(
+  schema: JsonSchema,
+  path: readonly string[],
+): { what: string; certain: boolean } | null {
+  let current: JsonSchema | undefined = schema;
+  for (const [index, segment] of path.entries()) {
+    if (!current) return null;
+    const types = Array.isArray(current.type)
+      ? current.type
+      : current.type
+        ? [current.type]
+        : [];
+    const at = path.slice(0, index + 1).join('.');
+    if (/^\d+$/.test(segment) && (types.includes('array') || current.items)) {
+      current = current.items;
+      continue;
+    }
+    if (types.length > 0 && !types.includes('object')) {
+      return { what: `"${at}", a field of a ${types.join(' or ')},`, certain: true };
+    }
+    const properties = current.properties ?? {};
+    if (Object.hasOwn(properties, segment)) {
+      current = properties[segment];
+      continue;
+    }
+    if (current.additionalProperties === false) {
+      return { what: `"${at}", which is not declared`, certain: true };
+    }
+    if (current.properties !== undefined) {
+      return { what: `"${at}", which is not declared (a typo?)`, certain: false };
+    }
+    return null;
+  }
+  return null;
 }
 
 // ── Graph algorithms ────────────────────────────────────────────────────────

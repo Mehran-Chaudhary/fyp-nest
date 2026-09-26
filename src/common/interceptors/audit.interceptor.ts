@@ -42,6 +42,9 @@ export class AuditInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    // Gateways audit for themselves: there is no HTTP request to describe.
+    if (context.getType() !== 'http') return next.handle();
+
     const descriptor = this.reflector.getAllAndOverride<AuditDescriptor>(
       METADATA_KEY.AUDIT,
       [context.getHandler(), context.getClass()],

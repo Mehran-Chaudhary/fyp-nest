@@ -352,7 +352,7 @@ The short version:
 
 ---
 
-## Phase 4 — Orchestration, Tools & Real-Time
+## Phase 4 — Orchestration, Tools & Real-Time · **IMPLEMENTED**
 
 Turning individual agents into collaborating ones.
 
@@ -360,7 +360,120 @@ Turning individual agents into collaborating ones.
 Engine · 6.13 Interactive Workflow Canvas (backend half) · 6.16 Real-Time
 Notification & WebSocket Engine
 
-### Deliverables
+### Delivered
+
+| Area | What was built |
+|------|----------------|
+| **Workflow definitions** | The React Flow graph as the contract ([`docs/contracts/workflow-graph-v1.md`](contracts/workflow-graph-v1.md)): trigger, agent, tool, retrieval, condition, supervisor, approval and output nodes. Validation is the boundary: an acyclic core plus **explicit, bounded loops** (condition-controlled back edges over single-entry, single-exit regions); references checked against the workspace *and* the editor's own access; templates that only reference ancestors; paths into an agent's JSON output checked against its output schema; passages only into agents; a worst-case step bound; unknown properties dropped. Append-only versions, publish, restore, test runs of drafts, a node catalogue for the canvas palette. |
+| **Execution engine** | PostgreSQL is the source of truth; BullMQ only delivers. Each step settles in **one transaction** under the run's row lock — encrypted output, labels, audit record, successors, run completion — so no state exists in which a step finished but its successors were lost. Deterministic step ids; **compare-and-set claims bound to a dispatch number** (stale and replayed jobs are no-ops); heartbeat leases with takeover; a reconciliation sweep (lost jobs, stalled steps, deadlines, expired approvals, stuck runs, retention). Dead-path elimination, AND-joins, error edges, loops, and the **Supervisor pattern** (LLM router with a validated JSON decision, or round robin), each round a persisted step. Resume from failed steps, cancel reaching in-flight model calls, admission control per workspace, idempotent starts. |
+| **Queues and the DLQ** | Engine-owned retries (per node: attempts, jittered exponential backoff, timeouts) for transient failures only. Every final failure is dead-lettered as a **typed, metadata-only record** — no free text, no error messages, no ciphertext — with a keyed fingerprint of the input. Poison steps (a worker crash on every attempt) are capped and dead-lettered. |
+| **Inter-agent payloads** | Jobs carry **references and a MAC** (HMAC keyed by HKDF of the run's data key), never content: a compromised Redis yields nothing, cannot mint a job, and cannot redirect one to another workspace (rejected, audited CRITICAL). Step inputs and outputs are sealed with AES-256-GCM under a **per-run key** with AAD bound to run, step and field; deletion and retention crypto-shred the run. |
+| **Circuit breakers** | The **step ceiling**, checked when steps are scheduled — a runaway loop stops before its next step reaches the queue — and a **per-run token budget** charged after every model call. Both fail the run and are audited `agent.circuit_broken`; per-edge loop limits and supervisor round limits bound each construct on its own. |
+| **Tool Execution Engine** | A registry of built-in tools (calculator, current date and time, knowledge search, email to members) and workspace HTTP tools, with **per-agent grants**. Signatures in a strict JSON Schema subset that rejects every keyword it does not enforce. Checks in a fixed order — granted, enabled, permitted as the delegating principal, arguments valid, approval, **information flow** (confidentiality ceiling and an integrity lattice against prompt injection), personal data in arguments, budgets — then a timeout, a result ceiling, and an idempotency claim for side effects. A content-free ledger (`tool_executions`) and audit records for every call, refusals included. |
+| **Egress control** | HTTP tools reach only allowlisted hosts (`TOOL_HTTP_ALLOWED_HOSTS`); the origin is fixed at definition, arguments fill path, query and body only (traversal refused). Every resolved address must be public; the connection is pinned to it (no DNS rebinding); the cloud metadata service is refused even in development; redirects are not followed; response and header limits; credentials encrypted and never shown to the model. |
+| **ReAct loop** | A text protocol (`<tool_call>` JSON, generation stopped at the closing tag) that works with every model the gateway serves and keeps the privacy boundary intact: calls pass the egress check and the streaming unmasker, results are escaped and masked in the **same** masking session. Bounded iterations, repeat detection, a failure limit, token-bounded results with eliding, a forced final answer. Conversations stream a `tool` event; agents in workflows run the same loop. |
+| **WebSocket gateway** | Socket.IO on the API's port ([`docs/contracts/realtime-v1.md`](contracts/realtime-v1.md)). Authenticated at the handshake with the HTTP machinery (token + workspace, or API key; never in the URL), origin-checked, throttled per IP, capped per user, IP-allowlisted. Rooms derived from verified ids only; a second tenant check on every delivery; subscriptions to other people's runs refused and audited. **Metadata-only events** from a Redis Stream (replay after reconnect) and pub/sub (fan-out across API instances), published atomically; no sticky sessions needed. Access re-checked periodically and **immediately on any access change**; revoked sockets are told why and closed. |
+| **Traceability** | Every fact of a run is written to the hash-chained audit log as it happens, the step's record inside its settlement transaction; `GET …/workflow-runs/{id}/trace` rebuilds the run — steps, edges, tool calls, approvals — from the audit log alone and reports whether it is complete. Indexed by run. |
+| **Human in the loop** | Approval nodes with separation of duties (no self-approval by default), approvers cleared for the label of what they approve, timeouts decided by policy, decisions audited with the settlement. |
+| **Cloud & configuration** | Nothing new to provision (Redis/BullMQ, the model gateway and the API port are reused). Every variable validated with cross-field checks (step vs model timeouts, stall vs heartbeat, private networks and plain HTTP refused in production). Degraded-never-down health indicators for the engine and real-time. Seeded demo: a tool-using agent and two published workflows, one of which runs with no model. Phase 4 section in `docs/CLOUD_SETUP.md`; [ADR 0004](adr/0004-orchestration-tools-realtime.md). |
+
+### Verification status
+
+- `npm run typecheck`, `npm run lint`, `npm run build` — clean
+- `npm test` — **671 tests, 29 suites, all passing** (88 new). Covers:
+  - graph validation (loops, supervisors, references, typed paths, limits);
+  - the scheduler (chains, dead paths, joins, error edges, loops and their
+    limits, supervisor rounds, idempotent recomputation);
+  - templates and conditions, including inherited-property reads;
+  - job MACs against every kind of tampering;
+  - dead-letter sanitisation and trace reconstruction;
+  - failure classification;
+  - the schema subset (including a `__proto__` bypass);
+  - the tool-call parser and stream filter;
+  - the information-flow lattice;
+  - SSRF address classification and allowlists;
+  - the calculator;
+  - HTTP request rendering and traversal;
+  - real-time routing and event sanitisation.
+- **Against real PostgreSQL 18:** the migration applies, reverts and
+  re-applies; the application boots (API with WebSocket and four queue
+  workers); the seed is idempotent and creates the demo workflows.
+- **End-to-end (`npm run test:e2e:workflows`) — 26/26.** Real PostgreSQL,
+  real Redis, real BullMQ workers and Socket.IO; a scripted model. The main
+  checks:
+  - a three-agent workflow with a tool call and a structured-output repair
+    completes, and its trace is rebuilt from 12 audit records alone;
+  - the model saw placeholders only;
+  - the initiator's socket got 18 metadata-only events, while a colleague and
+    another workspace got none, and their subscriptions were refused;
+  - after reading an injected web page, the agent could not send email
+    (integrity), and the attempt was audited;
+  - an outside recipient was refused, and a member was notified live without
+    content;
+  - SSRF: the metadata address and unlisted hosts were refused, and a redirect
+    was not followed;
+  - a failing step retried with backoff and was dead-lettered, and **no
+    sensitive value exists anywhere in Redis or in any table**;
+  - resume re-ran only the failed step; deletion shredded the key and the
+    trace survived;
+  - a runaway loop was stopped by the step ceiling with the queue empty, and
+    the token budget broke the circuit;
+  - self-approval was refused, and the administrator's approval was traced;
+  - cancel aborted the in-flight model call;
+  - crash recovery and poison-step capping;
+  - forged and redirected jobs were rejected (CRITICAL), and a replayed job
+    was a no-op;
+  - a removed member's socket was closed at once;
+  - the audit chain verifies.
+
+  The phase 3 suite still passes, 18/18.
+- **Live smoke test** (built server, real HTTP and WebSocket) — 29/29: handshake
+  auth, validation, publish, input schemas, idempotency, live events, branching
+  with dead-path elimination, trace, dead letters, the seeded workflow with no
+  model configured, health.
+- Verification found and drove fixes for:
+  - a boot-order crash (the gateway subscribing before Redis connected);
+  - global HTTP interceptors wrapping WebSocket acknowledgements;
+  - stale jobs able to claim a retry early;
+  - poison steps re-dispatched forever;
+  - an approval decision audited outside its transaction;
+  - a job with a tampered workspace skipped silently instead of rejected;
+  - a `__proto__` schema bypass;
+  - template paths reading inherited properties;
+  - cloud metadata reachable in development mode;
+  - an unindexed trace query.
+
+### Exit criteria
+
+- ✅ A three-agent workflow completes end to end and its full trace is
+  reconstructible from the audit log alone — steps, edges, tool calls, agent
+  versions and tokens, from 12 records, `complete: true`; it still stands after
+  the run is deleted.
+- ✅ A deliberately failing step lands in the DLQ with **no** sensitive payload
+  recoverable from it — the record is typed metadata, and a scan of every key
+  in Redis and every row of every table finds none of the run's sensitive
+  values.
+- ✅ An infinite-loop workflow is stopped by the step ceiling rather than by
+  exhausting the queue — 6/6 steps, circuit breaker audited, queue empty.
+
+### Design decisions worth defending in the report
+
+See [`docs/adr/0004-orchestration-tools-realtime.md`](adr/0004-orchestration-tools-realtime.md).
+The short version:
+
+- PostgreSQL decides and the queue only delivers;
+- the broker carries references it cannot forge, not content;
+- loops are explicit and bounded, and the step ceiling stops them before the
+  queue;
+- a run acts as its initiator, re-checked every step;
+- every tool call is checked, labelled and recorded;
+- untrusted content disables side effects (integrity);
+- sockets see only what their verified identity entitles them to, and only
+  metadata.
+
+### Original plan (for reference)
+
+#### Deliverables
 
 1. **Workflow definition** — the JSON graph the React Flow canvas produces,
    validated server-side: acyclic (or with explicit bounded loops), every node
@@ -388,7 +501,7 @@ Notification & WebSocket Engine
    phase 1 via `REDIS_TLS`) plus application-level encryption of step payloads,
    so a compromised broker yields ciphertext.
 
-### Exit criteria
+#### Exit criteria
 
 - A three-agent workflow completes end to end and its full trace is
   reconstructible from the audit log alone.
@@ -414,6 +527,8 @@ hardening across all modules.
 2. **Circuit breaking** — agents that loop or overrun their budget are broken
    open and audited as `agent.circuit_broken`. The proposal names runaway agents
    exhausting tokens as a core problem; this is the control that addresses it.
+   *Workflow runs already have it (phase 4: the step ceiling and the per-run
+   token budget); what remains is conversations and quotas across runs.*
 3. **Analytics** — the Command Centre screen: throughput, latency distributions,
    token spend, PII redaction counts, security event feed.
 4. **PostgreSQL row-level security** — RLS policies as a third, independent
@@ -480,11 +595,11 @@ the frontend authenticates against and what the Python service calls back into.
 | 1 — Foundation, Identity & Multi-Tenancy | ✅ Implemented; verified against real PostgreSQL during phase 2 |
 | 2 — Knowledge Layer & Secure Retrieval | ✅ Implemented; verified end to end against real PostgreSQL. Live runs await the cloud services and the Python AI service (see `docs/CLOUD_SETUP.md`) |
 | 3 — Inference, Agents & Privacy | ✅ Implemented; verified end to end against real PostgreSQL and over live HTTP with a mock model endpoint; benchmarked. Live runs await a model endpoint and the AI service's `/v1/pii/analyze` (see `docs/CLOUD_SETUP.md`) |
-| 4 — Orchestration, Tools & Real-Time | Next |
-| 5 — Governance, Hardening & Operations | Planned |
+| 4 — Orchestration, Tools & Real-Time | ✅ Implemented; verified end to end against real PostgreSQL, Redis, BullMQ workers and Socket.IO with a scripted model, and over live HTTP and WebSocket. Live agent runs await the model endpoint of phase 3 (see `docs/CLOUD_SETUP.md`) |
+| 5 — Governance, Hardening & Operations | Next |
 
-**Two phases remain.** Phase 4 builds directly on phase 3: the workflow engine
-routes work between the agents built here, every model call still goes through
-the same gateway and privacy boundary, and the Tool Execution Engine adds the
-granted tools that phase 3 deliberately left out. Phase 5 then hardens and
-measures the whole system.
+**One phase remains.** Phase 5 hardens and measures what now exists: token
+quotas per workspace, agent and member on top of the per-run budgets of phase
+4; metrics and tracing; mTLS between the API and the AI service; load tests of
+the engine's settlement path and the audit chain; and the operational
+runbooks. Nothing in it changes the privacy, access or orchestration model.
