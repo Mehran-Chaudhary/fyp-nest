@@ -223,8 +223,10 @@ export class ConversationsController {
       'Server-Sent Events over a POST (use fetch() with a stream reader, or ' +
       '@microsoft/fetch-event-source). Events: `meta` {conversationId, agentId, ' +
       'agentVersion, model, userMessageId, assistantMessageId} once preflight passes; ' +
-      '`status` {stage: retrieving | redacting | queued | generating | thinking}; `delta` ' +
-      '{text}, already unmasked; then `done` (the same body as the non-streaming endpoint) or ' +
+      '`status` {stage: retrieving | redacting | queued | generating | thinking | tool}; ' +
+      '`delta` {text}, already unmasked; `tool` {executionId, tool, status, code?, reason?, ' +
+      'durationMs} after each tool call (never its arguments or result); then `done` (the ' +
+      'same body as the non-streaming endpoint) or ' +
       '`error` {code, message}. Failures before `meta` are ordinary JSON errors. ' +
       'Disconnecting stops generation; the partial answer is kept as a cancelled message.',
   })
@@ -248,6 +250,7 @@ export class ConversationsController {
             onOpen: (meta) => channel.open('meta', meta),
             onStatus: (stage, detail) => channel.send('status', { stage, ...detail }),
             onDelta: (text) => channel.send('delta', { text }),
+            onTool: (call) => channel.send('tool', call),
           },
           signal,
         ),

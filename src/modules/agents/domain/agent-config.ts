@@ -57,6 +57,19 @@ export interface AgentRetrievalConfig {
   maxClassification: Classification | null;
 }
 
+/**
+ * The tools an agent may call (phase 4, module 6.11).
+ *
+ * A grant is necessary, never sufficient: a granted tool is offered only when
+ * the person using the agent may run it too (`tool:execute` and the tool's own
+ * permissions), and every call is checked again as it happens.
+ */
+export interface AgentToolsConfig {
+  toolIds: string[];
+  /** Reason → act iterations per answer. */
+  maxIterations: number;
+}
+
 export interface AgentMemoryConfig {
   /** Most recent messages considered, before the token budget. 0 disables memory. */
   maxMessages: number;
@@ -79,6 +92,11 @@ export interface AgentConfig {
   memory: AgentMemoryConfig;
   grounding: GroundingMode;
   citations: boolean;
+  /**
+   * Absent on versions written before phase 4; read it through
+   * {@link toolsOf}, which supplies "no tools".
+   */
+  tools?: AgentToolsConfig;
 }
 
 export interface AgentConfigDefaults {
@@ -86,6 +104,8 @@ export interface AgentConfigDefaults {
   maxContextTokens: number;
   memoryMaxMessages: number;
   memoryMaxHistoryTokens: number;
+  /** Reason → act iterations a new agent gets (TOOL_DEFAULT_ITERATIONS). */
+  toolIterations?: number;
 }
 
 export function defaultAgentConfig(defaults: AgentConfigDefaults): AgentConfig {
@@ -110,7 +130,25 @@ export function defaultAgentConfig(defaults: AgentConfigDefaults): AgentConfig {
     },
     grounding: 'STRICT',
     citations: true,
+    tools: { toolIds: [], maxIterations: defaults.toolIterations ?? 4 },
   };
+}
+
+/** An agent's tools, with versions from before phase 4 read as "none granted". */
+export function toolsOf(config: AgentConfig, defaultIterations = 4): AgentToolsConfig {
+  return config.tools ?? { toolIds: [], maxIterations: defaultIterations };
+}
+
+/**
+ * The config with every section present. Versions written before a section
+ * existed are compared through this, so opening and saving an old agent does
+ * not register as a change.
+ */
+export function normalizeAgentConfig(
+  config: AgentConfig,
+  defaultIterations = 4,
+): AgentConfig {
+  return { ...config, tools: toolsOf(config, defaultIterations) };
 }
 
 /** A partial update: every key optional, nested objects merged one level deep. */
@@ -123,6 +161,7 @@ export interface AgentConfigPatch {
   memory?: Partial<AgentMemoryConfig>;
   grounding?: GroundingMode;
   citations?: boolean;
+  tools?: Partial<AgentToolsConfig>;
 }
 
 /**
@@ -130,7 +169,12 @@ export interface AgentConfigPatch {
  * that removing an override (going back to the default temperature) is
  * possible by omitting it.
  */
-export function applyConfigPatch(base: AgentConfig, patch: AgentConfigPatch): AgentConfig {
+export function applyConfigPatch(
+  base: AgentConfig,
+  patch: AgentConfigPatch,
+  defaultIterations = 4,
+): AgentConfig {
+  const baseTools = toolsOf(base, defaultIterations);
   const next: AgentConfig = {
     persona: { ...base.persona, ...definedOnly(patch.persona) },
     model: patch.model === undefined ? base.model : patch.model,
@@ -142,8 +186,13 @@ export function applyConfigPatch(base: AgentConfig, patch: AgentConfigPatch): Ag
     memory: { ...base.memory, ...definedOnly(patch.memory) },
     grounding: patch.grounding ?? base.grounding,
     citations: patch.citations ?? base.citations,
+    tools: { ...baseTools, ...definedOnly(patch.tools) },
   };
   next.retrieval.knowledgeBaseIds = [...new Set(next.retrieval.knowledgeBaseIds)].sort();
+  next.tools = {
+    ...(next.tools as AgentToolsConfig),
+    toolIds: [...new Set((next.tools as AgentToolsConfig).toolIds)].sort(),
+  };
   return next;
 }
 

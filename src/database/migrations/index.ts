@@ -1,6 +1,7 @@
 import { InitialSchema1758500000000 } from './1758500000000-InitialSchema';
 import { KnowledgeLayer1758600000000 } from './1758600000000-KnowledgeLayer';
 import { InferenceAgentsPrivacy1758700000000 } from './1758700000000-InferenceAgentsPrivacy';
+import { OrchestrationToolsRealtime1758800000000 } from './1758800000000-OrchestrationToolsRealtime';
 
 /**
  * Migrations, in execution order.
@@ -14,4 +15,5 @@ export const migrations = [
   InitialSchema1758500000000,
   KnowledgeLayer1758600000000,
   InferenceAgentsPrivacy1758700000000,
+  OrchestrationToolsRealtime1758800000000,
 ];

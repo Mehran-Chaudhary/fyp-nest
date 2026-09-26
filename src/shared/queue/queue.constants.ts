@@ -18,6 +18,13 @@ export const QUEUE_NAME = {
    * document, which failure code — so it can be inspected safely.
    */
   DEAD_LETTER: 'dead-letter',
+  /**
+   * Workflow steps (phase 4): one job per step dispatch, carrying references
+   * and a MAC, never the inter-agent message itself.
+   */
+  WORKFLOW_STEPS: 'workflow-steps',
+  /** The workflow engine's reconciliation sweep. */
+  WORKFLOW_MAINTENANCE: 'workflow-maintenance',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAME)[keyof typeof QUEUE_NAME];

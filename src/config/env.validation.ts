@@ -270,6 +270,9 @@ export const envValidationSchema = Joi.object({
   /** PII analysis previews and redaction reports. */
   THROTTLE_PII_TTL: duration('60s'),
   THROTTLE_PII_LIMIT: Joi.number().integer().min(1).default(30),
+  /** Workflow run starts: each one can fan out into many model and tool calls. */
+  THROTTLE_WORKFLOW_TTL: duration('60s'),
+  THROTTLE_WORKFLOW_LIMIT: Joi.number().integer().min(1).default(30),
 
   // ───────────────────────────────────────────────────────────────────────────
   // Phase 2 — object storage (S3-compatible: AWS S3, Cloudflare R2, Backblaze
@@ -498,6 +501,91 @@ export const envValidationSchema = Joi.object({
   AGENT_MAX_MESSAGE_LENGTH: Joi.number().integer().min(100).max(100_000).default(16_000),
 
   // ───────────────────────────────────────────────────────────────────────────
+  // Phase 4 — multi-agent workflow engine (modules 6.9, 6.13). Runs on the
+  // Redis/BullMQ of phase 2; nothing new to provision.
+  // ───────────────────────────────────────────────────────────────────────────
+  WORKFLOW_MAX_NODES: Joi.number().integer().min(2).max(500).default(50),
+  WORKFLOW_MAX_EDGES: Joi.number().integer().min(1).max(2_000).default(150),
+  /** Steps one run may schedule, loops included. The runaway-loop stop. */
+  WORKFLOW_MAX_STEPS: Joi.number().integer().min(2).max(10_000).default(100),
+  WORKFLOW_MAX_LOOP_ITERATIONS: Joi.number().integer().min(1).max(1_000).default(10),
+  WORKFLOW_MAX_SUPERVISOR_ROUNDS: Joi.number().integer().min(1).max(200).default(12),
+  WORKFLOW_MAX_INPUT_SIZE: byteSize('64kb'),
+  WORKFLOW_MAX_STEP_OUTPUT_SIZE: byteSize('256kb'),
+  WORKFLOW_RUN_TIMEOUT: duration('30m'),
+  /** One step may make several model calls (tool use), so this exceeds LLM_MAX_DURATION. */
+  WORKFLOW_STEP_TIMEOUT: duration('10m'),
+  WORKFLOW_STEP_MAX_ATTEMPTS: Joi.number().integer().min(1).max(10).default(3),
+  WORKFLOW_STEP_BACKOFF: duration('10s'),
+  WORKFLOW_STEP_BACKOFF_MAX: duration('5m'),
+  WORKFLOW_CONCURRENCY: Joi.number().integer().min(1).max(64).default(4),
+  WORKFLOW_MAX_ACTIVE_RUNS_PER_ORG: Joi.number().integer().min(1).max(10_000).default(20),
+  WORKFLOW_MAX_TOKENS_PER_RUN: Joi.number()
+    .integer()
+    .min(1_000)
+    .max(100_000_000)
+    .default(200_000),
+  WORKFLOW_HEARTBEAT_INTERVAL: duration('15s'),
+  WORKFLOW_STALL_THRESHOLD: duration('2m'),
+  WORKFLOW_SWEEP_INTERVAL: duration('1m'),
+  WORKFLOW_APPROVAL_TIMEOUT: duration('24h'),
+  /** 0 keeps finished runs forever. */
+  WORKFLOW_RUN_RETENTION: duration('90d'),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 4 — tool execution engine (module 6.11)
+  // ───────────────────────────────────────────────────────────────────────────
+  TOOLS_ENABLED: Joi.boolean().default(true),
+  /** Comma-separated built-in tool names to switch off platform-wide. */
+  TOOLS_DISABLED_BUILTINS: Joi.string()
+    .pattern(/^\s*([a-z_]+\s*(,\s*[a-z_]+\s*)*)?$/)
+    .allow('')
+    .default(''),
+  TOOL_MAX_ITERATIONS: Joi.number().integer().min(1).max(32).default(8),
+  TOOL_DEFAULT_ITERATIONS: Joi.number().integer().min(1).max(32).default(4),
+  TOOL_DEFAULT_TIMEOUT: duration('15s'),
+  TOOL_MAX_TIMEOUT: duration('60s'),
+  TOOL_MAX_RESULT_SIZE: byteSize('32kb'),
+  TOOL_RESULT_MAX_TOKENS: Joi.number().integer().min(64).max(32_768).default(1_500),
+  TOOL_MAX_CALLS_PER_RUN: Joi.number().integer().min(1).max(10_000).default(50),
+  /**
+   * Hosts HTTP tools may call: `api.example.com` or `*.example.com`, comma
+   * separated. Empty disables outbound HTTP tools altogether.
+   */
+  TOOL_HTTP_ALLOWED_HOSTS: Joi.string()
+    .pattern(/^\s*((\*\.)?[a-z0-9.-]+(:\d+)?)?(\s*,\s*(\*\.)?[a-z0-9.-]+(:\d+)?)*\s*$/i)
+    .allow('')
+    .default(''),
+  /** Never in production: lets HTTP tools reach private and loopback addresses. */
+  TOOL_HTTP_ALLOW_PRIVATE_NETWORKS: Joi.boolean().default(false),
+  /** Never in production: lets HTTP tools use plain http://. */
+  TOOL_HTTP_ALLOW_INSECURE: Joi.boolean().default(false),
+  TOOL_HTTP_MAX_RESPONSE_SIZE: byteSize('256kb'),
+  TOOL_EMAIL_ENABLED: Joi.boolean().default(true),
+  TOOL_EMAIL_MAX_PER_RUN: Joi.number().integer().min(0).max(100).default(5),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 4 — real-time events over WebSocket (module 6.16)
+  // ───────────────────────────────────────────────────────────────────────────
+  REALTIME_ENABLED: Joi.boolean().default(true),
+  REALTIME_PATH: Joi.string()
+    .pattern(/^\/?[A-Za-z0-9._/-]{1,64}$/)
+    .default('/realtime'),
+  /** `websocket` (no sticky sessions needed) or `websocket,polling`. */
+  REALTIME_TRANSPORTS: Joi.string()
+    .pattern(/^\s*(websocket|polling)(\s*,\s*(websocket|polling))*\s*$/)
+    .default('websocket'),
+  REALTIME_MAX_CONNECTIONS_PER_USER: Joi.number().integer().min(1).max(1_000).default(10),
+  REALTIME_MAX_HANDSHAKES_PER_MINUTE: Joi.number().integer().min(1).max(10_000).default(60),
+  REALTIME_REVALIDATE_INTERVAL: duration('60s'),
+  REALTIME_REPLAY_MAX: Joi.number().integer().min(0).max(5_000).default(200),
+  REALTIME_STREAM_MAXLEN: Joi.number().integer().min(10).max(100_000).default(1_000),
+  REALTIME_STREAM_TTL: duration('24h'),
+  REALTIME_PING_INTERVAL: duration('25s'),
+  REALTIME_PING_TIMEOUT: duration('20s'),
+  REALTIME_MAX_MESSAGE_SIZE: byteSize('4kb'),
+
+  // ───────────────────────────────────────────────────────────────────────────
   // Outbound email
   // ───────────────────────────────────────────────────────────────────────────
   /** `log` prints messages to the console; nothing is sent. Ideal for development. */
@@ -605,6 +693,45 @@ function crossFieldProblems(values: Record<string, unknown>): string[] {
     problems.push(
       '"PRESIDIO_ANALYZER_URL" is required when "PII_NER_PROVIDER" is presidio.',
     );
+  }
+
+  // ── Phase 4 ────────────────────────────────────────────────────────────────
+  if (ms('WORKFLOW_STEP_TIMEOUT') < ms('LLM_MAX_DURATION') + 30_000) {
+    problems.push(
+      '"WORKFLOW_STEP_TIMEOUT" must exceed "LLM_MAX_DURATION" by at least 30s: an agent step ' +
+        'makes at least one full model call.',
+    );
+  }
+  if (ms('WORKFLOW_RUN_TIMEOUT') < ms('WORKFLOW_STEP_TIMEOUT')) {
+    problems.push('"WORKFLOW_RUN_TIMEOUT" cannot be shorter than "WORKFLOW_STEP_TIMEOUT".');
+  }
+  if (ms('WORKFLOW_STALL_THRESHOLD') < 3 * ms('WORKFLOW_HEARTBEAT_INTERVAL')) {
+    problems.push(
+      '"WORKFLOW_STALL_THRESHOLD" must be at least three "WORKFLOW_HEARTBEAT_INTERVAL"s, or ' +
+        'a slow heartbeat would be mistaken for a dead worker.',
+    );
+  }
+  if (ms('WORKFLOW_STEP_BACKOFF') > ms('WORKFLOW_STEP_BACKOFF_MAX')) {
+    problems.push('"WORKFLOW_STEP_BACKOFF" cannot exceed "WORKFLOW_STEP_BACKOFF_MAX".');
+  }
+  if (ms('TOOL_DEFAULT_TIMEOUT') > ms('TOOL_MAX_TIMEOUT')) {
+    problems.push('"TOOL_DEFAULT_TIMEOUT" cannot exceed "TOOL_MAX_TIMEOUT".');
+  }
+  if (Number(values.TOOL_DEFAULT_ITERATIONS) > Number(values.TOOL_MAX_ITERATIONS)) {
+    problems.push('"TOOL_DEFAULT_ITERATIONS" cannot exceed "TOOL_MAX_ITERATIONS".');
+  }
+  if (ms('TOOL_MAX_TIMEOUT') >= ms('WORKFLOW_STEP_TIMEOUT')) {
+    problems.push('"TOOL_MAX_TIMEOUT" must be shorter than "WORKFLOW_STEP_TIMEOUT".');
+  }
+  const production = values.NODE_ENV === 'production' || values.NODE_ENV === 'staging';
+  if (production && values.TOOL_HTTP_ALLOW_PRIVATE_NETWORKS === true) {
+    problems.push(
+      '"TOOL_HTTP_ALLOW_PRIVATE_NETWORKS" cannot be enabled outside development: it lets an ' +
+        'agent reach cloud metadata endpoints and internal services.',
+    );
+  }
+  if (production && values.TOOL_HTTP_ALLOW_INSECURE === true) {
+    problems.push('"TOOL_HTTP_ALLOW_INSECURE" cannot be enabled outside development.');
   }
 
   return problems;

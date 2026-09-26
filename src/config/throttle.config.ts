@@ -34,6 +34,7 @@ export const THROTTLE_POLICY = {
   RAG: 'rag',
   INFERENCE: 'inference',
   PRIVACY: 'privacy',
+  WORKFLOW: 'workflow',
 } as const;
 
 export default registerAs(THROTTLE_CONFIG_KEY, (): ThrottleConfig => {
@@ -86,6 +87,14 @@ export default registerAs(THROTTLE_CONFIG_KEY, (): ThrottleConfig => {
       limit: Number(process.env.THROTTLE_PII_LIMIT),
       description:
         'PII analysis previews and redaction reports. Each one runs the NER model.',
+    },
+    [THROTTLE_POLICY.WORKFLOW]: {
+      name: THROTTLE_POLICY.WORKFLOW,
+      ttlMs: parseDuration(process.env.THROTTLE_WORKFLOW_TTL as string),
+      limit: Number(process.env.THROTTLE_WORKFLOW_LIMIT),
+      description:
+        'Workflow run starts. One run can fan out into many model and tool calls, so starts ' +
+        'are budgeted separately from the calls they cause.',
     },
   };
 

@@ -18,6 +18,12 @@ import { Permission } from '../modules/rbac/entities/permission.entity';
 import { PiiPolicy } from '../modules/privacy/entities/pii-policy.entity';
 import { Role } from '../modules/rbac/entities/role.entity';
 import { Session } from '../modules/auth/entities/session.entity';
+import { ToolExecution } from '../modules/tools/entities/tool-execution.entity';
+import { Tool } from '../modules/tools/entities/tool.entity';
+import { WorkflowRun } from '../modules/workflows/entities/workflow-run.entity';
+import { WorkflowStep } from '../modules/workflows/entities/workflow-step.entity';
+import { WorkflowVersion } from '../modules/workflows/entities/workflow-version.entity';
+import { Workflow } from '../modules/workflows/entities/workflow.entity';
 import { UserToken } from '../modules/users/entities/user-token.entity';
 import { User } from '../modules/users/entities/user.entity';
 
@@ -54,9 +60,21 @@ export const entities = [
   AgentVersion,
   Conversation,
   ConversationMessage,
+  Tool,
+  ToolExecution,
+  Workflow,
+  WorkflowVersion,
+  WorkflowRun,
+  WorkflowStep,
 ];
 
 export {
+  Tool,
+  ToolExecution,
+  Workflow,
+  WorkflowRun,
+  WorkflowStep,
+  WorkflowVersion,
   Agent,
   AgentVersion,
   Conversation,

@@ -19,6 +19,7 @@ import { CryptoModule } from './shared/crypto/crypto.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { MailModule } from './shared/mail/mail.module';
 import { AiServiceModule } from './shared/ai-service/ai-service.module';
+import { EventsModule } from './shared/events/events.module';
 import { QueueModule } from './shared/queue/queue.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { StorageModule } from './shared/storage/storage.module';
@@ -35,7 +36,10 @@ import { MembershipsModule } from './modules/memberships/memberships.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { RbacModule } from './modules/rbac/rbac.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
+import { ToolsModule } from './modules/tools/tools.module';
 import { UsersModule } from './modules/users/users.module';
+import { WorkflowsModule } from './modules/workflows/workflows.module';
 
 /**
  * Application root.
@@ -88,9 +92,12 @@ import { UsersModule } from './modules/users/users.module';
     VectorStoreModule,
     AiServiceModule,
     QueueModule,
+    // Phase 4: the cross-process event bus (Redis streams + pub/sub) behind
+    // the real-time layer, and the workflow engine's control channel.
+    EventsModule,
     EventEmitterModule.forRoot({
-      // Wildcard listeners let phase 4's workflow engine subscribe to whole
-      // event families (`agent.*`) without enumerating them.
+      // Wildcard listeners let a module subscribe to whole event families
+      // (`security.*`) without enumerating them.
       wildcard: true,
       delimiter: '.',
       maxListeners: 20,
@@ -113,6 +120,12 @@ import { UsersModule } from './modules/users/users.module';
     PrivacyModule,
     LlmModule,
     AgentsModule,
+    // Phase 4: the Tool Execution Engine, the multi-agent workflow engine and
+    // the canvas's backend, and real-time events over WebSocket. Nothing new
+    // to provision: the engine runs on the Redis/BullMQ of phase 2.
+    ToolsModule,
+    WorkflowsModule,
+    RealtimeModule,
   ],
   providers: [
     // ── Global guards, in execution order ─────────────────────────────────

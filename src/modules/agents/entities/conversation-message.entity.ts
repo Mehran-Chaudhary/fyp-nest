@@ -8,6 +8,7 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 import type { Classification } from '../../knowledge/domain/classification';
+import type { Integrity } from '../../tools/domain/information-flow';
 import { Conversation } from './conversation.entity';
 
 export enum MessageRole {
@@ -33,6 +34,19 @@ export interface MessageCitation {
   score: number;
   /** Whether the answer actually cited it, as opposed to it merely being provided. */
   cited: boolean;
+}
+
+/**
+ * A tool call made while producing an answer (phase 4). Content-free: which
+ * tool, what happened, how long it took — never the arguments or the result.
+ */
+export interface MessageToolCall {
+  executionId: string;
+  tool: string;
+  status: 'ok' | 'error' | 'denied';
+  code?: string;
+  reason?: string;
+  durationMs: number;
 }
 
 /** What the PII engine did for the turn. Counts only — never values. */
@@ -103,6 +117,17 @@ export class ConversationMessage {
 
   @Column({ type: 'jsonb', name: 'citations', default: () => "'[]'::jsonb" })
   citations: MessageCitation[];
+
+  /**
+   * How far the message can be trusted not to carry attacker-written text: the
+   * lowest integrity of what it was derived from (phase 4). Rows from before
+   * phase 4 read as INTERNAL.
+   */
+  @Column({ type: 'varchar', length: 16, name: 'integrity', default: 'INTERNAL' })
+  integrity: Integrity;
+
+  @Column({ type: 'jsonb', name: 'tool_calls', default: () => "'[]'::jsonb" })
+  toolCalls: MessageToolCall[];
 
   @Column({ type: 'integer', name: 'agent_version', nullable: true })
   agentVersion: number | null;

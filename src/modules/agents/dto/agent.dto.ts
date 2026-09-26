@@ -157,6 +157,33 @@ export class AgentMemoryDto {
   maxHistoryTokens?: number;
 }
 
+export class AgentToolsDto {
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Tools the agent may call (ids from GET …/tools). Requires tool:read to grant. A grant ' +
+      'is necessary, never sufficient: a tool is offered only when the person using the ' +
+      'agent may run it (tool:execute and the tool’s own permissions).',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID('all', { each: true })
+  toolIds?: string[];
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 32,
+    description:
+      'Reason → act iterations per answer, up to TOOL_MAX_ITERATIONS. 0 disables tools.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(32)
+  maxIterations?: number;
+}
+
 /** Fields shared by create and update. */
 class AgentBehaviourDto {
   @ApiPropertyOptional({ type: AgentPersonaDto })
@@ -213,6 +240,12 @@ class AgentBehaviourDto {
   @IsOptional()
   @IsBoolean()
   citations?: boolean;
+
+  @ApiPropertyOptional({ type: AgentToolsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AgentToolsDto)
+  tools?: AgentToolsDto;
 
   @ApiPropertyOptional({
     maxLength: MAX_INSTRUCTIONS_LENGTH,
@@ -366,6 +399,7 @@ export class AgentConfigViewDto {
   @ApiProperty({ type: AgentMemoryDto }) memory: AgentMemoryDto;
   @ApiProperty({ enum: ['STRICT', 'BALANCED'] }) grounding: string;
   @ApiProperty() citations: boolean;
+  @ApiProperty({ type: AgentToolsDto }) tools: AgentToolsDto;
 }
 
 export class AgentSummaryDto {

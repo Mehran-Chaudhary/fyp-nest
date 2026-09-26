@@ -1,8 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { CacheKeys, CACHE_TTL_SECONDS } from '../../common/constants/cache-keys.constants';
+import {
+  SECURITY_EVENT,
+  type AccessChangedEvent,
+} from '../../common/constants/security-events';
 import { API_KEY_SCOPES } from '../../common/constants/permissions.constants';
 import { AuditAction, AuditStatus } from '../../common/enums/audit-action.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
@@ -62,6 +67,7 @@ export class ApiKeysService {
     private readonly redis: RedisService,
     private readonly auditService: AuditService,
     private readonly configService: ConfigService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {
     this.security = this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY);
   }
@@ -322,6 +328,10 @@ export class ApiKeysService {
     // Invalidate before returning, so the key stops working immediately rather
     // than at the end of its cache TTL.
     await this.redis.del(CacheKeys.apiKeyByPrefix(record.prefix));
+    this.events?.emit(SECURITY_EVENT.ACCESS_CHANGED, {
+      organizationId,
+      apiKeyId: record.id,
+    } satisfies AccessChangedEvent);
 
     await this.auditService.recordSafe({
       action: AuditAction.API_KEY_REVOKED,

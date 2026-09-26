@@ -219,6 +219,15 @@ export class MessageRedactionDto {
   byType: Record<string, number>;
 }
 
+export class MessageToolCallDto {
+  @ApiProperty({ format: 'uuid' }) executionId: string;
+  @ApiProperty() tool: string;
+  @ApiProperty({ enum: ['ok', 'error', 'denied'] }) status: 'ok' | 'error' | 'denied';
+  @ApiPropertyOptional() code?: string;
+  @ApiPropertyOptional({ description: 'Why a call was refused.' }) reason?: string;
+  @ApiProperty() durationMs: number;
+}
+
 export class MessageDto {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() sequence: number;
@@ -244,6 +253,12 @@ export class MessageDto {
   @ApiProperty({ nullable: true, type: MessageRedactionDto })
   redaction: MessageRedactionDto | null;
   @ApiProperty({ nullable: true }) errorCode: string | null;
+  @ApiProperty({
+    type: [MessageToolCallDto],
+    description:
+      'Tools the agent called for this answer: which, and how it went. No content.',
+  })
+  toolCalls: MessageToolCallDto[];
   @ApiProperty() createdAt: Date;
 }
 

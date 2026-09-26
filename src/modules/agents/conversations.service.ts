@@ -37,10 +37,12 @@ import type {
   UpdateConversationDto,
 } from './dto/conversation.dto';
 import { Agent } from './entities/agent.entity';
+import { Integrity } from '../tools/domain/information-flow';
 import {
   ConversationMessage,
   MessageRole,
   MessageStatus,
+  type MessageToolCall,
 } from './entities/conversation-message.entity';
 import { Conversation, ConversationStatus } from './entities/conversation.entity';
 
@@ -64,6 +66,9 @@ export interface NewMessage {
   redaction?: ConversationMessage['redaction'];
   errorCode?: string | null;
   clientMessageId?: string | null;
+  /** Phase 4: how far the message can be trusted, and the tools behind it. */
+  integrity?: Integrity;
+  toolCalls?: MessageToolCall[];
 }
 
 /** Associated data for a conversation's key, title and messages. */
@@ -322,6 +327,8 @@ export class ConversationsService {
       redaction: message.redaction ?? {},
       errorCode: message.errorCode ?? null,
       clientMessageId: message.clientMessageId ?? null,
+      integrity: message.integrity ?? Integrity.TRUSTED,
+      toolCalls: message.toolCalls ?? [],
     });
     return manager.getRepository(ConversationMessage).save(entity);
   }
@@ -883,6 +890,7 @@ export function toMessageDto(
           }
         : null,
     errorCode: message.errorCode,
+    toolCalls: withheld ? [] : (message.toolCalls ?? []),
     createdAt: message.createdAt,
   };
 }

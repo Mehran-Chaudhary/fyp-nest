@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  SECURITY_EVENT,
+  type AccessChangedEvent,
+} from '../../common/constants/security-events';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, IsNull, Repository, type EntityManager } from 'typeorm';
 import { CacheKeys, CACHE_TTL_SECONDS } from '../../common/constants/cache-keys.constants';
@@ -84,6 +89,7 @@ export class RbacService {
     private readonly memberRepository: Repository<OrganizationMember>,
     private readonly dataSource: DataSource,
     private readonly redis: RedisService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
 
   // ── Permission catalogue ──────────────────────────────────────────────────
@@ -534,11 +540,19 @@ export class RbacService {
 
   async invalidateMemberCache(organizationId: string, userId: string): Promise<void> {
     await this.redis.del(CacheKeys.memberPermissions(organizationId, userId));
+    // Live connections (real-time sockets) re-check this member now.
+    this.events?.emit(SECURITY_EVENT.ACCESS_CHANGED, {
+      organizationId,
+      userId,
+    } satisfies AccessChangedEvent);
   }
 
   /** Drops every cached permission set in a workspace. */
   async invalidateOrganizationCache(organizationId: string): Promise<void> {
     await this.redis.deleteByPattern(CacheKeys.memberPermissionsPattern(organizationId));
+    this.events?.emit(SECURITY_EVENT.ACCESS_CHANGED, {
+      organizationId,
+    } satisfies AccessChangedEvent);
   }
 
   // ── Guard rails ───────────────────────────────────────────────────────────

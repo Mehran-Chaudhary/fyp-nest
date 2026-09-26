@@ -3,6 +3,10 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm'
 export enum InvocationPurpose {
   AGENT_TURN = 'AGENT_TURN',
   DIRECT_CHAT = 'DIRECT_CHAT',
+  /** An agent node of a workflow run (phase 4). */
+  WORKFLOW_STEP = 'WORKFLOW_STEP',
+  /** A supervisor node deciding which agent acts next (phase 4). */
+  WORKFLOW_ROUTING = 'WORKFLOW_ROUTING',
 }
 
 export enum InvocationStatus {
@@ -47,6 +51,14 @@ export interface InvocationMetrics {
   parameters?: Record<string, number | string | boolean | string[] | undefined>;
   reasoningRemoved?: boolean;
   promptTemplateVersion?: number;
+  /** Reason → act loop: how many model calls the answer took, and the tools called. */
+  toolLoop?: {
+    iterations: number;
+    toolCalls: number;
+    denied: number;
+    failed: number;
+    finishedBy: string;
+  };
 }
 
 /**
@@ -99,6 +111,17 @@ export class LlmInvocation {
 
   @Column({ type: 'uuid', name: 'message_id', nullable: true })
   messageId: string | null;
+
+  /** The workflow run this call belonged to (phase 4), for per-run token accounting. */
+  @Column({ type: 'uuid', name: 'workflow_run_id', nullable: true })
+  workflowRunId?: string | null;
+
+  @Column({ type: 'uuid', name: 'workflow_step_id', nullable: true })
+  workflowStepId?: string | null;
+
+  /** Reason → act iteration within one answer; 1 for an answer without tools. */
+  @Column({ type: 'smallint', name: 'iteration', nullable: true })
+  iteration?: number | null;
 
   @Column({ type: 'varchar', length: 16, name: 'provider' })
   provider: string;

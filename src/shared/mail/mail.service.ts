@@ -8,6 +8,7 @@ import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.
 import { maskEmail } from '../../common/utils/redact.util';
 import { RequestContextService } from '../context/request-context.service';
 import {
+  agentMessageTemplate,
   invitationTemplate,
   passwordChangedTemplate,
   passwordResetTemplate,
@@ -312,6 +313,24 @@ export class MailService implements OnModuleInit {
     });
 
     return this.deliver({ to, ...rendered, tag: 'security-alert' });
+  }
+
+  /**
+   * A message written by an agent for a workspace member (the `send_email`
+   * tool). Resolves `accepted: false` rather than throwing, like every send.
+   */
+  async sendAgentMessage(
+    to: string,
+    params: {
+      subject: string;
+      body: string;
+      agentName: string;
+      onBehalfOf: string;
+      workspaceName: string;
+    },
+  ): Promise<MailSendResult> {
+    const rendered = agentMessageTemplate(this.templateContext, params);
+    return this.deliver({ to, ...rendered, tag: 'agent-message' });
   }
 
   /** Connectivity check, surfaced by the health endpoint. */

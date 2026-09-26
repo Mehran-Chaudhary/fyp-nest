@@ -22,6 +22,9 @@ export const CACHE_NAMESPACE = {
   IDEMPOTENCY: 'idem',
   PII: 'pii',
   LLM: 'llm',
+  EVENTS: 'events',
+  REALTIME: 'rt',
+  WORKFLOW: 'wf',
 } as const;
 
 export const CacheKeys = {
@@ -88,6 +91,37 @@ export const CacheKeys = {
    */
   piiDetection: (fingerprint: string): string =>
     `${CACHE_NAMESPACE.PII}:ner:${fingerprint}`,
+
+  /**
+   * A workspace's recent real-time events: a capped Redis stream, so a client
+   * that reconnects can ask for what it missed. Metadata only — events never
+   * carry content.
+   */
+  eventStream: (organizationId: string): string =>
+    `${CACHE_NAMESPACE.EVENTS}:org:${organizationId}`,
+
+  /** Live real-time connections per user, for the per-user connection ceiling. */
+  realtimeConnections: (subjectId: string): string =>
+    `${CACHE_NAMESPACE.REALTIME}:conns:${subjectId}`,
+
+  /** Real-time handshake attempts per source IP. */
+  realtimeHandshakes: (ip: string): string => `${CACHE_NAMESPACE.REALTIME}:hs:${ip}`,
+
+  /** Tool calls made so far in one workflow run, for the per-run ceiling. */
+  workflowToolCalls: (runId: string): string =>
+    `${CACHE_NAMESPACE.WORKFLOW}:tool-calls:${runId}`,
+} as const;
+
+/**
+ * Redis pub/sub channels. Channel names are not keys — ioredis does not apply
+ * `keyPrefix` to them — so these are combined with the prefix explicitly by
+ * the event bus.
+ */
+export const PubSubChannels = {
+  /** Real-time events, fanned out to every API instance holding sockets. */
+  events: 'events:live',
+  /** Control messages: cancel a run's in-flight steps, revalidate a user's sockets. */
+  control: 'events:control',
 } as const;
 
 /** Default TTLs, in seconds, for cached projections. */

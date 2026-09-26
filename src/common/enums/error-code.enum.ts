@@ -136,6 +136,7 @@ export enum ErrorCode {
   LLM_CONTEXT_OVERFLOW = 'LLM_CONTEXT_OVERFLOW',
   LLM_REJECTED = 'LLM_REJECTED',
   LLM_RESPONSE_INVALID = 'LLM_RESPONSE_INVALID',
+  LLM_CLASSIFICATION_EXCEEDED = 'LLM_CLASSIFICATION_EXCEEDED',
 
   // ── Agents & conversations ────────────────────────────────────────────────
   AGENT_NOT_FOUND = 'AGENT_NOT_FOUND',
@@ -151,6 +152,55 @@ export enum ErrorCode {
   // ── PII redaction ─────────────────────────────────────────────────────────
   PII_DETECTION_UNAVAILABLE = 'PII_DETECTION_UNAVAILABLE',
   PII_EGRESS_BLOCKED = 'PII_EGRESS_BLOCKED',
+
+  // ── Tools (phase 4) ───────────────────────────────────────────────────────
+  TOOL_NOT_FOUND = 'TOOL_NOT_FOUND',
+  TOOL_NAME_TAKEN = 'TOOL_NAME_TAKEN',
+  TOOL_DEFINITION_INVALID = 'TOOL_DEFINITION_INVALID',
+  TOOL_DISABLED = 'TOOL_DISABLED',
+  TOOL_NOT_GRANTED = 'TOOL_NOT_GRANTED',
+  TOOL_ARGUMENTS_INVALID = 'TOOL_ARGUMENTS_INVALID',
+  TOOL_EXECUTION_FAILED = 'TOOL_EXECUTION_FAILED',
+  TOOL_TIMEOUT = 'TOOL_TIMEOUT',
+  TOOL_EGRESS_BLOCKED = 'TOOL_EGRESS_BLOCKED',
+  TOOL_INFORMATION_FLOW_BLOCKED = 'TOOL_INFORMATION_FLOW_BLOCKED',
+  TOOL_PII_BLOCKED = 'TOOL_PII_BLOCKED',
+  TOOL_APPROVAL_REQUIRED = 'TOOL_APPROVAL_REQUIRED',
+  TOOL_CALL_LIMIT = 'TOOL_CALL_LIMIT',
+
+  // ── Workflows (phase 4) ───────────────────────────────────────────────────
+  WORKFLOW_NOT_FOUND = 'WORKFLOW_NOT_FOUND',
+  WORKFLOW_NAME_TAKEN = 'WORKFLOW_NAME_TAKEN',
+  WORKFLOW_VERSION_NOT_FOUND = 'WORKFLOW_VERSION_NOT_FOUND',
+  WORKFLOW_VERSION_CONFLICT = 'WORKFLOW_VERSION_CONFLICT',
+  WORKFLOW_INVALID = 'WORKFLOW_INVALID',
+  WORKFLOW_NOT_ACTIVE = 'WORKFLOW_NOT_ACTIVE',
+  WORKFLOW_INPUT_INVALID = 'WORKFLOW_INPUT_INVALID',
+  WORKFLOW_CONCURRENCY_LIMIT = 'WORKFLOW_CONCURRENCY_LIMIT',
+  WORKFLOW_RUN_NOT_FOUND = 'WORKFLOW_RUN_NOT_FOUND',
+  WORKFLOW_RUN_FINISHED = 'WORKFLOW_RUN_FINISHED',
+  WORKFLOW_RUN_NOT_RESUMABLE = 'WORKFLOW_RUN_NOT_RESUMABLE',
+  WORKFLOW_RUN_DUPLICATE = 'WORKFLOW_RUN_DUPLICATE',
+  WORKFLOW_STEP_NOT_FOUND = 'WORKFLOW_STEP_NOT_FOUND',
+  WORKFLOW_APPROVAL_NOT_PENDING = 'WORKFLOW_APPROVAL_NOT_PENDING',
+  WORKFLOW_SELF_APPROVAL_FORBIDDEN = 'WORKFLOW_SELF_APPROVAL_FORBIDDEN',
+  WORKFLOW_APPROVAL_REJECTED = 'WORKFLOW_APPROVAL_REJECTED',
+  WORKFLOW_STEP_LIMIT_EXCEEDED = 'WORKFLOW_STEP_LIMIT_EXCEEDED',
+  WORKFLOW_TOKEN_BUDGET_EXCEEDED = 'WORKFLOW_TOKEN_BUDGET_EXCEEDED',
+  WORKFLOW_TIMEOUT = 'WORKFLOW_TIMEOUT',
+  WORKFLOW_STEP_TIMEOUT = 'WORKFLOW_STEP_TIMEOUT',
+  WORKFLOW_LOOP_EXHAUSTED = 'WORKFLOW_LOOP_EXHAUSTED',
+  WORKFLOW_NO_OUTPUT = 'WORKFLOW_NO_OUTPUT',
+  WORKFLOW_OUTPUT_INVALID = 'WORKFLOW_OUTPUT_INVALID',
+  WORKFLOW_ROUTING_FAILED = 'WORKFLOW_ROUTING_FAILED',
+  WORKFLOW_TEMPLATE_ERROR = 'WORKFLOW_TEMPLATE_ERROR',
+  WORKFLOW_PRINCIPAL_REVOKED = 'WORKFLOW_PRINCIPAL_REVOKED',
+  WORKFLOW_DEPENDENCY_UNAVAILABLE = 'WORKFLOW_DEPENDENCY_UNAVAILABLE',
+
+  // ── Real-time (phase 4) ───────────────────────────────────────────────────
+  REALTIME_DISABLED = 'REALTIME_DISABLED',
+  REALTIME_CONNECTION_LIMIT = 'REALTIME_CONNECTION_LIMIT',
+  REALTIME_ORIGIN_NOT_ALLOWED = 'REALTIME_ORIGIN_NOT_ALLOWED',
 }
 
 /**
@@ -294,6 +344,8 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
     'The message is too long for the model’s context window.',
   [ErrorCode.LLM_REJECTED]: 'The language model rejected the request.',
   [ErrorCode.LLM_RESPONSE_INVALID]: 'The language model returned an unusable response.',
+  [ErrorCode.LLM_CLASSIFICATION_EXCEEDED]:
+    'This input is more sensitive than the model endpoint is trusted to receive.',
 
   [ErrorCode.AGENT_NOT_FOUND]: 'The agent was not found.',
   [ErrorCode.AGENT_NAME_TAKEN]: 'An agent with this name already exists in this workspace.',
@@ -313,4 +365,67 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
     'unprotected text to the model.',
   [ErrorCode.PII_EGRESS_BLOCKED]:
     'The request was stopped because sensitive data would have reached the model.',
+
+  [ErrorCode.TOOL_NOT_FOUND]: 'The tool was not found.',
+  [ErrorCode.TOOL_NAME_TAKEN]: 'A tool with this name already exists in this workspace.',
+  [ErrorCode.TOOL_DEFINITION_INVALID]: 'The tool definition is not valid.',
+  [ErrorCode.TOOL_DISABLED]: 'This tool is disabled.',
+  [ErrorCode.TOOL_NOT_GRANTED]: 'The agent has not been granted this tool.',
+  [ErrorCode.TOOL_ARGUMENTS_INVALID]: 'The tool was called with invalid arguments.',
+  [ErrorCode.TOOL_EXECUTION_FAILED]: 'The tool failed to execute.',
+  [ErrorCode.TOOL_TIMEOUT]: 'The tool took too long to respond.',
+  [ErrorCode.TOOL_EGRESS_BLOCKED]:
+    'The tool tried to reach a destination that is not on the egress allowlist.',
+  [ErrorCode.TOOL_INFORMATION_FLOW_BLOCKED]:
+    'The tool call was stopped: data this sensitive, or this untrusted, may not flow into it.',
+  [ErrorCode.TOOL_PII_BLOCKED]:
+    'The tool call was stopped because it would have sent personal data to a destination not ' +
+    'permitted to receive it.',
+  [ErrorCode.TOOL_APPROVAL_REQUIRED]: 'This tool can only run after a person approves it.',
+  [ErrorCode.TOOL_CALL_LIMIT]: 'The tool-call limit for this request has been reached.',
+
+  [ErrorCode.WORKFLOW_NOT_FOUND]: 'The workflow was not found.',
+  [ErrorCode.WORKFLOW_NAME_TAKEN]:
+    'A workflow with this name already exists in this workspace.',
+  [ErrorCode.WORKFLOW_VERSION_NOT_FOUND]: 'That version of the workflow does not exist.',
+  [ErrorCode.WORKFLOW_VERSION_CONFLICT]:
+    'The workflow was changed by someone else. Reload it and apply your change again.',
+  [ErrorCode.WORKFLOW_INVALID]: 'The workflow definition is not valid.',
+  [ErrorCode.WORKFLOW_NOT_ACTIVE]: 'The workflow must be published before it can run.',
+  [ErrorCode.WORKFLOW_INPUT_INVALID]:
+    'The run input does not match the workflow’s trigger.',
+  [ErrorCode.WORKFLOW_CONCURRENCY_LIMIT]:
+    'This workspace already has the maximum number of workflow runs in progress.',
+  [ErrorCode.WORKFLOW_RUN_NOT_FOUND]: 'The workflow run was not found.',
+  [ErrorCode.WORKFLOW_RUN_FINISHED]: 'The workflow run has already finished.',
+  [ErrorCode.WORKFLOW_RUN_NOT_RESUMABLE]: 'This workflow run cannot be resumed.',
+  [ErrorCode.WORKFLOW_RUN_DUPLICATE]: 'A run with this idempotency key already exists.',
+  [ErrorCode.WORKFLOW_STEP_NOT_FOUND]: 'The workflow step was not found.',
+  [ErrorCode.WORKFLOW_APPROVAL_NOT_PENDING]: 'This step is not waiting for approval.',
+  [ErrorCode.WORKFLOW_SELF_APPROVAL_FORBIDDEN]:
+    'You cannot approve a step of a run you started yourself.',
+  [ErrorCode.WORKFLOW_APPROVAL_REJECTED]: 'An approver rejected this step.',
+  [ErrorCode.WORKFLOW_STEP_LIMIT_EXCEEDED]:
+    'The run was stopped because it reached its step ceiling.',
+  [ErrorCode.WORKFLOW_TOKEN_BUDGET_EXCEEDED]:
+    'The run was stopped because it exhausted its token budget.',
+  [ErrorCode.WORKFLOW_TIMEOUT]: 'The run exceeded its maximum duration.',
+  [ErrorCode.WORKFLOW_STEP_TIMEOUT]: 'A workflow step exceeded its maximum duration.',
+  [ErrorCode.WORKFLOW_LOOP_EXHAUSTED]:
+    'A loop in the workflow reached its iteration limit and is configured to fail.',
+  [ErrorCode.WORKFLOW_NO_OUTPUT]: 'The run finished without reaching an output node.',
+  [ErrorCode.WORKFLOW_OUTPUT_INVALID]:
+    'An agent’s structured output did not match the schema the workflow expects.',
+  [ErrorCode.WORKFLOW_ROUTING_FAILED]: 'The supervisor could not decide the next step.',
+  [ErrorCode.WORKFLOW_TEMPLATE_ERROR]: 'A step’s input template could not be rendered.',
+  [ErrorCode.WORKFLOW_PRINCIPAL_REVOKED]:
+    'The run was stopped because the member who started it no longer has access.',
+  [ErrorCode.WORKFLOW_DEPENDENCY_UNAVAILABLE]:
+    'A service a workflow step depends on is temporarily unavailable.',
+
+  [ErrorCode.REALTIME_DISABLED]: 'Real-time events are disabled on this deployment.',
+  [ErrorCode.REALTIME_CONNECTION_LIMIT]:
+    'Too many simultaneous real-time connections for this account.',
+  [ErrorCode.REALTIME_ORIGIN_NOT_ALLOWED]:
+    'Real-time connections are not accepted from this origin.',
 };

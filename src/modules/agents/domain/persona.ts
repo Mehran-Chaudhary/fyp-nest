@@ -1,11 +1,14 @@
+import { renderToolsSection, type PromptTool } from '../../tools/domain/tool-call-protocol';
 import type { AgentPersona, GroundingMode } from './agent-config';
 
 /**
  * Bumped whenever the platform's part of the prompt changes. Recorded with
  * every answer, so that "which prompt produced this?" has an exact answer: the
  * agent version *and* the template version.
+ *
+ * 2: tools (phase 4) and structured output for workflow steps.
  */
-export const PROMPT_TEMPLATE_VERSION = 1;
+export const PROMPT_TEMPLATE_VERSION = 2;
 
 export interface PersonaInput {
   agentName: string;
@@ -16,6 +19,13 @@ export interface PersonaInput {
   citations: boolean;
   /** Whether this turn carries retrieved reference material. */
   hasContext: boolean;
+  /** Tools offered for this answer (phase 4). */
+  tools?: readonly PromptTool[];
+  /**
+   * A workflow step that must answer in JSON: the schema its answer must match.
+   * The task text is then the *input*, and the answer is data for the next step.
+   */
+  outputSchema?: Record<string, unknown> | null;
 }
 
 const TONE: Readonly<Record<AgentPersona['tone'], string>> = {
@@ -33,11 +43,13 @@ const TONE: Readonly<Record<AgentPersona['tone'], string>> = {
  * because the privacy design depends on them:
  *
  *  - **Reference material is data.** Retrieved passages arrive inside
- *    `<context>` tags and must never be obeyed as instructions — the standard
- *    defence against prompt injection through a poisoned document
- *    ("spotlighting"). It is defence in depth: an agent has no tools in this
- *    phase and reads only what its user may read, so an injection has nothing
- *    to escalate to.
+ *    `<context>` tags, and tool results inside `<tool_result>` tags, and
+ *    neither is ever to be obeyed as instructions — the standard defence
+ *    against prompt injection through a poisoned document ("spotlighting").
+ *    Since phase 4 an agent can call tools, so this rule is backed by the
+ *    tool engine's information-flow checks: even an injection that is obeyed
+ *    cannot send classified data out, or act once untrusted content has been
+ *    read.
  *  - **Placeholders are to be repeated exactly.** Unmasking depends on the model
  *    writing `[PERSON_1]`, not "the person" or an invented name. The example
  *    uses a type name that can never collide with a real placeholder.
@@ -86,11 +98,19 @@ export function compileSystemPrompt(input: PersonaInput): string {
       ? `Always answer in ${persona.language}.`
       : 'Answer in the language the user writes in.',
   );
+  if (input.outputSchema) {
+    rules.push(
+      'Your answer is read by a program, not a person. Reply with a single JSON value that ' +
+        'matches this JSON Schema, and nothing else — no explanation, no code fences: ' +
+        JSON.stringify(input.outputSchema),
+    );
+  }
 
   const sections = [identity];
   const instructions = input.instructions.trim();
   if (instructions.length > 0) sections.push(instructions);
   sections.push(`Rules:\n${rules.map((rule) => `- ${rule}`).join('\n')}`);
+  if (input.tools && input.tools.length > 0) sections.push(renderToolsSection(input.tools));
 
   return sections.join('\n\n');
 }

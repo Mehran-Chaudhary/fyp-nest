@@ -15,6 +15,10 @@ import {
 } from '../../common/utils/pagination.util';
 import { AGENTS_CONFIG_KEY, type AgentsConfig } from '../../config/agents.config';
 import { RAG_CONFIG_KEY, type RagConfig } from '../../config/rag.config';
+import { TOOLS_CONFIG_KEY, type ToolsConfig } from '../../config/tools.config';
+import { hasPermission } from '../../common/utils/permission.util';
+import { PermissionDeniedError } from '../../common/exceptions/app.exception';
+import { ToolRegistryService } from '../tools/tool-registry.service';
 import { EncryptionService } from '../../shared/crypto/encryption.service';
 import { AuditService } from '../audit/audit.service';
 import type { AccessPrincipal } from '../knowledge/domain/access';
@@ -28,6 +32,8 @@ import {
   applyConfigPatch,
   configDigest,
   defaultAgentConfig,
+  normalizeAgentConfig,
+  toolsOf,
   type AgentConfig,
   type AgentConfigPatch,
 } from './domain/agent-config';
@@ -79,6 +85,7 @@ export interface ExecutableAgent {
 export class AgentsService {
   private readonly agentsConfig: AgentsConfig;
   private readonly ragConfig: RagConfig;
+  private readonly toolsConfig: ToolsConfig;
 
   constructor(
     @InjectRepository(Agent) private readonly agentRepository: Repository<Agent>,
@@ -89,10 +96,12 @@ export class AgentsService {
     private readonly knowledgeAccess: KnowledgeBaseAccessService,
     private readonly llmPolicies: LlmPolicyService,
     private readonly auditService: AuditService,
+    private readonly tools: ToolRegistryService,
     configService: ConfigService,
   ) {
     this.agentsConfig = configService.getOrThrow<AgentsConfig>(AGENTS_CONFIG_KEY);
     this.ragConfig = configService.getOrThrow<RagConfig>(RAG_CONFIG_KEY);
+    this.toolsConfig = configService.getOrThrow<ToolsConfig>(TOOLS_CONFIG_KEY);
   }
 
   // ── Viewers ───────────────────────────────────────────────────────────────
@@ -254,10 +263,16 @@ export class AgentsService {
   // ── Writes ────────────────────────────────────────────────────────────────
 
   async create(principal: AccessPrincipal, input: CreateAgentDto): Promise<AgentDto> {
-    const config = applyConfigPatch(this.defaults(), toPatch(input));
+    const config = applyConfigPatch(
+      this.defaults(),
+      toPatch(input),
+      this.toolsConfig.defaultIterations,
+    );
     const instructions = input.instructions ?? '';
 
     await this.assertKnowledgeBasesReadable(principal, config.retrieval.knowledgeBaseIds);
+    await this.assertToolsGrantable(principal, toolsOf(config).toolIds);
+    this.assertIterations(toolsOf(config).maxIterations);
     await this.assertModelAllowed(principal.organizationId, config.model);
     const roles = await this.loadRoles(
       principal.organizationId,
@@ -295,6 +310,7 @@ export class AgentsService {
               version: 1,
               model: config.model,
               knowledgeBases: config.retrieval.knowledgeBaseIds.length,
+              tools: toolsOf(config).toolIds,
               accessMode: agent.accessMode,
               allowedRoles: roles.length,
             },
@@ -353,14 +369,28 @@ export class AgentsService {
           ];
         }
 
-        const nextConfig = applyConfigPatch(current.config, patch);
+        const nextConfig = applyConfigPatch(
+          current.config,
+          patch,
+          this.toolsConfig.defaultIterations,
+        );
         const nextInstructions = input.instructions ?? currentInstructions;
         if (nextConfig.model !== current.config.model) {
           await this.assertModelAllowed(principal.organizationId, nextConfig.model);
         }
+        if (patch.tools !== undefined) {
+          // Only newly granted tools are checked: a tool deleted since it was
+          // granted must not block an unrelated edit.
+          const before = new Set(toolsOf(current.config).toolIds);
+          await this.assertToolsGrantable(
+            principal,
+            toolsOf(nextConfig).toolIds.filter((id) => !before.has(id)),
+          );
+          this.assertIterations(toolsOf(nextConfig).maxIterations);
+        }
 
         const changedSections = diffSections(
-          current.config,
+          normalizeAgentConfig(current.config, this.toolsConfig.defaultIterations),
           nextConfig,
           currentInstructions !== nextInstructions,
         );
@@ -586,7 +616,34 @@ export class AgentsService {
       maxContextTokens: this.agentsConfig.retrieval.defaultMaxContextTokens,
       memoryMaxMessages: this.agentsConfig.memory.defaultMaxMessages,
       memoryMaxHistoryTokens: this.agentsConfig.memory.defaultMaxHistoryTokens,
+      toolIterations: this.toolsConfig.defaultIterations,
     });
+  }
+
+  /**
+   * Checks tools an editor grants: they must be able to see the tool catalogue,
+   * and each tool must exist and be enabled. A grant confers nothing by itself —
+   * each user's own `tool:execute` is checked when the agent runs.
+   */
+  private async assertToolsGrantable(
+    principal: AccessPrincipal,
+    toolIds: readonly string[],
+  ): Promise<void> {
+    if (toolIds.length === 0) return;
+    if (!hasPermission(principal.permissions, 'tool:read')) {
+      throw new PermissionDeniedError(['tool:read'], {
+        message: 'Granting tools to an agent requires tool:read.',
+      });
+    }
+    await this.tools.assertGrantable(principal.organizationId, toolIds);
+  }
+
+  private assertIterations(maxIterations: number): void {
+    if (maxIterations > this.toolsConfig.maxIterations) {
+      throw new AppException(ErrorCode.VALIDATION_FAILED, HttpStatus.UNPROCESSABLE_ENTITY, {
+        message: `tools.maxIterations cannot exceed ${this.toolsConfig.maxIterations} (TOOL_MAX_ITERATIONS).`,
+      });
+    }
   }
 
   private async loadVisible(
@@ -859,6 +916,14 @@ function toPatch(input: CreateAgentDto | UpdateAgentDto): AgentConfigPatch {
     memory: input.memory,
     grounding: input.grounding,
     citations: input.citations,
+    tools: input.tools
+      ? {
+          ...(input.tools.toolIds ? { toolIds: [...input.tools.toolIds] } : {}),
+          ...(input.tools.maxIterations !== undefined
+            ? { maxIterations: input.tools.maxIterations }
+            : {}),
+        }
+      : undefined,
   };
 }
 
@@ -890,6 +955,7 @@ function configView(config: AgentConfig, visible: ReadonlySet<string>): AgentCon
     memory: { ...config.memory },
     grounding: config.grounding,
     citations: config.citations,
+    tools: { ...toolsOf(config) },
   };
 }
 

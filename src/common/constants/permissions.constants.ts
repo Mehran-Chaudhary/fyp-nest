@@ -419,6 +419,21 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
     description: 'Activate a workflow so that triggers may fire it.',
     phase: 4,
   },
+  {
+    key: 'workflow:approve',
+    category: PermissionCategory.WORKFLOWS,
+    description:
+      'Approve or reject workflow steps that wait for a person, such as an action with side effects.',
+    phase: 4,
+  },
+  {
+    key: 'workflow:read_all',
+    category: PermissionCategory.WORKFLOWS,
+    description:
+      'Read the inputs and outputs of every member’s workflow runs, with personal data masked.',
+    dangerous: true,
+    phase: 4,
+  },
 
   // ── Tools (6.11) ──────────────────────────────────────────────────────────
   {
@@ -654,7 +669,11 @@ export const API_KEY_SCOPES: readonly string[] = [
   'conversation:read',
   'conversation:delete',
   'llm:invoke',
+  // A key reads only the workflow runs it started itself (`workflow:read_all`
+  // is deliberately absent, like `conversation:read_all`).
+  'workflow:read',
   'workflow:execute',
+  'tool:read',
   'tool:execute',
   'usage:read',
   'pii:policy:read',

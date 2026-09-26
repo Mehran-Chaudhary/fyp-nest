@@ -188,6 +188,122 @@ export class RedactionService {
       policy,
     };
   }
+
+  /**
+   * Detects and masks more segments into a session that already exists.
+   *
+   * A tool result arrives in the middle of a reason → act loop, after the
+   * prompt was masked. Masking it in the *same* session keeps one person one
+   * placeholder across the whole exchange — "[PERSON_1]" in the passage the
+   * model searched for is "[PERSON_1]" in the email it drafts — and lets the
+   * gateway's egress check cover the result too. Fails closed exactly as
+   * {@link redact} does.
+   */
+  async extend(
+    session: MaskingSession,
+    request: Omit<RedactionRequest, 'segments'> & {
+      segments: readonly RedactionSegment[];
+      policy: EffectivePiiPolicy;
+    },
+  ): Promise<{ segments: MaskedSegment[]; timings: RedactionTimings; degraded: boolean }> {
+    const started = performance.now();
+    const prepared = request.segments.map((segment) => ({
+      id: segment.id,
+      text: prepareText(segment.text),
+    }));
+    const detection = await this.detectOrRefuse(request, prepared, request.policy);
+    const maskingStarted = performance.now();
+    const segments = session.mask(prepared, detection.spans);
+    return {
+      segments,
+      degraded: detection.degraded,
+      timings: {
+        patternMs: detection.timings.patternMs,
+        nerMs: detection.timings.nerMs,
+        maskingMs: round(performance.now() - maskingStarted),
+        totalMs: round(performance.now() - started),
+      },
+    };
+  }
+
+  /**
+   * The entity types present in `texts`, without masking anything. Used to
+   * inspect a tool request that is about to leave the platform with real
+   * values in it (a workflow tool node's arguments). Empty when the workspace
+   * has redaction switched off.
+   */
+  async detectTypes(
+    request: Omit<RedactionRequest, 'segments'> & { texts: string[] },
+  ): Promise<{
+    entityTypes: string[];
+    degraded: boolean;
+  }> {
+    const policy =
+      request.policy ?? (await this.policies.getEffective(request.organizationId));
+    if (!policy.enabled || request.texts.length === 0) {
+      return { entityTypes: [], degraded: false };
+    }
+    const prepared = request.texts.map((text, index) => ({
+      id: `inspect:${index}`,
+      text: prepareText(text),
+    }));
+    const detection = await this.detectOrRefuse(request, prepared, policy);
+    const session = new MaskingSession(maskingPolicyFor(policy));
+    try {
+      const masked = session.mask(prepared, detection.spans);
+      const types = new Set<string>();
+      for (const segment of masked)
+        for (const span of segment.spans) types.add(span.entityType);
+      return { entityTypes: [...types].sort(), degraded: detection.degraded };
+    } finally {
+      session.destroy();
+    }
+  }
+
+  private async detectOrRefuse(
+    request: Pick<RedactionRequest, 'organizationId' | 'purpose' | 'signal'>,
+    prepared: Array<{ id: string; text: string }>,
+    policy: EffectivePiiPolicy,
+  ): Promise<DetectionOutcome> {
+    try {
+      return await this.detection.detect({
+        organizationId: request.organizationId,
+        policy,
+        texts: prepared.map((segment) => segment.text),
+        signal: request.signal,
+      });
+    } catch (error) {
+      if (error instanceof PiiDetectionUnavailableError) {
+        await this.auditService.recordSafe({
+          action: AuditAction.PII_REDACTION_FAILED,
+          status: AuditStatus.FAILURE,
+          organizationId: request.organizationId,
+          resourceType: 'pii_redaction',
+          metadata: {
+            purpose: request.purpose,
+            reason: error.reason,
+            detector: error.detector,
+            entityTypes: error.entityTypes,
+            onDetectorFailure: policy.onDetectorFailure,
+          },
+        });
+        throw new AppException(
+          ErrorCode.PII_DETECTION_UNAVAILABLE,
+          HttpStatus.SERVICE_UNAVAILABLE,
+          {
+            cause: error,
+            details: {
+              reason: error.reason,
+              detector: error.detector,
+              entityTypes: error.entityTypes,
+              missingConfiguration: error.missingConfiguration,
+            },
+          },
+        );
+      }
+      throw error;
+    }
+  }
 }
 
 function round(value: number): number {

@@ -1,11 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
 import {
   CacheKeys,
   CACHE_TTL_SECONDS,
 } from '../../../common/constants/cache-keys.constants';
+import {
+  SECURITY_EVENT,
+  type AccessChangedEvent,
+} from '../../../common/constants/security-events';
 import { ErrorCode } from '../../../common/enums/error-code.enum';
 import { UnauthorizedError } from '../../../common/exceptions/app.exception';
 import {
@@ -63,6 +68,7 @@ export class JwtTokenService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redis: RedisService,
+    @Optional() private readonly events?: EventEmitter2,
   ) {
     this.config = this.configService.getOrThrow<JwtConfig>(JWT_CONFIG_KEY);
   }
@@ -246,6 +252,10 @@ export class JwtTokenService {
       String(epoch),
       CACHE_TTL_SECONDS.USER_TOKEN_EPOCH,
     );
+    // Long-lived connections authenticated with those tokens close now.
+    this.events?.emit(SECURITY_EVENT.ACCESS_CHANGED, {
+      userId,
+    } satisfies AccessChangedEvent);
   }
 
   /** Clears a user's epoch. Only used when reactivating a suspended account. */

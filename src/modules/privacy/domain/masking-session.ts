@@ -581,6 +581,20 @@ export class MaskingSession {
     );
   }
 
+  /**
+   * What {@link unmask} would return, without counting anything in the
+   * statistics. For checks — does this tool argument carry a placeholder? —
+   * that must not skew the fidelity measurement.
+   */
+  unmaskPreview(text: string): string {
+    if (this.vault.isDestroyed) return text;
+    return text.replace(
+      placeholderMatcher(),
+      (match: string, rawType: string, rawOrdinal: string): string =>
+        this.vault.open(canonicalPlaceholder(rawType, rawOrdinal).placeholder) ?? match,
+    );
+  }
+
   /** An unmasker for a token stream, holding back partial placeholders across chunks. */
   createStreamUnmasker(): StreamingUnmasker {
     return new StreamingUnmasker((text) => this.unmask(text));

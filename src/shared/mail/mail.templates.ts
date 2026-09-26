@@ -260,3 +260,37 @@ export function securityAlertTemplate(
     ].join('\n'),
   };
 }
+
+/**
+ * A message an agent sent on a member's behalf (the `send_email` tool, phase 4).
+ *
+ * Says plainly that an agent wrote it and on whose behalf, so a recipient can
+ * tell automation from a colleague — and can tell who to ask if it was
+ * unexpected. The body is plain text written by a model: it is escaped and
+ * rendered as preformatted text, never as HTML.
+ */
+export function agentMessageTemplate(
+  context: TemplateContext,
+  params: {
+    subject: string;
+    body: string;
+    agentName: string;
+    onBehalfOf: string;
+    workspaceName: string;
+  },
+): RenderedTemplate {
+  const provenance =
+    `Sent by the agent “${params.agentName}” on behalf of ${params.onBehalfOf}, ` +
+    `in the ${params.workspaceName} workspace.`;
+
+  return {
+    subject: params.subject,
+    html: layout(
+      context,
+      params.subject,
+      `<pre style="margin:0 0 24px;font-family:inherit;font-size:15px;line-height:1.6;color:#374151;white-space:pre-wrap;">${escapeHtml(params.body)}</pre>` +
+        `<p style="margin:0;font-size:13px;color:#6b7280;">${escapeHtml(provenance)}</p>`,
+    ),
+    text: [params.body, '', '—', provenance].join('\n'),
+  };
+}

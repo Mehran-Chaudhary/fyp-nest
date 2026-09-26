@@ -14,6 +14,8 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { RealtimeIoAdapter } from './modules/realtime/realtime-io.adapter';
+import { REALTIME_CONFIG_KEY, type RealtimeConfig } from './config/realtime.config';
 import { HEADER, SECURITY_SCHEME } from './common/constants/app.constants';
 import { APP_CONFIG_KEY, type AppConfig } from './config/app.config';
 import { SECURITY_CONFIG_KEY, type SecurityConfig } from './config/security.config';
@@ -59,6 +61,17 @@ async function bootstrap(): Promise<void> {
     }
     bootLogger.warn(message);
   }
+
+  // ── Real-time events (phase 4) ────────────────────────────────────────────
+  // Socket.IO on the same HTTP server, configured from the environment: path,
+  // transports, origin check, message ceilings. See RealtimeIoAdapter.
+  app.useWebSocketAdapter(
+    new RealtimeIoAdapter(
+      app,
+      configService.getOrThrow<RealtimeConfig>(REALTIME_CONFIG_KEY),
+      securityConfig,
+    ),
+  );
 
   // ── Proxy awareness ───────────────────────────────────────────────────────
   // Must be set before anything reads `req.ip`. The IP allowlist and the rate
@@ -244,6 +257,18 @@ async function bootstrap(): Promise<void> {
       .addTag('Conversations', 'Conversations with agents: memory and streamed turns')
       .addTag('LLM gateway', 'Models, the workspace model policy, direct inference, usage')
       .addTag('Privacy', 'The PII redaction engine: policy, analysis and reports')
+      .addTag(
+        'Tools',
+        'The Tool Execution Engine: built-in and HTTP tools, and the tool ledger',
+      )
+      .addTag(
+        'Workflows',
+        'Workflow definitions: the canvas, versions, validation, publishing',
+      )
+      .addTag(
+        'Workflow runs',
+        'Runs, their steps, approvals, the audit trace and dead letters',
+      )
       .addTag('Health', 'Liveness and readiness probes')
       .build();
 
@@ -283,6 +308,12 @@ async function bootstrap(): Promise<void> {
   bootLogger.log(`${appConfig.name} is running in ${appConfig.env} mode.`);
   bootLogger.log(`API      ${baseUrl}${apiPath}`);
   bootLogger.log(`Health   ${baseUrl}/health`);
+  const realtime = configService.getOrThrow<RealtimeConfig>(REALTIME_CONFIG_KEY);
+  if (realtime.enabled) {
+    bootLogger.log(
+      `Realtime ${baseUrl.replace(/^http/, 'ws')}${realtime.path} (Socket.IO)`,
+    );
+  }
   if (appConfig.swagger.enabled) {
     bootLogger.log(`Docs     ${baseUrl}/${appConfig.swagger.path}`);
     bootLogger.log(`OpenAPI  ${baseUrl}/${appConfig.swagger.jsonPath}`);

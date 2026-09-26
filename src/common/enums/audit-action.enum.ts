@@ -114,7 +114,7 @@ export enum AuditAction {
   /** Someone read a conversation that is not theirs (supervision). */
   AGENT_CONVERSATION_SUPERVISED = 'agent.conversation.supervised',
 
-  // ── Workflows & tools (6.9, 6.11) — later phases ──────────────────────────
+  // ── Workflows & tools (6.9, 6.11) ─────────────────────────────────────────
   WORKFLOW_CREATED = 'workflow.created',
   WORKFLOW_UPDATED = 'workflow.updated',
   WORKFLOW_DELETED = 'workflow.deleted',
@@ -124,6 +124,34 @@ export enum AuditAction {
   WORKFLOW_EXECUTION_DEAD_LETTERED = 'workflow.execution.dead_lettered',
   TOOL_EXECUTED = 'tool.executed',
   TOOL_EXECUTION_DENIED = 'tool.execution.denied',
+  /** Published, so that runs may start. */
+  WORKFLOW_PUBLISHED = 'workflow.published',
+  WORKFLOW_ARCHIVED = 'workflow.archived',
+  WORKFLOW_VERSION_RESTORED = 'workflow.version.restored',
+  WORKFLOW_EXECUTION_CANCELLED = 'workflow.execution.cancelled',
+  WORKFLOW_EXECUTION_RESUMED = 'workflow.execution.resumed',
+  WORKFLOW_EXECUTION_TIMED_OUT = 'workflow.execution.timed_out',
+  WORKFLOW_RUN_DELETED = 'workflow.run.deleted',
+  /** Someone read the content of a run they did not start (supervision). */
+  WORKFLOW_RUN_SUPERVISED = 'workflow.run.supervised',
+  /** One node of a run finished. The unit from which a run's trace is rebuilt. */
+  WORKFLOW_STEP_COMPLETED = 'workflow.step.completed',
+  WORKFLOW_STEP_FAILED = 'workflow.step.failed',
+  /** A queued job failed authentication: forged, tampered with or replayed across runs. */
+  WORKFLOW_STEP_REJECTED = 'workflow.step.rejected',
+  WORKFLOW_APPROVAL_REQUESTED = 'workflow.approval.requested',
+  WORKFLOW_APPROVAL_GRANTED = 'workflow.approval.granted',
+  WORKFLOW_APPROVAL_REJECTED = 'workflow.approval.rejected',
+  TOOL_CREATED = 'tool.created',
+  TOOL_UPDATED = 'tool.updated',
+  TOOL_DELETED = 'tool.deleted',
+  /** Authorised and started, but the tool itself failed or timed out. */
+  TOOL_EXECUTION_FAILED = 'tool.execution.failed',
+
+  // ── Real-time (6.16) ──────────────────────────────────────────────────────
+  REALTIME_CONNECTION_REJECTED = 'realtime.connection.rejected',
+  /** A socket asked for events it may not see — usually a probe across tenants. */
+  REALTIME_SUBSCRIPTION_DENIED = 'realtime.subscription.denied',
 
   // ── PII redaction (6.12) ──────────────────────────────────────────────────
   PII_REDACTED = 'pii.redacted',
@@ -170,6 +198,7 @@ const CRITICAL_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.ORGANIZATION_IP_BLOCKED,
   AuditAction.PII_UNMASKED,
   AuditAction.PII_EGRESS_BLOCKED,
+  AuditAction.WORKFLOW_STEP_REJECTED,
 ]);
 
 const WARNING_ACTIONS: ReadonlySet<AuditAction> = new Set([
@@ -188,6 +217,12 @@ const WARNING_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.DOCUMENT_INGESTION_DEAD_LETTERED,
   AuditAction.PII_REDACTION_FAILED,
   AuditAction.LLM_INFERENCE_FAILED,
+  AuditAction.WORKFLOW_EXECUTION_FAILED,
+  AuditAction.WORKFLOW_EXECUTION_TIMED_OUT,
+  AuditAction.WORKFLOW_STEP_FAILED,
+  AuditAction.TOOL_EXECUTION_FAILED,
+  AuditAction.REALTIME_CONNECTION_REJECTED,
+  AuditAction.REALTIME_SUBSCRIPTION_DENIED,
 ]);
 
 const NOTICE_ACTIONS: ReadonlySet<AuditAction> = new Set([
@@ -219,6 +254,20 @@ const NOTICE_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.AGENT_VERSION_RESTORED,
   AuditAction.AGENT_CONVERSATION_DELETED,
   AuditAction.AGENT_CONVERSATION_SUPERVISED,
+  AuditAction.WORKFLOW_DELETED,
+  AuditAction.WORKFLOW_PUBLISHED,
+  AuditAction.WORKFLOW_ARCHIVED,
+  AuditAction.WORKFLOW_VERSION_RESTORED,
+  AuditAction.WORKFLOW_EXECUTION_CANCELLED,
+  AuditAction.WORKFLOW_EXECUTION_RESUMED,
+  AuditAction.WORKFLOW_RUN_DELETED,
+  AuditAction.WORKFLOW_RUN_SUPERVISED,
+  AuditAction.WORKFLOW_APPROVAL_REQUESTED,
+  AuditAction.WORKFLOW_APPROVAL_GRANTED,
+  AuditAction.WORKFLOW_APPROVAL_REJECTED,
+  AuditAction.TOOL_CREATED,
+  AuditAction.TOOL_UPDATED,
+  AuditAction.TOOL_DELETED,
 ]);
 
 export function severityForAction(action: AuditAction, status: AuditStatus): AuditSeverity {
