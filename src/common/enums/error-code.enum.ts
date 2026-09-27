@@ -37,6 +37,17 @@ export enum ErrorCode {
   AUTH_PASSWORD_MISMATCH = 'AUTH_PASSWORD_MISMATCH',
   AUTH_PASSWORD_REUSED = 'AUTH_PASSWORD_REUSED',
   AUTH_PASSWORD_TOO_WEAK = 'AUTH_PASSWORD_TOO_WEAK',
+  /** Phase 5: the password appears in a known data breach (k-anonymity lookup). */
+  AUTH_PASSWORD_BREACHED = 'AUTH_PASSWORD_BREACHED',
+
+  // ── Multi-factor authentication (phase 5) ─────────────────────────────────
+  MFA_CODE_INVALID = 'MFA_CODE_INVALID',
+  MFA_CHALLENGE_INVALID = 'MFA_CHALLENGE_INVALID',
+  MFA_ALREADY_ENABLED = 'MFA_ALREADY_ENABLED',
+  MFA_NOT_ENABLED = 'MFA_NOT_ENABLED',
+  MFA_NOT_ENROLLING = 'MFA_NOT_ENROLLING',
+  /** The workspace (or platform) requires a session verified with a second factor. */
+  MFA_REQUIRED = 'MFA_REQUIRED',
 
   // ── Account state ─────────────────────────────────────────────────────────
   ACCOUNT_NOT_FOUND = 'ACCOUNT_NOT_FOUND',
@@ -98,10 +109,26 @@ export enum ErrorCode {
   RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
   QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
   TOO_MANY_LOGIN_ATTEMPTS = 'TOO_MANY_LOGIN_ATTEMPTS',
+  /** Phase 5: the workspace is spending tokens faster than its per-minute rate. */
+  TOKEN_RATE_LIMITED = 'TOKEN_RATE_LIMITED',
+  QUOTA_NOT_FOUND = 'QUOTA_NOT_FOUND',
+  /** Platform allowances are set by the deployment, not by the workspace. */
+  QUOTA_MANAGED_BY_PLATFORM = 'QUOTA_MANAGED_BY_PLATFORM',
+  /** Phase 5: the agent's circuit breaker is open (runaway spend or repeated failures). */
+  AGENT_CIRCUIT_OPEN = 'AGENT_CIRCUIT_OPEN',
+  /** Phase 5: one answer used more tokens than a turn may spend. */
+  AGENT_TOKEN_BUDGET_EXCEEDED = 'AGENT_TOKEN_BUDGET_EXCEEDED',
+  /** Phase 5: the conversation has spent its lifetime token budget. */
+  CONVERSATION_TOKEN_BUDGET_EXCEEDED = 'CONVERSATION_TOKEN_BUDGET_EXCEEDED',
 
   // ── Audit ─────────────────────────────────────────────────────────────────
   AUDIT_CHAIN_BROKEN = 'AUDIT_CHAIN_BROKEN',
   AUDIT_LOG_IMMUTABLE = 'AUDIT_LOG_IMMUTABLE',
+
+  // ── Data lifecycle (phase 5) ──────────────────────────────────────────────
+  /** The account still owns workspaces other people belong to. */
+  ACCOUNT_ERASURE_BLOCKED = 'ACCOUNT_ERASURE_BLOCKED',
+  ACCOUNT_ERASURE_DISABLED = 'ACCOUNT_ERASURE_DISABLED',
 
   // ── Knowledge bases ───────────────────────────────────────────────────────
   KNOWLEDGE_BASE_NOT_FOUND = 'KNOWLEDGE_BASE_NOT_FOUND',
@@ -238,6 +265,18 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.AUTH_PASSWORD_REUSED]:
     'The new password must differ from the current password.',
   [ErrorCode.AUTH_PASSWORD_TOO_WEAK]: 'The password does not meet the security policy.',
+  [ErrorCode.AUTH_PASSWORD_BREACHED]:
+    'This password has appeared in a known data breach, so attackers try it first. Choose a different one.',
+
+  [ErrorCode.MFA_CODE_INVALID]: 'The verification code is not valid.',
+  [ErrorCode.MFA_CHALLENGE_INVALID]:
+    'This sign-in attempt has expired or was already completed. Sign in again.',
+  [ErrorCode.MFA_ALREADY_ENABLED]: 'Two-step verification is already enabled on this account.',
+  [ErrorCode.MFA_NOT_ENABLED]: 'Two-step verification is not enabled on this account.',
+  [ErrorCode.MFA_NOT_ENROLLING]:
+    'Start two-step verification setup before confirming a code.',
+  [ErrorCode.MFA_REQUIRED]:
+    'This workspace requires two-step verification. Enable it on your account and sign in again.',
 
   [ErrorCode.ACCOUNT_NOT_FOUND]: 'No account was found.',
   [ErrorCode.ACCOUNT_ALREADY_EXISTS]: 'An account with this email address already exists.',
@@ -302,9 +341,24 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.RATE_LIMIT_EXCEEDED]: 'Too many requests. Please slow down.',
   [ErrorCode.QUOTA_EXCEEDED]: 'This workspace has exhausted its allocated quota.',
   [ErrorCode.TOO_MANY_LOGIN_ATTEMPTS]: 'Too many sign-in attempts. Please try again later.',
+  [ErrorCode.TOKEN_RATE_LIMITED]:
+    'This workspace is using the model faster than its token rate allows. Try again shortly.',
+  [ErrorCode.QUOTA_NOT_FOUND]: 'The quota was not found.',
+  [ErrorCode.QUOTA_MANAGED_BY_PLATFORM]:
+    'This allowance is set by the platform and cannot be changed from the workspace.',
+  [ErrorCode.AGENT_CIRCUIT_OPEN]:
+    'This agent has been paused automatically after unusual activity. Try again later.',
+  [ErrorCode.AGENT_TOKEN_BUDGET_EXCEEDED]:
+    'The answer was stopped because it used more tokens than one reply may spend.',
+  [ErrorCode.CONVERSATION_TOKEN_BUDGET_EXCEEDED]:
+    'This conversation has reached its token budget. Start a new conversation to continue.',
 
   [ErrorCode.AUDIT_CHAIN_BROKEN]: 'The audit log integrity chain could not be verified.',
   [ErrorCode.AUDIT_LOG_IMMUTABLE]: 'Audit records cannot be modified or deleted.',
+
+  [ErrorCode.ACCOUNT_ERASURE_BLOCKED]:
+    'You still own workspaces that other people belong to. Transfer or delete them first.',
+  [ErrorCode.ACCOUNT_ERASURE_DISABLED]: 'Self-service account erasure is disabled on this deployment.',
 
   [ErrorCode.KNOWLEDGE_BASE_NOT_FOUND]: 'The knowledge base was not found.',
   [ErrorCode.KNOWLEDGE_BASE_NAME_TAKEN]:

@@ -22,6 +22,8 @@ export interface AuthenticatedUser {
   sessionId: string;
   /** Access token id, used to revoke this specific token. */
   tokenId: string;
+  /** Whether this session passed a second factor (phase 5; from the token's `amr`). */
+  mfaVerified?: boolean;
 }
 
 /** The machine principal behind an `X-API-Key` request. */

@@ -13,7 +13,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiExtraModels, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { THROTTLE_POLICY } from '../../config/throttle.config';
 import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
@@ -50,11 +50,20 @@ import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
+  BeginMfaSetupDto,
   ChangePasswordDto,
   CurrentUserDto,
+  DisableMfaDto,
+  EnableMfaDto,
+  EnableMfaResponseDto,
   ForgotPasswordDto,
   LoginDto,
+  MfaRequiredResponseDto,
+  MfaSetupResponseDto,
+  MfaStatusDto,
+  RecoveryCodesDto,
   RefreshTokenDto,
+  RegenerateRecoveryCodesDto,
   RegisterDto,
   ResendVerificationDto,
   ResetPasswordDto,
@@ -62,7 +71,9 @@ import {
   TokenPairDto,
   UpdateProfileDto,
   VerifyEmailDto,
+  VerifyMfaDto,
 } from './dto/auth.dto';
+import { MfaService } from './mfa/mfa.service';
 import { JwtTokenService } from './services/jwt-token.service';
 
 /**
@@ -94,6 +105,7 @@ import { JwtTokenService } from './services/jwt-token.service';
  * budget and one account cannot be cheaply locked out from many addresses.
  */
 @ApiTags('Authentication')
+@ApiExtraModels(MfaRequiredResponseDto)
 @Controller({ path: 'auth', version: '1' })
 @SkipOrganizationContext()
 export class AuthController {
@@ -106,6 +118,7 @@ export class AuthController {
     private readonly rbacService: RbacService,
     private readonly jwtTokenService: JwtTokenService,
     private readonly configService: ConfigService,
+    private readonly mfaService: MfaService,
   ) {
     this.security = this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY);
   }
@@ -143,7 +156,9 @@ export class AuthController {
     summary: 'Sign in',
     description:
       'Exchanges credentials for an access/refresh pair. Repeated failures lock the ' +
-      'account for ACCOUNT_LOCKOUT_DURATION.',
+      'account for ACCOUNT_LOCKOUT_DURATION. On an account with two-step verification, ' +
+      'a correct password returns `{ mfaRequired: true, challenge }` instead of tokens: ' +
+      'finish with POST /auth/mfa/verify.',
   })
   @ApiEnvelopedResponse(AuthResponseDto, 'Signed in')
   @ApiErrorResponse(401, [ErrorCode.AUTH_INVALID_CREDENTIALS])
@@ -158,9 +173,141 @@ export class AuthController {
     @ClientIp() ip: string,
     @UserAgent() userAgent: string | undefined,
     @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthResponseDto | MfaRequiredResponseDto> {
+    const outcome = await this.authService.login(dto, { ip, userAgent });
+    if (outcome.kind === 'mfa') return { mfaRequired: true, challenge: outcome.challenge };
+    return this.withRefreshCookie(response, outcome.result);
+  }
+
+  // ── Two-step verification (phase 5) ───────────────────────────────────────
+
+  @Post('mfa/verify')
+  @Public()
+  @ThrottlePolicy(THROTTLE_POLICY.AUTH)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Finish signing in with a code',
+    description:
+      'Exchanges the challenge from POST /auth/login and a current authenticator code (or a ' +
+      'recovery code) for a session. Wrong codes count towards the account lockout.',
+  })
+  @ApiEnvelopedResponse(AuthResponseDto, 'Signed in')
+  @ApiErrorResponse(401, [ErrorCode.MFA_CODE_INVALID, ErrorCode.MFA_CHALLENGE_INVALID])
+  @ApiErrorResponse(403, [ErrorCode.ACCOUNT_LOCKED, ErrorCode.ACCOUNT_SUSPENDED])
+  async verifyMfa(
+    @Body() dto: VerifyMfaDto,
+    @ClientIp() ip: string,
+    @UserAgent() userAgent: string | undefined,
+    @Res({ passthrough: true }) response: Response,
   ): Promise<AuthResponseDto> {
-    const result = await this.authService.login(dto, { ip, userAgent });
+    const result = await this.authService.completeMfaLogin(
+      dto.challengeToken,
+      { code: dto.code, recoveryCode: dto.recoveryCode },
+      { ip, userAgent },
+    );
     return this.withRefreshCookie(response, result);
+  }
+
+  @Get('mfa')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Your two-step verification status' })
+  @ApiEnvelopedResponse(MfaStatusDto)
+  @ApiStandardErrors()
+  async mfaStatus(@CurrentUser() user: AuthenticatedUser): Promise<MfaStatusDto> {
+    const status = await this.mfaService.status(user.id);
+    return { ...status, sessionVerified: user.mfaVerified === true };
+  }
+
+  @Post('mfa/setup')
+  @ThrottlePolicy(THROTTLE_POLICY.AUTH)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Start two-step verification setup',
+    description:
+      'Returns a new secret and an otpauth:// URI for the authenticator app (render it as a ' +
+      'QR code). Requires your password. Nothing changes until POST /auth/mfa/enable ' +
+      'confirms a code.',
+  })
+  @ApiEnvelopedResponse(MfaSetupResponseDto)
+  @ApiErrorResponse(401, [ErrorCode.AUTH_PASSWORD_MISMATCH])
+  @ApiErrorResponse(409, [ErrorCode.MFA_ALREADY_ENABLED])
+  @ApiStandardErrors()
+  beginMfaSetup(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BeginMfaSetupDto,
+  ): Promise<MfaSetupResponseDto> {
+    return this.mfaService.beginEnrollment(user.id, dto.password);
+  }
+
+  @Post('mfa/enable')
+  @ThrottlePolicy(THROTTLE_POLICY.AUTH)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Turn two-step verification on',
+    description:
+      'Confirms a first code from the authenticator. Returns single-use recovery codes ' +
+      '(shown once) and an access token for this session that carries the second factor. ' +
+      'Other devices are signed out.',
+  })
+  @ApiEnvelopedResponse(EnableMfaResponseDto)
+  @ApiErrorResponse(401, [ErrorCode.MFA_CODE_INVALID])
+  @ApiErrorResponse(409, [ErrorCode.MFA_ALREADY_ENABLED, ErrorCode.MFA_NOT_ENROLLING])
+  @ApiStandardErrors()
+  enableMfa(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: EnableMfaDto,
+  ): Promise<EnableMfaResponseDto> {
+    return this.authService.enableMfa(user.id, dto.code, user.sessionId);
+  }
+
+  @Post('mfa/disable')
+  @ThrottlePolicy(THROTTLE_POLICY.AUTH)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Turn two-step verification off',
+    description:
+      'Requires your password and a current code (or a recovery code). Audited as CRITICAL ' +
+      'and notified by email.',
+  })
+  @ApiErrorResponse(401, [ErrorCode.AUTH_PASSWORD_MISMATCH, ErrorCode.MFA_CODE_INVALID])
+  @ApiErrorResponse(409, [ErrorCode.MFA_NOT_ENABLED])
+  @ApiStandardErrors()
+  async disableMfa(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DisableMfaDto,
+  ): Promise<{ disabled: true }> {
+    await this.mfaService.disable(user.id, dto.password, {
+      code: dto.code,
+      recoveryCode: dto.recoveryCode,
+    });
+    return { disabled: true };
+  }
+
+  @Post('mfa/recovery-codes')
+  @ThrottlePolicy(THROTTLE_POLICY.AUTH)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Replace your recovery codes',
+    description: 'Invalidates every unused code and returns a new set. Requires password and code.',
+  })
+  @ApiEnvelopedResponse(RecoveryCodesDto)
+  @ApiErrorResponse(401, [ErrorCode.AUTH_PASSWORD_MISMATCH, ErrorCode.MFA_CODE_INVALID])
+  @ApiStandardErrors()
+  async regenerateRecoveryCodes(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RegenerateRecoveryCodesDto,
+  ): Promise<RecoveryCodesDto> {
+    return {
+      recoveryCodes: await this.mfaService.regenerateRecoveryCodes(
+        user.id,
+        dto.password,
+        dto.code,
+      ),
+    };
   }
 
   @Post('refresh')

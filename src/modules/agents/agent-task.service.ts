@@ -388,6 +388,7 @@ export class AgentTaskService {
           actorLabel: input.actorLabel,
           executionId: input.executionId,
           callBudget: input.callBudget,
+          purpose: InvocationPurpose.WORKFLOW_STEP,
           onIteration: async (iteration) => {
             invocationIds.push(iteration.invocationId);
             await this.recordIteration(
@@ -435,6 +436,12 @@ export class AgentTaskService {
             contextWindow: model.contextWindow,
             privacy,
             signal: input.signal,
+            attribution: {
+              userId: principal.userId ?? null,
+              apiKeyId: principal.apiKeyId ?? null,
+              agentId: executable.agent.id,
+              purpose: InvocationPurpose.WORKFLOW_STEP,
+            },
           });
           const repairId = randomUUID();
           invocationIds.push(repairId);
@@ -652,6 +659,12 @@ export class AgentTaskService {
           contextWindow: model.contextWindow,
           privacy,
           signal: input.signal,
+          attribution: {
+            userId: principal.userId ?? null,
+            apiKeyId: principal.apiKeyId ?? null,
+            agentId: executable?.agent.id ?? null,
+            purpose: InvocationPurpose.WORKFLOW_ROUTING,
+          },
         });
         const invocationId = randomUUID();
         invocationIds.push(invocationId);

@@ -13,6 +13,10 @@ export enum SessionRevocationReason {
   ADMIN_REVOKED = 'ADMIN_REVOKED',
   ACCOUNT_SUSPENDED = 'ACCOUNT_SUSPENDED',
   EXPIRED = 'EXPIRED',
+  /** Two-step verification was enabled or disabled; other devices sign in again. */
+  MFA_CHANGED = 'MFA_CHANGED',
+  /** The account was erased at its owner's request. */
+  ACCOUNT_ERASED = 'ACCOUNT_ERASED',
 }
 
 /**
@@ -91,6 +95,14 @@ export class Session extends BaseEntity {
   /** Workspace selected at sign-in, if any. Advisory; never an authorization input. */
   @Column({ type: 'uuid', name: 'organization_id', nullable: true })
   organizationId: string | null;
+
+  /**
+   * When the sign-in that started this family passed a second factor (phase
+   * 5). Copied to every rotated session, so the assurance of a refreshed
+   * access token is exactly that of the sign-in it descends from.
+   */
+  @Column({ type: 'timestamptz', name: 'mfa_verified_at', nullable: true })
+  mfaVerifiedAt: Date | null;
 
   get isRevoked(): boolean {
     return this.revokedAt !== null && this.revokedAt !== undefined;

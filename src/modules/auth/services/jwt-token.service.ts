@@ -16,6 +16,7 @@ import { UnauthorizedError } from '../../../common/exceptions/app.exception';
 import {
   TokenType,
   type AccessTokenClaims,
+  type AuthenticationMethod,
   type RefreshTokenClaims,
   type TokenPair,
 } from '../../../common/interfaces/jwt-payload.interface';
@@ -88,10 +89,11 @@ export class JwtTokenService {
     sessionId: string,
     familyId: string,
     organizationId?: string,
+    amr: AuthenticationMethod[] = ['pwd'],
   ): Promise<TokenPair> {
     const now = Math.floor(Date.now() / 1000);
 
-    const accessToken = await this.signAccessToken(user, sessionId, organizationId);
+    const accessToken = await this.signAccessToken(user, sessionId, organizationId, amr);
     const refreshToken = await this.signRefreshToken(user.id, sessionId, familyId);
 
     return {
@@ -108,6 +110,7 @@ export class JwtTokenService {
     user: AccessTokenSubject,
     sessionId: string,
     organizationId?: string,
+    amr: AuthenticationMethod[] = ['pwd'],
   ): Promise<string> {
     const claims: Omit<AccessTokenClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
       sub: user.id,
@@ -116,6 +119,7 @@ export class JwtTokenService {
       email: user.emailNormalized,
       isPlatformAdmin: user.isPlatformAdmin,
       sid: sessionId,
+      amr,
       ...(organizationId ? { org: organizationId } : {}),
     };
 

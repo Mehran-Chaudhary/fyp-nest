@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHmac } from 'node:crypto';
-import { DataSource, Repository, type EntityManager } from 'typeorm';
+import { performance } from 'node:perf_hooks';
+import { DataSource, MoreThan, Repository, type EntityManager } from 'typeorm';
 import {
   AuditAction,
   AuditSeverity,
@@ -17,7 +18,10 @@ import {
   buildPaginationMeta,
   type PaginatedResult,
 } from '../../common/utils/pagination.util';
+import { RowLevelSecurityService } from '../../database/tenancy/row-level-security.service';
+import { MetricsService } from '../../observability/metrics.service';
 import { RequestContextService } from '../../shared/context/request-context.service';
+import { AuditChainAnchor } from './entities/audit-chain-anchor.entity';
 import { AuditLog, GENESIS_HASH, PLATFORM_CHAIN_ID } from './entities/audit-log.entity';
 
 /**
@@ -26,7 +30,7 @@ import { AuditLog, GENESIS_HASH, PLATFORM_CHAIN_ID } from './entities/audit-log.
  * Advisory locks share one global 64-bit space, so an arbitrary but fixed
  * namespace keeps these locks from colliding with any other component's.
  */
-const AUDIT_LOCK_NAMESPACE = 918_273;
+export const AUDIT_LOCK_NAMESPACE = 918_273;
 
 export interface AuditEntryInput {
   action: AuditAction;
@@ -70,6 +74,24 @@ export interface ChainVerificationResult {
   brokenRecordId?: string;
   reason?: string;
   verifiedAt: string;
+  /**
+   * Phase 5: records up to this sequence were pruned by retention; the chain
+   * was verified from the signed anchor they left. Absent if nothing was pruned.
+   */
+  prunedThroughSequence?: string;
+  anchors?: number;
+}
+
+/** The fields an anchor's MAC covers. */
+export interface AnchorFields {
+  organizationId: string;
+  sequence: string;
+  hash: string;
+  firstSequence: string;
+  recordsPruned: string;
+  cutoff: Date;
+  archiveKey: string | null;
+  archiveSha256: string | null;
 }
 
 /**
@@ -120,6 +142,8 @@ export class AuditService {
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
     private readonly requestContext: RequestContextService,
+    @Optional() private readonly rowLevelSecurity?: RowLevelSecurityService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {
     this.hashSecret =
       this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY).auditHashSecret;
@@ -132,7 +156,9 @@ export class AuditService {
    * the audited change and its record must be atomic.
    */
   async record(input: AuditEntryInput, manager?: EntityManager): Promise<AuditLog> {
-    if (manager) {
+    // The chain lock and the chain-head read must share one transaction; a
+    // manager that is not in one gets its own.
+    if (manager?.queryRunner?.isTransactionActive) {
       return this.append(manager, input);
     }
     return this.dataSource.transaction((transactionManager) =>
@@ -176,6 +202,18 @@ export class AuditService {
     const actorType = input.actor?.type ?? context?.actorType ?? ActorType.SYSTEM;
     const actorId = input.actor?.id ?? context?.actorId ?? null;
     const actorLabel = input.actor?.label ?? context?.actorLabel ?? null;
+
+    const started = performance.now();
+
+    // Row-level security (phase 5): a unit of work bound to one workspace that
+    // records an event on another chain — the platform's — must read and
+    // write that chain. The binding is moved for these statements only
+    // (`set_config(…, true)` is local to the transaction) and put back after.
+    const bound = this.rowLevelSecurity?.currentTenant() ?? '';
+    const rebind = bound !== '' && bound !== organizationId;
+    if (rebind) {
+      await manager.query(`SELECT set_config('daiap.tenant', $1, true)`, [organizationId]);
+    }
 
     // Serialise appends for this workspace. Released automatically at COMMIT or
     // ROLLBACK, so a crashed transaction cannot wedge the chain.
@@ -226,7 +264,14 @@ export class AuditService {
 
     record.hash = this.computeHash(record, previousHash);
 
-    return manager.getRepository(AuditLog).save(record);
+    const saved = await manager.getRepository(AuditLog).save(record);
+    if (rebind) {
+      await manager.query(`SELECT set_config('daiap.tenant', $1, true)`, [bound]);
+    }
+
+    this.metrics?.auditEvents.inc({ action: input.action, severity, status });
+    this.metrics?.auditAppendDuration.observe((performance.now() - started) / 1000);
+    return saved;
   }
 
   /**
@@ -299,17 +344,54 @@ export class AuditService {
   ): Promise<ChainVerificationResult> {
     const batchSize = options.batchSize ?? 1_000;
     const maxRecords = options.maxRecords ?? Number.POSITIVE_INFINITY;
+    const verifiedAt = () => new Date().toISOString();
 
+    // ── Anchors left by retention (phase 5) ─────────────────────────────
+    // Each must carry a valid MAC and continue exactly where the previous one
+    // stopped; the chain then resumes from the last one's hash.
+    const anchors = await this.dataSource.getRepository(AuditChainAnchor).find({
+      where: { organizationId },
+      order: { sequence: 'ASC' },
+    });
     let expectedPreviousHash = GENESIS_HASH;
     let expectedSequence = 1n;
+    for (const anchor of anchors) {
+      if (
+        anchor.mac !== this.anchorMac(anchor) ||
+        BigInt(anchor.firstSequence) !== expectedSequence
+      ) {
+        return {
+          organizationId,
+          valid: false,
+          recordsChecked: 0,
+          brokenAtSequence: anchor.sequence,
+          reason:
+            anchor.mac !== this.anchorMac(anchor)
+              ? 'Retention anchor MAC mismatch: the anchor was forged or altered.'
+              : `Retention anchors are not contiguous: expected pruning to start at ${expectedSequence}.`,
+          verifiedAt: verifiedAt(),
+          anchors: anchors.length,
+        };
+      }
+      expectedPreviousHash = anchor.hash;
+      expectedSequence = BigInt(anchor.sequence) + 1n;
+    }
+    const pruned =
+      anchors.length > 0
+        ? {
+            prunedThroughSequence: anchors[anchors.length - 1].sequence,
+            anchors: anchors.length,
+          }
+        : {};
+
+    // ── The surviving chain, in keyset pages ────────────────────────────
     let checked = 0;
-    let offset = 0;
+    let after = (expectedSequence - 1n).toString();
 
     for (;;) {
       const batch = await this.auditRepository.find({
-        where: { organizationId },
+        where: { organizationId, sequence: MoreThan(after) },
         order: { sequence: 'ASC' },
-        skip: offset,
         take: batchSize,
       });
 
@@ -324,7 +406,8 @@ export class AuditService {
             brokenAtSequence: record.sequence,
             brokenRecordId: record.id,
             reason: `Sequence gap: expected ${expectedSequence}, found ${record.sequence}. A record was deleted.`,
-            verifiedAt: new Date().toISOString(),
+            verifiedAt: verifiedAt(),
+            ...pruned,
           };
         }
 
@@ -337,7 +420,8 @@ export class AuditService {
             brokenRecordId: record.id,
             reason:
               'Chain link mismatch: this record does not reference the hash of its predecessor.',
-            verifiedAt: new Date().toISOString(),
+            verifiedAt: verifiedAt(),
+            ...pruned,
           };
         }
 
@@ -351,7 +435,8 @@ export class AuditService {
             brokenRecordId: record.id,
             reason:
               'Content hash mismatch: this record has been modified since it was written.',
-            verifiedAt: new Date().toISOString(),
+            verifiedAt: verifiedAt(),
+            ...pruned,
           };
         }
 
@@ -364,12 +449,13 @@ export class AuditService {
             organizationId,
             valid: true,
             recordsChecked: checked,
-            verifiedAt: new Date().toISOString(),
+            verifiedAt: verifiedAt(),
+            ...pruned,
           };
         }
       }
 
-      offset += batch.length;
+      after = batch[batch.length - 1].sequence;
       if (batch.length < batchSize) break;
     }
 
@@ -377,8 +463,29 @@ export class AuditService {
       organizationId,
       valid: true,
       recordsChecked: checked,
-      verifiedAt: new Date().toISOString(),
+      verifiedAt: verifiedAt(),
+      ...pruned,
     };
+  }
+
+  /**
+   * The MAC over a retention anchor (phase 5), keyed like the chain itself:
+   * without AUDIT_HASH_SECRET no one can write an anchor that verifies, so
+   * deleting records and "anchoring" over the gap is detectable.
+   */
+  anchorMac(anchor: AnchorFields): string {
+    const canonical = [
+      'anchor/v1',
+      anchor.organizationId,
+      anchor.sequence,
+      anchor.hash,
+      anchor.firstSequence,
+      anchor.recordsPruned,
+      new Date(anchor.cutoff).toISOString(),
+      anchor.archiveKey ?? '',
+      anchor.archiveSha256 ?? '',
+    ].join('|');
+    return createHmac('sha256', this.hashSecret).update(canonical).digest('hex');
   }
 
   /** Most recent sequence number for a workspace. Zero when the chain is empty. */

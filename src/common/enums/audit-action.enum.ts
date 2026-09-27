@@ -29,6 +29,18 @@ export enum AuditAction {
   USER_PROFILE_UPDATED = 'user.profile.updated',
   USER_SESSION_REVOKED = 'user.session.revoked',
   USER_DEACTIVATED = 'user.deactivated',
+  // Phase 5: the second factor, breached-password screening, and data rights.
+  USER_MFA_ENROLLMENT_STARTED = 'user.mfa.enrollment_started',
+  USER_MFA_ENABLED = 'user.mfa.enabled',
+  USER_MFA_DISABLED = 'user.mfa.disabled',
+  USER_MFA_CHALLENGE_FAILED = 'user.mfa.challenge_failed',
+  USER_MFA_RECOVERY_CODE_USED = 'user.mfa.recovery_code_used',
+  USER_MFA_RECOVERY_CODES_REGENERATED = 'user.mfa.recovery_codes_regenerated',
+  /** A new password was refused (or, in `warn` mode, accepted) because it is breached. */
+  USER_PASSWORD_BREACH_DETECTED = 'user.password.breach_detected',
+  USER_DATA_EXPORTED = 'user.data.exported',
+  /** The right to be forgotten: identity anonymised, personal content crypto-shredded. */
+  USER_ERASED = 'user.erased',
 
   // ── Organization workspace (6.2) ──────────────────────────────────────────
   ORGANIZATION_CREATED = 'organization.created',
@@ -166,11 +178,25 @@ export enum AuditAction {
   RATE_LIMIT_TRIGGERED = 'rate_limit.triggered',
   QUOTA_EXHAUSTED = 'quota.exhausted',
   AGENT_CIRCUIT_BROKEN = 'agent.circuit_broken',
+  // Phase 5.
+  QUOTA_CREATED = 'quota.created',
+  QUOTA_UPDATED = 'quota.updated',
+  QUOTA_DELETED = 'quota.deleted',
+  /** A budget crossed its alert threshold (once per period). */
+  QUOTA_THRESHOLD_REACHED = 'quota.threshold_reached',
+  /** The per-minute token rate refused a model call. */
+  QUOTA_RATE_LIMITED = 'quota.rate_limited',
+  AGENT_CIRCUIT_RESET = 'agent.circuit_reset',
 
   // ── Audit itself (6.15) ───────────────────────────────────────────────────
   AUDIT_LOG_EXPORTED = 'audit.log.exported',
   AUDIT_CHAIN_VERIFIED = 'audit.chain.verified',
   AUDIT_CHAIN_TAMPER_DETECTED = 'audit.chain.tamper_detected',
+  // Phase 5: retention through the documented deletion escape hatch.
+  AUDIT_LOG_PRUNED = 'audit.log.pruned',
+
+  // ── Data lifecycle (phase 5) ──────────────────────────────────────────────
+  DATA_RETENTION_APPLIED = 'data.retention.applied',
 }
 
 /** Outcome recorded alongside each audited action. */
@@ -199,6 +225,7 @@ const CRITICAL_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.PII_UNMASKED,
   AuditAction.PII_EGRESS_BLOCKED,
   AuditAction.WORKFLOW_STEP_REJECTED,
+  AuditAction.USER_MFA_DISABLED,
 ]);
 
 const WARNING_ACTIONS: ReadonlySet<AuditAction> = new Set([
@@ -223,6 +250,9 @@ const WARNING_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.TOOL_EXECUTION_FAILED,
   AuditAction.REALTIME_CONNECTION_REJECTED,
   AuditAction.REALTIME_SUBSCRIPTION_DENIED,
+  AuditAction.USER_MFA_CHALLENGE_FAILED,
+  AuditAction.USER_PASSWORD_BREACH_DETECTED,
+  AuditAction.QUOTA_RATE_LIMITED,
 ]);
 
 const NOTICE_ACTIONS: ReadonlySet<AuditAction> = new Set([
@@ -268,6 +298,18 @@ const NOTICE_ACTIONS: ReadonlySet<AuditAction> = new Set([
   AuditAction.TOOL_CREATED,
   AuditAction.TOOL_UPDATED,
   AuditAction.TOOL_DELETED,
+  AuditAction.USER_MFA_ENABLED,
+  AuditAction.USER_MFA_RECOVERY_CODE_USED,
+  AuditAction.USER_MFA_RECOVERY_CODES_REGENERATED,
+  AuditAction.USER_DATA_EXPORTED,
+  AuditAction.USER_ERASED,
+  AuditAction.QUOTA_CREATED,
+  AuditAction.QUOTA_UPDATED,
+  AuditAction.QUOTA_DELETED,
+  AuditAction.QUOTA_THRESHOLD_REACHED,
+  AuditAction.AGENT_CIRCUIT_RESET,
+  AuditAction.AUDIT_LOG_PRUNED,
+  AuditAction.DATA_RETENTION_APPLIED,
 ]);
 
 export function severityForAction(action: AuditAction, status: AuditStatus): AuditSeverity {

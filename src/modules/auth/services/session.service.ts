@@ -8,6 +8,12 @@ import { TokenService } from '../../../shared/crypto/token.service';
 import { Session, SessionRevocationReason } from '../entities/session.entity';
 
 export interface CreateSessionInput {
+  /**
+   * The id the tokens already carry as `sid`. The row must have it, or an
+   * access token's session could not be found (to sign it out, or to mark it
+   * verified with a second factor).
+   */
+  id?: string;
   userId: string;
   refreshToken: string;
   expiresAt: Date;
@@ -15,6 +21,8 @@ export interface CreateSessionInput {
   ipAddress?: string;
   userAgent?: string;
   organizationId?: string | null;
+  /** When the sign-in passed a second factor (phase 5); inherited by every rotation. */
+  mfaVerifiedAt?: Date | null;
 }
 
 export interface RotateSessionResult {
@@ -47,6 +55,7 @@ export class SessionService {
     const repository = manager ? manager.getRepository(Session) : this.sessionRepository;
 
     const session = repository.create({
+      ...(input.id ? { id: input.id } : {}),
       userId: input.userId,
       familyId: input.familyId ?? randomUUID(),
       tokenHash: this.tokenService.hashToken(input.refreshToken),
@@ -55,6 +64,7 @@ export class SessionService {
       userAgent: input.userAgent ?? null,
       deviceLabel: input.userAgent ? describeDevice(input.userAgent) : null,
       organizationId: input.organizationId ?? null,
+      mfaVerifiedAt: input.mfaVerifiedAt ?? null,
       lastUsedAt: new Date(),
     });
 
@@ -91,6 +101,7 @@ export class SessionService {
     newToken: string,
     expiresAt: Date,
     context: { ipAddress?: string; userAgent?: string },
+    replacementId?: string,
   ): Promise<RotateSessionResult> {
     const repository = manager.getRepository(Session);
     const tokenHash = this.tokenService.hashToken(presentedToken);
@@ -139,6 +150,8 @@ export class SessionService {
     }
 
     const replacement = repository.create({
+      // The id the new tokens carry as `sid`.
+      ...(replacementId ? { id: replacementId } : {}),
       userId: existing.userId,
       familyId: existing.familyId,
       tokenHash: this.tokenService.hashToken(newToken),
@@ -149,6 +162,8 @@ export class SessionService {
         ? describeDevice(context.userAgent)
         : existing.deviceLabel,
       organizationId: existing.organizationId,
+      // A refreshed token has exactly the assurance of the sign-in it descends from.
+      mfaVerifiedAt: existing.mfaVerifiedAt,
       lastUsedAt: new Date(),
     });
 

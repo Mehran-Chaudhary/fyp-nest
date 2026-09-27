@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -227,6 +228,9 @@ export class AuthUserDto {
 
   @ApiProperty({ enum: ['PENDING', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED'] })
   status: string;
+
+  @ApiPropertyOptional({ description: 'Two-step verification is enabled (phase 5).' })
+  mfaEnabled?: boolean;
 }
 
 export class AuthResponseDto {
@@ -291,4 +295,130 @@ export class CurrentUserDto extends AuthUserDto {
 
   @ApiPropertyOptional({ description: 'The active workspace, if one was supplied.' })
   activeOrganizationId?: string;
+}
+
+// ── Two-step verification (phase 5) ────────────────────────────────────────
+
+export class MfaChallengeDto {
+  @ApiProperty({
+    description:
+      'Signed, single-use and short-lived. Send it back with a code to POST /auth/mfa/verify.',
+  })
+  token: string;
+
+  @ApiProperty({ format: 'date-time' })
+  expiresAt: string;
+
+  @ApiProperty({ type: [String], enum: ['totp', 'recovery_code'] })
+  methods: string[];
+}
+
+/**
+ * Sign-in with two-step verification: the password was right; a code is
+ * needed to finish. Returned by POST /auth/login instead of tokens.
+ */
+export class MfaRequiredResponseDto {
+  @ApiProperty({ enum: [true] })
+  mfaRequired: true;
+
+  @ApiProperty({ type: MfaChallengeDto })
+  challenge: MfaChallengeDto;
+}
+
+/** Exactly one of `code` and `recoveryCode`. */
+export class SecondFactorDto {
+  @ApiPropertyOptional({ description: 'The six-digit code from the authenticator app.', example: '492039' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\s*\d{3}\s?\d{3}\s*$/, { message: 'code must be six digits.' })
+  code?: string;
+
+  @ApiPropertyOptional({ description: 'A single-use recovery code.', example: 'k7m2p-x9qrt' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  recoveryCode?: string;
+}
+
+export class VerifyMfaDto extends SecondFactorDto {
+  @ApiProperty({ description: 'The challenge token from POST /auth/login.' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2048)
+  challengeToken: string;
+}
+
+export class BeginMfaSetupDto {
+  @ApiProperty({ description: 'Your password: a session alone cannot attach an authenticator.' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1024)
+  password: string;
+}
+
+export class MfaSetupResponseDto {
+  @ApiProperty({ description: 'Base32 secret, for manual entry. Shown once.' })
+  secret: string;
+
+  @ApiProperty({ description: 'otpauth:// URI: render it as a QR code.' })
+  otpauthUri: string;
+
+  @ApiProperty() issuer: string;
+  @ApiProperty() account: string;
+}
+
+export class EnableMfaDto {
+  @ApiProperty({ description: 'A current code from the authenticator app.', example: '492039' })
+  @IsString()
+  @Matches(/^\s*\d{3}\s?\d{3}\s*$/, { message: 'code must be six digits.' })
+  code: string;
+}
+
+export class EnableMfaResponseDto {
+  @ApiProperty({
+    type: [String],
+    description: 'Single-use recovery codes. Shown once: store them somewhere safe.',
+  })
+  recoveryCodes: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'A new access token for this session, carrying the second factor it just proved.',
+  })
+  accessToken?: string;
+
+  @ApiPropertyOptional() expiresIn?: number;
+}
+
+export class DisableMfaDto extends SecondFactorDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1024)
+  password: string;
+}
+
+export class RegenerateRecoveryCodesDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1024)
+  password: string;
+
+  @ApiProperty({ example: '492039' })
+  @IsString()
+  @Matches(/^\s*\d{3}\s?\d{3}\s*$/, { message: 'code must be six digits.' })
+  code: string;
+}
+
+export class RecoveryCodesDto {
+  @ApiProperty({ type: [String] }) recoveryCodes: string[];
+}
+
+export class MfaStatusDto {
+  @ApiProperty() enabled: boolean;
+  @ApiProperty({ nullable: true, format: 'date-time' }) enrolledAt: Date | null;
+  @ApiProperty() recoveryCodesRemaining: number;
+  @ApiProperty({ description: 'Whether the current session passed a second factor.' })
+  sessionVerified: boolean;
 }

@@ -1,7 +1,9 @@
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditController } from './audit.controller';
+import { AuditRetentionService } from './audit-retention.service';
 import { AuditService } from './audit.service';
+import { AuditChainAnchor } from './entities/audit-chain-anchor.entity';
 import { AuditLog } from './entities/audit-log.entity';
 
 /**
@@ -15,9 +17,10 @@ import { AuditLog } from './entities/audit-log.entity';
  */
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([AuditLog])],
+  imports: [TypeOrmModule.forFeature([AuditLog, AuditChainAnchor])],
   controllers: [AuditController],
-  providers: [AuditService],
-  exports: [AuditService],
+  // Phase 5: retention through the documented escape hatch, with signed anchors.
+  providers: [AuditService, AuditRetentionService],
+  exports: [AuditService, AuditRetentionService],
 })
 export class AuditModule {}

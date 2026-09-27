@@ -284,6 +284,10 @@ export class UsageTotalsDto {
   refused: number;
   @ApiProperty({ description: 'Stopped by the gateway egress check.' })
   blocked: number;
+  @ApiProperty({
+    description: 'Refused by governance: a token budget, the token rate or an agent circuit (phase 5).',
+  })
+  throttled: number;
   @ApiProperty() promptTokens: number;
   @ApiProperty() completionTokens: number;
   @ApiProperty() entitiesMasked: number;

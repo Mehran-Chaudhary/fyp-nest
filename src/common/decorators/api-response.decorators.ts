@@ -33,6 +33,26 @@ export const ApiEnvelopedResponse = <TModel extends Type<unknown>>(
     }),
   );
 
+/** Documents an array success response inside the standard envelope. */
+export const ApiEnvelopedArrayResponse = <TModel extends Type<unknown>>(
+  model: TModel,
+  description = 'Successful response',
+) =>
+  applyDecorators(
+    ApiExtraModels(model),
+    ApiOkResponse({
+      description,
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          data: { type: 'array', items: { $ref: getSchemaPath(model) } },
+          meta: { $ref: getSchemaPath('ResponseMeta') },
+        },
+      },
+    }),
+  );
+
 /** Documents a paginated list response inside the standard envelope. */
 export const ApiPaginatedResponse = <TModel extends Type<unknown>>(
   model: TModel,

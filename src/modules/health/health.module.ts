@@ -8,6 +8,8 @@ import { InferenceDependenciesHealthIndicator } from './indicators/inference-dep
 import { KnowledgeDependenciesHealthIndicator } from './indicators/knowledge-dependencies.health';
 import { OrchestrationHealthIndicator } from './indicators/orchestration.health';
 import { RedisHealthIndicator } from './indicators/redis.health';
+import { SecurityHealthIndicator } from './indicators/security.health';
+import { MetricsCollectorsService } from './metrics-collectors.service';
 
 /**
  * Liveness, readiness and dependency probes.
@@ -28,6 +30,9 @@ import { RedisHealthIndicator } from './indicators/redis.health';
     KnowledgeDependenciesHealthIndicator,
     InferenceDependenciesHealthIndicator,
     OrchestrationHealthIndicator,
+    // Phase 5: row-level security and mTLS reported; gauges refreshed per scrape.
+    SecurityHealthIndicator,
+    MetricsCollectorsService,
   ],
 })
 export class HealthModule {}

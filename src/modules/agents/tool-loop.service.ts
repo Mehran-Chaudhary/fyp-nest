@@ -79,6 +79,8 @@ export interface ToolLoopRequest {
    */
   executionId: (iteration: number, toolName: string) => string;
   callBudget: ToolCallBudget;
+  /** What the calls are for, for governance and metrics (phase 5). */
+  purpose?: string;
   /** Every model call, as it completes: for the usage ledger and token budgets. May throw to stop. */
   onIteration?: (iteration: LoopIteration) => Promise<void>;
   handlers?: {
@@ -206,6 +208,12 @@ export class ToolLoopService {
           contextWindow: request.model.contextWindow,
           privacy: request.privacy,
           signal: request.signal,
+          attribution: {
+            userId: request.principal.userId ?? null,
+            apiKeyId: request.principal.apiKeyId ?? null,
+            agentId: request.agent.id,
+            purpose: request.purpose,
+          },
         },
         {
           onAdmitted: admitted ? undefined : handlers.onAdmitted,

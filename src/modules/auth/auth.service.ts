@@ -13,6 +13,7 @@ import {
 } from '../../common/exceptions/app.exception';
 import type {
   AccessTokenClaims,
+  AuthenticationMethod,
   TokenPair,
 } from '../../common/interfaces/jwt-payload.interface';
 import { maskEmail } from '../../common/utils/redact.util';
@@ -24,6 +25,8 @@ import { UsersService } from '../users/users.service';
 import { User, UserStatus } from '../users/entities/user.entity';
 import { UserTokenType } from '../users/entities/user-token.entity';
 import { Session, SessionRevocationReason } from './entities/session.entity';
+import { MfaService, type MfaChallenge, type SecondFactor } from './mfa/mfa.service';
+import { BreachedPasswordService } from './services/breached-password.service';
 import { JwtTokenService } from './services/jwt-token.service';
 import { SessionService } from './services/session.service';
 
@@ -55,9 +58,18 @@ export interface AuthResult {
     emailVerified: boolean;
     isPlatformAdmin: boolean;
     status: UserStatus;
+    mfaEnabled: boolean;
   };
   tokens: TokenPair;
 }
+
+/**
+ * What a correct password yields: a session, or — on an account with
+ * two-step verification — a challenge to complete with a code (phase 5).
+ */
+export type LoginOutcome =
+  | { kind: 'session'; result: AuthResult }
+  | { kind: 'mfa'; challenge: MfaChallenge };
 
 /**
  * Authentication flows (proposal module 6.1).
@@ -96,6 +108,8 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
+    private readonly mfa: MfaService,
+    private readonly breachedPasswords: BreachedPasswordService,
   ) {
     this.security = this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY);
   }
@@ -117,6 +131,9 @@ export class AuthService {
     // cannot tell the user why nothing happened. The exposure is limited to the
     // registration endpoint, which is rate limited under the strict `auth`
     // policy for exactly this reason.
+    await this.breachedPasswords.assertAcceptable(input.password, {
+      purpose: 'registration',
+    });
     const user = await this.usersService.create({
       email: input.email,
       password: input.password,
@@ -154,7 +171,7 @@ export class AuthService {
    * milliseconds, and the difference is trivially measurable over a handful of
    * requests.
    */
-  async login(input: LoginInput, context: RequestContextInput): Promise<AuthResult> {
+  async login(input: LoginInput, context: RequestContextInput): Promise<LoginOutcome> {
     const user = await this.usersService.findByEmailWithPassword(input.email);
 
     if (!user) {
@@ -210,6 +227,16 @@ export class AuthService {
       throw new UnauthorizedError(ErrorCode.AUTH_INVALID_CREDENTIALS);
     }
 
+    // Phase 5: the password was right, but it is only the first factor. No
+    // session exists until a code completes the challenge, and the failed-
+    // attempt counter is not reset until then either.
+    if (user.mfaEnabled) {
+      return {
+        kind: 'mfa',
+        challenge: await this.mfa.issueChallenge(user.id, input.organizationId),
+      };
+    }
+
     const tokens = await this.startSession(user, context, input.organizationId);
 
     await this.usersService.recordSuccessfulLogin(user.id, context.ip);
@@ -220,10 +247,129 @@ export class AuthService {
       resourceType: 'user',
       resourceId: user.id,
       actor: { type: ActorType.USER, id: user.id, label: maskEmail(user.emailNormalized) },
-      metadata: { emailVerified: user.isEmailVerified },
+      metadata: { emailVerified: user.isEmailVerified, mfa: false },
     });
 
+    return { kind: 'session', result: { user: this.toProfile(user), tokens } };
+  }
+
+  /**
+   * The second step of signing in to an account with MFA (phase 5): a TOTP
+   * code or a recovery code exchanged, with the challenge, for a session.
+   *
+   * A wrong code counts against the account lockout exactly like a wrong
+   * password, so the six digits cannot be guessed faster than a password can.
+   */
+  async completeMfaLogin(
+    challengeToken: string,
+    factor: SecondFactor,
+    context: RequestContextInput,
+  ): Promise<AuthResult> {
+    const challenge = await this.mfa.redeemChallenge(challengeToken);
+    const user = await this.usersService.findById(challenge.userId);
+    if (!user || !user.mfaEnabled) {
+      throw new UnauthorizedError(ErrorCode.MFA_CHALLENGE_INVALID);
+    }
+    if (user.isLocked) {
+      throw new ForbiddenError(ErrorCode.ACCOUNT_LOCKED, {
+        details: { lockedUntil: user.lockedUntil?.toISOString() },
+      });
+    }
+    if (user.status === UserStatus.SUSPENDED) {
+      throw new ForbiddenError(ErrorCode.ACCOUNT_SUSPENDED);
+    }
+    if (user.status === UserStatus.DEACTIVATED) {
+      throw new ForbiddenError(ErrorCode.ACCOUNT_DEACTIVATED);
+    }
+
+    let method: 'otp' | 'rec';
+    try {
+      method = await this.mfa.verifySecondFactor(user.id, factor);
+    } catch (error) {
+      const lockResult = await this.usersService.recordFailedLogin(user.id);
+      await this.mfa.recordChallengeFailure(
+        user.id,
+        user.emailNormalized,
+        factor.recoveryCode ? 'invalid_recovery_code' : 'invalid_code',
+        context,
+      );
+      if (lockResult.locked) {
+        await this.mfa.completeChallenge(challenge.challengeId);
+        throw new ForbiddenError(ErrorCode.ACCOUNT_LOCKED, {
+          details: { lockedUntil: lockResult.lockedUntil?.toISOString() },
+        });
+      }
+      throw error;
+    }
+
+    await this.mfa.completeChallenge(challenge.challengeId);
+    const amr: AuthenticationMethod[] = ['pwd', method, 'mfa'];
+    const tokens = await this.startSession(user, context, challenge.organizationId, {
+      amr,
+      mfaVerifiedAt: new Date(),
+    });
+    await this.usersService.recordSuccessfulLogin(user.id, context.ip);
+
+    await this.auditService.recordSafe({
+      action: AuditAction.USER_LOGIN_SUCCEEDED,
+      organizationId: challenge.organizationId,
+      resourceType: 'user',
+      resourceId: user.id,
+      actor: { type: ActorType.USER, id: user.id, label: maskEmail(user.emailNormalized) },
+      metadata: { emailVerified: user.isEmailVerified, mfa: true, method },
+    });
+
+    if (method === 'rec') {
+      const remaining = await this.mfa.recoveryCodesRemaining(user.id);
+      await this.auditService.recordSafe({
+        action: AuditAction.USER_MFA_RECOVERY_CODE_USED,
+        resourceType: 'user',
+        resourceId: user.id,
+        actor: { type: ActorType.USER, id: user.id, label: maskEmail(user.emailNormalized) },
+        metadata: { remaining },
+      });
+      await this.mailService.sendSecurityAlert(
+        user.email,
+        user.preferredName,
+        'A recovery code was used',
+        `You signed in with a recovery code; ${remaining} remain. If this was not you, ` +
+          'reset your password and your two-step verification now.',
+      );
+    }
+
     return { user: this.toProfile(user), tokens };
+  }
+
+  /**
+   * Confirms MFA enrolment, and hands back an access token for the calling
+   * session that carries the second factor it just proved — so a workspace
+   * that requires MFA opens without signing in again.
+   */
+  async enableMfa(
+    userId: string,
+    code: string,
+    sessionId: string | undefined,
+    organizationId?: string,
+  ): Promise<{ recoveryCodes: string[]; accessToken?: string; expiresIn?: number }> {
+    const outcome = await this.mfa.confirmEnrollment(userId, code, sessionId);
+    if (!outcome.sessionId) return { recoveryCodes: outcome.recoveryCodes };
+
+    const user = await this.usersService.findByIdOrFail(userId);
+    const accessToken = await this.jwtTokenService.signAccessToken(
+      {
+        id: user.id,
+        emailNormalized: user.emailNormalized,
+        isPlatformAdmin: user.isPlatformAdmin,
+      },
+      outcome.sessionId,
+      organizationId,
+      ['pwd', 'otp', 'mfa'],
+    );
+    return {
+      recoveryCodes: outcome.recoveryCodes,
+      accessToken,
+      expiresIn: this.jwtTokenService.accessTokenTtlSeconds,
+    };
   }
 
   /**
@@ -237,6 +383,10 @@ export class AuthService {
     user: User,
     context: RequestContextInput,
     organizationId?: string,
+    assurance: { amr: AuthenticationMethod[]; mfaVerifiedAt: Date | null } = {
+      amr: ['pwd'],
+      mfaVerifiedAt: null,
+    },
   ): Promise<TokenPair> {
     const sessionId = randomUUID();
     const familyId = randomUUID();
@@ -250,9 +400,11 @@ export class AuthService {
       sessionId,
       familyId,
       organizationId,
+      assurance.amr,
     );
 
     await this.sessionService.create({
+      id: sessionId,
       userId: user.id,
       refreshToken: tokens.refreshToken,
       expiresAt: new Date(Date.now() + this.jwtTokenService.refreshTokenTtlMs),
@@ -260,6 +412,7 @@ export class AuthService {
       ipAddress: context.ip,
       userAgent: context.userAgent,
       organizationId: organizationId ?? null,
+      mfaVerifiedAt: assurance.mfaVerifiedAt,
     });
 
     return tokens;
@@ -302,6 +455,7 @@ export class AuthService {
           newRefreshToken,
           new Date(Date.now() + this.jwtTokenService.refreshTokenTtlMs),
           { ipAddress: context.ip, userAgent: context.userAgent },
+          newSessionId,
         ),
       );
 
@@ -313,6 +467,8 @@ export class AuthService {
         },
         rotated.session.id,
         rotated.session.organizationId ?? undefined,
+        // The refreshed token has the assurance of the sign-in it descends from.
+        rotated.session.mfaVerifiedAt ? ['pwd', 'mfa'] : ['pwd'],
       );
 
       await this.auditService.recordSafe({
@@ -582,6 +738,10 @@ export class AuthService {
     newPassword: string,
     context: RequestContextInput,
   ): Promise<{ reset: true }> {
+    // Screened before the token is consumed, so a refused password leaves the
+    // reset link usable for a second attempt.
+    await this.breachedPasswords.assertAcceptable(newPassword, { purpose: 'reset' });
+
     const userId = await this.dataSource.transaction(async (manager) => {
       const record = await this.usersService.consumeToken(
         token,
@@ -659,6 +819,7 @@ export class AuthService {
     if (currentPassword === newPassword) {
       throw new BadRequestError(ErrorCode.AUTH_PASSWORD_REUSED);
     }
+    await this.breachedPasswords.assertAcceptable(newPassword, { userId, purpose: 'change' });
 
     const revoked = await this.dataSource.transaction(async (manager) => {
       await this.usersService.setPassword(userId, newPassword, manager);
@@ -777,6 +938,7 @@ export class AuthService {
       emailVerified: user.isEmailVerified,
       isPlatformAdmin: user.isPlatformAdmin,
       status: user.status,
+      mfaEnabled: user.mfaEnabled,
     };
   }
 }

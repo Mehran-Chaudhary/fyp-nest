@@ -32,10 +32,18 @@ export interface OrganizationSettings {
   /** Default chunk size, in tokens, for document ingestion. Phase 2. */
   defaultChunkSize?: number;
   defaultChunkOverlap?: number;
-  /** Monthly token allowance across the workspace. Phase 5. */
-  monthlyTokenQuota?: number;
-  /** Days to retain audit records before archival. */
+  /**
+   * Days to retain audit records before they are archived and pruned (phase
+   * 5). Never below the platform's AUDIT_RETENTION_MIN.
+   */
   auditRetentionDays?: number;
+  /**
+   * Members must hold a session verified with a second factor to act in this
+   * workspace (phase 5). Changing it requires `security:update`, and turning
+   * it on requires the caller's own session to be MFA-verified — so a
+   * workspace cannot be locked by someone who could not pass the check.
+   */
+  requireMfa?: boolean;
   /** Require every member to have a verified email address. */
   requireVerifiedEmail?: boolean;
   /** Restrict invitations to these email domains. */

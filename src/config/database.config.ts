@@ -22,6 +22,13 @@ export interface DatabaseConfig {
   idleTimeoutMs: number;
   connectionTimeoutMs: number;
   statementTimeoutMs: number;
+  /** Phase 5: PostgreSQL row-level security as a third tenancy layer. */
+  rowLevelSecurity: {
+    /** Bind each connection to the workspace of the request or job using it. */
+    enabled: boolean;
+    /** Role assumed on connect, for login roles that bypass RLS. */
+    role?: string;
+  };
 }
 
 export const DATABASE_CONFIG_KEY = 'database';
@@ -51,5 +58,9 @@ export default registerAs(DATABASE_CONFIG_KEY, (): DatabaseConfig => {
     idleTimeoutMs: parseDuration(process.env.DB_POOL_IDLE_TIMEOUT as string),
     connectionTimeoutMs: parseDuration(process.env.DB_CONNECTION_TIMEOUT as string),
     statementTimeoutMs: parseDuration(process.env.DB_STATEMENT_TIMEOUT as string),
+    rowLevelSecurity: {
+      enabled: process.env.DB_ROW_LEVEL_SECURITY !== 'false',
+      role: process.env.DB_RLS_ROLE || undefined,
+    },
   };
 });

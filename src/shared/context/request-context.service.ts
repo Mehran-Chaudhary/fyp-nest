@@ -26,6 +26,19 @@ export interface RequestContext {
   organization?: RequestOrganization;
   membership?: RequestMembership;
   permissions?: string[];
+  /**
+   * The workspace this unit of work is bound to in PostgreSQL (phase 5):
+   * every connection it checks out is scoped to this tenant by row-level
+   * security. Set by the organization guard for a request, and by a job once
+   * it has verified which workspace it works for. Unset means a trusted system
+   * context — sign-in, cross-tenant sweeps — which RLS lets see everything.
+   */
+  tenantId?: string;
+  /**
+   * Whether the principal's session passed a second factor (phase 5). Taken
+   * from the verified access token; false for API keys and older tokens.
+   */
+  mfaVerified?: boolean;
 }
 
 /**
@@ -82,6 +95,31 @@ export class RequestContextService {
 
   get organizationId(): string | undefined {
     return this.storage.getStore()?.organization?.id;
+  }
+
+  /** The workspace database connections are bound to, if any. */
+  get tenantId(): string | undefined {
+    return this.storage.getStore()?.tenantId;
+  }
+
+  /**
+   * Binds the rest of this unit of work to a workspace at the database. A
+   * no-op outside a context. Connections already checked out keep the binding
+   * they were given; everything checked out afterwards is scoped.
+   */
+  bindTenant(organizationId: string): void {
+    this.patch({ tenantId: organizationId });
+  }
+
+  /**
+   * Runs `callback` with no tenant bound: for the few steps of a tenant-bound
+   * unit of work that must address another chain or the platform (see
+   * `AuditService.append`). The binding of the surrounding work is untouched.
+   */
+  runUnbound<T>(callback: () => T): T {
+    const current = this.storage.getStore();
+    if (!current?.tenantId) return callback();
+    return this.storage.run({ ...current, tenantId: undefined }, callback);
   }
 
   get ip(): string | undefined {

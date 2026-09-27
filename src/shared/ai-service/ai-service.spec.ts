@@ -295,6 +295,7 @@ describe('AiServiceClient transport', () => {
     maxRetries: 2,
     maxResponseBytes: 1024,
     circuitBreaker: { failureThreshold: 3, cooldownMs: 60_000 },
+    tls: { enabled: false },
   };
   const vector = {
     embedding: { model: 'm', dimensions: 2, batchSize: 8 },

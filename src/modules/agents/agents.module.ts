@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { LlmModule } from '../llm/llm.module';
 import { PrivacyModule } from '../privacy/privacy.module';
+import { QuotasModule } from '../quotas/quotas.module';
 import { Role } from '../rbac/entities/role.entity';
 import { ToolsModule } from '../tools/tools.module';
 import { AgentRuntimeService } from './agent-runtime.service';
@@ -38,6 +39,8 @@ import { ToolLoopService } from './tool-loop.service';
     PrivacyModule,
     LlmModule,
     ToolsModule,
+    // Phase 5: conversation and turn budgets report to the agent circuit breaker.
+    QuotasModule,
   ],
   controllers: [AgentsController, ConversationsController],
   providers: [

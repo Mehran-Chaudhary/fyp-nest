@@ -12,6 +12,7 @@ import { ActorType, AuthType } from '../enums/auth-type.enum';
 import { ErrorCode } from '../enums/error-code.enum';
 import { ForbiddenError, UnauthorizedError } from '../exceptions/app.exception';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
+import { hasSecondFactor } from '../interfaces/jwt-payload.interface';
 import { normaliseIp } from '../utils/ip.util';
 import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
 import { RequestContextService } from '../../shared/context/request-context.service';
@@ -138,21 +139,26 @@ export class AuthenticationGuard implements CanActivate, OnModuleInit {
       });
     }
 
-    request.user = user;
+    // The assurance of this session: whether its sign-in passed a second
+    // factor. From the verified token, so it cannot be claimed by a client.
+    const authenticated = { ...user, mfaVerified: hasSecondFactor(claims.amr) };
+
+    request.user = authenticated;
     request.authType = AuthType.Bearer;
     request.principal = {
       actorType: ActorType.USER,
-      actorId: user.id,
-      actorLabel: user.displayName || user.email,
+      actorId: authenticated.id,
+      actorLabel: authenticated.displayName || authenticated.email,
       authType: AuthType.Bearer,
-      user,
+      user: authenticated,
     };
 
     this.requestContext.patch({
-      user,
+      user: authenticated,
       actorType: ActorType.USER,
-      actorId: user.id,
-      actorLabel: user.displayName || user.email,
+      actorId: authenticated.id,
+      actorLabel: authenticated.displayName || authenticated.email,
+      mfaVerified: authenticated.mfaVerified,
     });
   }
 

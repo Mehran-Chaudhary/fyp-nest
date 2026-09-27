@@ -119,6 +119,7 @@ const BASE_CONFIG: LlmConfig = {
   keepAlive: '5m',
   maxClassification: Classification.RESTRICTED,
   modelCacheTtlMs: 60_000,
+  tls: { enabled: false },
 };
 
 function setup(overrides: Partial<LlmConfig> = {}) {

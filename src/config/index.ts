@@ -2,10 +2,13 @@ import agentsConfig, { AGENTS_CONFIG_KEY } from './agents.config';
 import aiServiceConfig, { AI_SERVICE_CONFIG_KEY } from './ai-service.config';
 import appConfig, { APP_CONFIG_KEY } from './app.config';
 import databaseConfig, { DATABASE_CONFIG_KEY } from './database.config';
+import governanceConfig, { GOVERNANCE_CONFIG_KEY } from './governance.config';
 import ingestionConfig, { INGESTION_CONFIG_KEY } from './ingestion.config';
 import jwtConfig, { JWT_CONFIG_KEY } from './jwt.config';
+import lifecycleConfig, { LIFECYCLE_CONFIG_KEY } from './lifecycle.config';
 import llmConfig, { LLM_CONFIG_KEY } from './llm.config';
 import mailConfig, { MAIL_CONFIG_KEY } from './mail.config';
+import observabilityConfig, { OBSERVABILITY_CONFIG_KEY } from './observability.config';
 import piiConfig, { PII_CONFIG_KEY } from './pii.config';
 import ragConfig, { RAG_CONFIG_KEY } from './rag.config';
 import realtimeConfig, { REALTIME_CONFIG_KEY } from './realtime.config';
@@ -20,11 +23,15 @@ import workflowsConfig, { WORKFLOWS_CONFIG_KEY } from './workflows.config';
 export * from './agents.config';
 export * from './ai-service.config';
 export * from './app.config';
+export * from './client-tls';
 export * from './database.config';
+export * from './governance.config';
 export * from './ingestion.config';
 export * from './jwt.config';
+export * from './lifecycle.config';
 export * from './llm.config';
 export * from './mail.config';
+export * from './observability.config';
 export * from './pii.config';
 export * from './rag.config';
 export * from './realtime.config';
@@ -57,6 +64,9 @@ export const configurations = [
   toolsConfig,
   workflowsConfig,
   realtimeConfig,
+  governanceConfig,
+  observabilityConfig,
+  lifecycleConfig,
 ];
 
 export const CONFIG_KEYS = {
@@ -78,4 +88,7 @@ export const CONFIG_KEYS = {
   TOOLS: TOOLS_CONFIG_KEY,
   WORKFLOWS: WORKFLOWS_CONFIG_KEY,
   REALTIME: REALTIME_CONFIG_KEY,
+  GOVERNANCE: GOVERNANCE_CONFIG_KEY,
+  OBSERVABILITY: OBSERVABILITY_CONFIG_KEY,
+  LIFECYCLE: LIFECYCLE_CONFIG_KEY,
 } as const;

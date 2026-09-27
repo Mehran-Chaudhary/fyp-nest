@@ -25,6 +25,8 @@ export const CACHE_NAMESPACE = {
   EVENTS: 'events',
   REALTIME: 'rt',
   WORKFLOW: 'wf',
+  QUOTA: 'quota',
+  CIRCUIT: 'circuit',
 } as const;
 
 export const CacheKeys = {
@@ -110,6 +112,33 @@ export const CacheKeys = {
   /** Tool calls made so far in one workflow run, for the per-run ceiling. */
   workflowToolCalls: (runId: string): string =>
     `${CACHE_NAMESPACE.WORKFLOW}:tool-calls:${runId}`,
+
+  /**
+   * A workspace's per-minute token bucket (phase 5). Hash-tagged by workspace,
+   * so every key a single admission script touches hashes to one cluster slot.
+   */
+  tokenBucket: (organizationId: string, quotaId: string): string =>
+    `${CACHE_NAMESPACE.QUOTA}:{${organizationId}}:bucket:${quotaId}`,
+
+  /** An agent's circuit-breaker state and its rolling spend (phase 5). */
+  agentCircuit: (agentId: string): string => `${CACHE_NAMESPACE.CIRCUIT}:agent:${agentId}`,
+  agentSpend: (agentId: string, window: number): string =>
+    `${CACHE_NAMESPACE.CIRCUIT}:agent-spend:${agentId}:${window}`,
+  agentFailures: (agentId: string): string =>
+    `${CACHE_NAMESPACE.CIRCUIT}:agent-failures:${agentId}`,
+  /** The agents of a workspace whose circuit is open, for the Command Centre. */
+  openCircuits: (organizationId: string): string =>
+    `${CACHE_NAMESPACE.CIRCUIT}:open:${organizationId}`,
+  /** Throttles the audit record of rate refusals to one per scope per minute. */
+  rateLimitAudit: (organizationId: string, scope: string, subjectId: string): string =>
+    `${CACHE_NAMESPACE.QUOTA}:rate-audit:${organizationId}:${scope}:${subjectId}`,
+
+  /** A pending second-factor sign-in challenge: attempts so far (phase 5). */
+  mfaChallengeAttempts: (challengeId: string): string =>
+    `${CACHE_NAMESPACE.AUTH}:mfa-attempts:${challengeId}`,
+  /** A completed challenge, so the same challenge cannot be redeemed twice. */
+  mfaChallengeUsed: (challengeId: string): string =>
+    `${CACHE_NAMESPACE.AUTH}:mfa-used:${challengeId}`,
 } as const;
 
 /**

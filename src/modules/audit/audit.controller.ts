@@ -18,7 +18,10 @@ import {
 } from '../../common/decorators/auth.decorators';
 import { CurrentOrganizationId } from '../../common/decorators/param.decorators';
 import { AuditAction } from '../../common/enums/audit-action.enum';
+import { ErrorCode } from '../../common/enums/error-code.enum';
+import { NotFoundError } from '../../common/exceptions/app.exception';
 import type { PaginatedResult } from '../../common/utils/pagination.util';
+import { AuditRetentionService } from './audit-retention.service';
 import { AuditService } from './audit.service';
 import {
   AuditLogDto,
@@ -42,7 +45,10 @@ import type { AuditLog } from './entities/audit-log.entity';
 @Controller({ path: 'organizations/:organizationId/audit-logs', version: '1' })
 @ApiParam({ name: 'organizationId', description: 'Workspace UUID or slug.' })
 export class AuditController {
-  constructor(private readonly auditService: AuditService) {}
+  constructor(
+    private readonly auditService: AuditService,
+    private readonly retention: AuditRetentionService,
+  ) {}
 
   @Get()
   @RequirePermissions('audit:read')
@@ -172,6 +178,76 @@ export class AuditController {
     });
 
     return new StreamableFile(Readable.from(generator));
+  }
+
+  // ── Retention archives (phase 5) ─────────────────────────────────────────
+
+  @Get('archives')
+  @RequirePermissions('audit:read')
+  @ApiOperation({
+    summary: 'Where retention pruned this chain',
+    description:
+      'One entry per pruning: the records it removed, the cutoff, the signed anchor the ' +
+      'chain now verifies from, and whether an encrypted archive of the records exists.',
+  })
+  @ApiStandardErrors()
+  async archives(
+    @Param('organizationId') _identifier: string,
+    @CurrentOrganizationId() organizationId: string,
+  ): Promise<
+    Array<{
+      sequence: string;
+      firstSequence: string;
+      recordsPruned: number;
+      cutoff: Date;
+      archived: boolean;
+      archiveSha256: string | null;
+      createdAt: Date;
+    }>
+  > {
+    const anchors = await this.retention.anchors(organizationId);
+    return anchors.map((anchor) => ({
+      sequence: anchor.sequence,
+      firstSequence: anchor.firstSequence,
+      recordsPruned: Number(anchor.recordsPruned),
+      cutoff: anchor.cutoff,
+      archived: anchor.archiveKey !== null,
+      archiveSha256: anchor.archiveSha256,
+      createdAt: anchor.createdAt,
+    }));
+  }
+
+  @Get('archives/:sequence')
+  @RequirePermissions('audit:export')
+  @SkipResponseEnvelope()
+  @Header('Content-Type', 'application/x-ndjson')
+  @ApiProduces('application/x-ndjson')
+  @ApiOperation({
+    summary: 'Download the archive of pruned records',
+    description:
+      'The records one pruning removed, decrypted, as NDJSON — the same format as the ' +
+      'export, verifiable offline: its last `hash` equals the anchor’s. The stored ' +
+      'object’s digest is checked against the anchor before anything is served.',
+  })
+  @ApiStandardErrors()
+  async archive(
+    @Param('organizationId') _identifier: string,
+    @CurrentOrganizationId() organizationId: string,
+    @Param('sequence') sequence: string,
+  ): Promise<StreamableFile> {
+    if (!/^\d{1,19}$/.test(sequence)) {
+      throw new NotFoundError(ErrorCode.RESOURCE_NOT_FOUND);
+    }
+    const body = await this.retention.readArchive(organizationId, sequence);
+    await this.auditService.recordSafe({
+      action: AuditAction.AUDIT_LOG_EXPORTED,
+      organizationId,
+      resourceType: 'audit_chain',
+      metadata: { archive: true, anchorSequence: sequence },
+    });
+    return new StreamableFile(body, {
+      disposition: `attachment; filename="audit-archive-${sequence}.ndjson"`,
+    });
   }
 
   private toDto(log: AuditLog): AuditLogDto {

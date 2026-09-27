@@ -25,21 +25,26 @@ import { RedisModule } from './shared/redis/redis.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { VectorStoreModule } from './shared/vector-store/vector-store.module';
 import { AgentsModule } from './modules/agents/agents.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
+import { LifecycleModule } from './modules/lifecycle/lifecycle.module';
 import { LlmModule } from './modules/llm/llm.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
+import { QuotasModule } from './modules/quotas/quotas.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { ToolsModule } from './modules/tools/tools.module';
 import { UsersModule } from './modules/users/users.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
+import { HttpMetricsMiddleware } from './observability/http-metrics.middleware';
+import { ObservabilityModule } from './observability/observability.module';
 
 /**
  * Application root.
@@ -81,6 +86,8 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
 
     // ── Cross-cutting infrastructure ──────────────────────────────────────
     LoggerModule,
+    // Phase 5: Prometheus metrics (tracing starts before Nest; see main.ts).
+    ObservabilityModule,
     RequestContextModule,
     CryptoModule,
     RedisModule,
@@ -126,6 +133,14 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
     ToolsModule,
     WorkflowsModule,
     RealtimeModule,
+    // Phase 5: governance and operations — token quotas, throttling and agent
+    // circuit breakers. Nothing new to provision: budgets live in PostgreSQL,
+    // rates and breakers in Redis.
+    QuotasModule,
+    // The Command Centre: analytics over the ledgers and the audit log.
+    AnalyticsModule,
+    // Retention, audit archival and the data-subject rights (export, erasure).
+    LifecycleModule,
   ],
   providers: [
     // ── Global guards, in execution order ─────────────────────────────────
@@ -153,6 +168,6 @@ export class AppModule implements NestModule {
     // Applied to every route, including health probes, so that a correlation id
     // and a source IP exist before any guard runs — which is what makes a
     // rejected sign-in traceable.
-    consumer.apply(RequestContextMiddleware).forRoutes('*path');
+    consumer.apply(RequestContextMiddleware, HttpMetricsMiddleware).forRoutes('*path');
   }
 }

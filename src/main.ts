@@ -1,3 +1,5 @@
+// Must stay first: OpenTelemetry instruments modules as they load (phase 5).
+import './observability/tracing';
 import {
   ClassSerializerInterceptor,
   Logger,
@@ -13,13 +15,20 @@ import { useContainer } from 'class-validator';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import type { Express } from 'express';
 import { AppModule } from './app.module';
 import { RealtimeIoAdapter } from './modules/realtime/realtime-io.adapter';
 import { REALTIME_CONFIG_KEY, type RealtimeConfig } from './config/realtime.config';
 import { HEADER, SECURITY_SCHEME } from './common/constants/app.constants';
 import { APP_CONFIG_KEY, type AppConfig } from './config/app.config';
 import { SECURITY_CONFIG_KEY, type SecurityConfig } from './config/security.config';
+import {
+  OBSERVABILITY_CONFIG_KEY,
+  type ObservabilityConfig,
+} from './config/observability.config';
 import { findInsecureDefaults } from './config/env.validation';
+import { createMetricsHandler } from './observability/metrics-endpoint';
+import { MetricsService } from './observability/metrics.service';
 import {
   ApiErrorBody,
   ApiErrorResponseDto,
@@ -73,6 +82,29 @@ async function bootstrap(): Promise<void> {
     ),
   );
 
+  // ── Metrics (phase 5) ─────────────────────────────────────────────────────
+  // Mounted on the raw HTTP adapter, ahead of the Nest router and outside the
+  // API prefix and versioning: `/metrics`, like the health probes, is for
+  // infrastructure. It authenticates with its own bearer token (METRICS_TOKEN),
+  // not with user credentials, so the global guards do not apply to it.
+  const observability = configService.getOrThrow<ObservabilityConfig>(OBSERVABILITY_CONFIG_KEY);
+  if (observability.metrics.enabled) {
+    const serveMetrics = createMetricsHandler(app.get(MetricsService), {
+      token: observability.metrics.token,
+      isProduction: appConfig.isProduction,
+    });
+    const express = app.getHttpAdapter().getInstance() as Express;
+    express.get(observability.metrics.path, (request, response) =>
+      serveMetrics(request, response),
+    );
+    if (appConfig.isProduction && !observability.metrics.token) {
+      bootLogger.warn(
+        `Metrics are enabled but METRICS_TOKEN is not set: ${observability.metrics.path} ` +
+          'answers 401 until it is.',
+      );
+    }
+  }
+
   // ── Proxy awareness ───────────────────────────────────────────────────────
   // Must be set before anything reads `req.ip`. The IP allowlist and the rate
   // limiter both depend on it; getting it wrong means either every client
@@ -118,6 +150,9 @@ async function bootstrap(): Promise<void> {
       HEADER.ORGANIZATION_SLUG,
       HEADER.REQUEST_ID,
       HEADER.API_KEY,
+      // W3C trace context (phase 5): lets the frontend's trace continue here.
+      'traceparent',
+      'tracestate',
     ],
     // Without this the browser hides these from `fetch`, and the frontend cannot
     // read its own correlation id or the rate-limit budget.
@@ -269,6 +304,9 @@ async function bootstrap(): Promise<void> {
         'Workflow runs',
         'Runs, their steps, approvals, the audit trace and dead letters',
       )
+      .addTag('Governance', 'Token quotas, the token rate and agent circuit breakers')
+      .addTag('Command Centre', 'Analytics: throughput, latency, spend, privacy and security')
+      .addTag('Personal data', 'Your data: a copy of it, and the erasure of your account')
       .addTag('Health', 'Liveness and readiness probes')
       .build();
 
@@ -308,6 +346,9 @@ async function bootstrap(): Promise<void> {
   bootLogger.log(`${appConfig.name} is running in ${appConfig.env} mode.`);
   bootLogger.log(`API      ${baseUrl}${apiPath}`);
   bootLogger.log(`Health   ${baseUrl}/health`);
+  if (observability.metrics.enabled) {
+    bootLogger.log(`Metrics  ${baseUrl}${observability.metrics.path}`);
+  }
   const realtime = configService.getOrThrow<RealtimeConfig>(REALTIME_CONFIG_KEY);
   if (realtime.enabled) {
     bootLogger.log(

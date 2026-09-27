@@ -116,13 +116,32 @@ export class User extends SoftDeletableEntity {
   @Column({ type: 'boolean', name: 'is_platform_admin', default: false })
   isPlatformAdmin: boolean;
 
-  /** Reserved for the MFA work scheduled in phase 5. */
+  /** A second factor (TOTP) is required at sign-in. Phase 5. */
   @Column({ type: 'boolean', name: 'mfa_enabled', default: false })
   mfaEnabled: boolean;
 
-  /** AES-256-GCM encrypted TOTP seed. Null until MFA is enrolled. */
+  /**
+   * AES-256-GCM encrypted TOTP seed, bound to the user id by associated data.
+   * Holds the *pending* seed during enrolment (with `mfaEnabled` false) and
+   * the active one afterwards.
+   */
   @Column({ type: 'text', name: 'mfa_secret', nullable: true, select: false })
   mfaSecret: string | null;
+
+  @Column({ type: 'timestamptz', name: 'mfa_enrolled_at', nullable: true })
+  mfaEnrolledAt: Date | null;
+
+  /**
+   * The last TOTP time step accepted. A code is valid for its 30-second step
+   * (and one step either side for clock drift), so without this a code seen
+   * over someone's shoulder could be replayed within the same minute.
+   */
+  @Column({ type: 'bigint', name: 'mfa_last_used_step', nullable: true, select: false })
+  mfaLastUsedStep: string | null;
+
+  /** Set when the account was erased at its owner's request (phase 5). */
+  @Column({ type: 'timestamptz', name: 'erased_at', nullable: true })
+  erasedAt: Date | null;
 
   /** Free-form user preferences (locale, theme, notification settings). */
   @Column({ type: 'jsonb', name: 'preferences', default: () => "'{}'::jsonb" })

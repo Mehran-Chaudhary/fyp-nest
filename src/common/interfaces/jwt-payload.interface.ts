@@ -51,6 +51,25 @@ export interface AccessTokenClaims extends BaseJwtClaims {
   org?: string;
   /** Session (refresh token family) this access token belongs to. */
   sid: string;
+  /**
+   * Authentication methods the session was established with (RFC 8176):
+   * `pwd` always, `otp` when a TOTP code was verified, `rec` when a recovery
+   * code was. Phase 5 policies that require a second factor read this.
+   */
+  amr?: AuthenticationMethod[];
+}
+
+/**
+ * RFC 8176 authentication method references this platform issues: `pwd` for
+ * the password, `otp` for a TOTP code, `rec` for a recovery code, and `mfa`
+ * whenever more than one factor was used — which is all a refreshed token can
+ * say, since rotation carries the assurance but not the method.
+ */
+export type AuthenticationMethod = 'pwd' | 'otp' | 'rec' | 'mfa';
+
+/** Whether a token's methods include a second factor. */
+export function hasSecondFactor(amr: readonly string[] | undefined): boolean {
+  return !!amr && (amr.includes('mfa') || amr.includes('otp') || amr.includes('rec'));
 }
 
 export interface RefreshTokenClaims extends BaseJwtClaims {

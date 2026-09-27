@@ -52,18 +52,30 @@ export class OrganizationSettingsDto {
   @Max(1024)
   defaultChunkOverlap?: number;
 
-  @ApiPropertyOptional({ description: 'Monthly token allowance across the workspace.' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  monthlyTokenQuota?: number;
+  // Token budgets are not settings: they have their own endpoints behind
+  // `quota:manage` (GET/POST …/quotas), because this object is writable with
+  // `workspace:update` and a budget is a governance control.
 
-  @ApiPropertyOptional({ description: 'Days to retain audit records.', example: 365 })
+  @ApiPropertyOptional({
+    description:
+      'Days to retain audit records before they are archived and pruned. Never below the ' +
+      'platform minimum (AUDIT_RETENTION_MIN).',
+    example: 365,
+  })
   @IsOptional()
   @IsInt()
   @Min(30)
   @Max(3650)
   auditRetentionDays?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Require every member to use two-step verification in this workspace. Changing it needs ' +
+      'security:update; enabling it needs your own session to be MFA-verified.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  requireMfa?: boolean;
 
   @ApiPropertyOptional({ description: 'Require every member to verify their email.' })
   @IsOptional()

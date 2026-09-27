@@ -14,6 +14,7 @@ import { InferenceDependenciesHealthIndicator } from './indicators/inference-dep
 import { KnowledgeDependenciesHealthIndicator } from './indicators/knowledge-dependencies.health';
 import { OrchestrationHealthIndicator } from './indicators/orchestration.health';
 import { RedisHealthIndicator } from './indicators/redis.health';
+import { SecurityHealthIndicator } from './indicators/security.health';
 
 /**
  * Health and readiness probes.
@@ -48,6 +49,7 @@ export class HealthController {
     private readonly knowledge: KnowledgeDependenciesHealthIndicator,
     private readonly inference: InferenceDependenciesHealthIndicator,
     private readonly orchestration: OrchestrationHealthIndicator,
+    private readonly security: SecurityHealthIndicator,
     private readonly configService: ConfigService,
   ) {
     this.appConfig = this.configService.getOrThrow<AppConfig>(APP_CONFIG_KEY);
@@ -74,6 +76,9 @@ export class HealthController {
       // Phase 4: likewise reported, never fatal.
       () => this.orchestration.workflowEngine('workflow_engine'),
       () => this.orchestration.realtime('realtime'),
+      // Phase 5: controls whose absence would otherwise be silent.
+      () => this.security.rowLevelSecurityStatus('row_level_security'),
+      () => this.security.mutualTls('mutual_tls'),
     ]);
   }
 

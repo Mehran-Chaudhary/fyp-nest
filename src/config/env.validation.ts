@@ -1,5 +1,6 @@
 import * as Joi from 'joi';
 import { parseDuration } from '../common/utils/duration.util';
+import { describeClientTlsProblems } from '../common/utils/pem.util';
 
 /**
  * Authoritative environment variable contract.
@@ -79,6 +80,14 @@ const secret = (devDefault: string) =>
       'string.min': `{{#label}} must be at least ${MIN_SECRET_LENGTH} characters of high-entropy randomness.`,
     });
 
+/**
+ * PEM material supplied through the environment: the contents, never a path,
+ * because a cloud service has no file system to put a key file on. Raw PEM
+ * (real newlines or `\n` escapes) or the whole PEM base64-encoded — whichever
+ * the hosting platform's variable editor handles — is accepted.
+ */
+const pem = () => Joi.string().allow('').default('');
+
 export const envValidationSchema = Joi.object({
   // ───────────────────────────────────────────────────────────────────────────
   // Application
@@ -87,7 +96,17 @@ export const envValidationSchema = Joi.object({
     .valid(...NODE_ENVIRONMENTS)
     .default('development'),
   APP_NAME: Joi.string().default('Distributed AI Agent Management Platform'),
-  APP_PORT: Joi.number().port().default(3000),
+  /**
+   * The port injected by the hosting platform (Render, Railway, Heroku, Cloud
+   * Run). `APP_PORT` falls back to it, so the API listens where the platform's
+   * router expects without anyone having to copy the value across.
+   */
+  PORT: Joi.number().port().optional(),
+  APP_PORT: Joi.number()
+    .port()
+    .default((parent: Record<string, unknown>) =>
+      parent.PORT !== undefined && parent.PORT !== '' ? Number(parent.PORT) : 3000,
+    ),
   APP_HOST: Joi.string().default('0.0.0.0'),
   /** Mounted in front of every route, e.g. `/api/v1/auth/login`. */
   APP_GLOBAL_PREFIX: Joi.string().allow('').default('api'),
@@ -142,6 +161,23 @@ export const envValidationSchema = Joi.object({
   DB_POOL_IDLE_TIMEOUT: duration('30s'),
   DB_CONNECTION_TIMEOUT: duration('10s'),
   DB_STATEMENT_TIMEOUT: duration('30s'),
+  /**
+   * Phase 5: bind every pooled connection to the workspace of the request (or
+   * job) using it, so PostgreSQL row-level security is a third, independent
+   * tenancy layer beneath the guards and the repository filters. Needs a
+   * session-mode connection (a direct connection, not a transaction pooler).
+   */
+  DB_ROW_LEVEL_SECURITY: Joi.boolean().default(true),
+  /**
+   * Optional role assumed with `SET ROLE` on every new connection. Only for
+   * providers whose login role bypasses RLS (a superuser, or a role with
+   * BYPASSRLS such as Supabase's `postgres`): the migration creates
+   * `daiap_rls`, a role that cannot.
+   */
+  DB_RLS_ROLE: Joi.string()
+    .pattern(/^[a-z_][a-z0-9_]{0,62}$/)
+    .allow('')
+    .default(''),
 
   // ───────────────────────────────────────────────────────────────────────────
   // Redis
@@ -245,6 +281,36 @@ export const envValidationSchema = Joi.object({
   /** Strict-Transport-Security max-age. Only meaningful behind HTTPS. */
   HSTS_MAX_AGE: Joi.number().integer().min(0).default(15552000),
 
+  // ── Phase 5: multi-factor authentication (TOTP, RFC 6238) ──────────────────
+  /** The account label authenticator apps show next to the six-digit code. */
+  MFA_ISSUER: Joi.string()
+    .max(64)
+    .pattern(/^[^:]+$/)
+    .default('DAIAP'),
+  /** How long the second step of a sign-in may take once the password was right. */
+  MFA_CHALLENGE_TTL: duration('5m'),
+  /** Wrong codes accepted per sign-in challenge before it is withdrawn. */
+  MFA_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
+  /** Single-use recovery codes issued at enrolment. */
+  MFA_RECOVERY_CODES: Joi.number().integer().min(4).max(20).default(10),
+  /** Platform administrators must hold an MFA-verified session to act as one. */
+  MFA_REQUIRED_FOR_PLATFORM_ADMINS: Joi.boolean().default(false),
+
+  // ── Phase 5: breached-password screening (k-anonymity range API) ───────────
+  /**
+   * `enforce` refuses passwords found in known breaches, `warn` accepts them
+   * and records the fact, `off` never asks. Only the first five hex characters
+   * of the password's SHA-1 ever leave the platform (k-anonymity), and the
+   * lookup fails open: an outage of the range service never blocks a sign-up.
+   */
+  PASSWORD_BREACH_CHECK: Joi.string().valid('off', 'warn', 'enforce').default('enforce'),
+  PASSWORD_BREACH_API_URL: Joi.string()
+    .uri({ scheme: ['https', 'http'] })
+    .default('https://api.pwnedpasswords.com'),
+  PASSWORD_BREACH_TIMEOUT: duration('3s'),
+  /** Breach appearances at or above which a password is refused. */
+  PASSWORD_BREACH_MIN_OCCURRENCES: Joi.number().integer().min(1).max(1_000_000).default(1),
+
   // ───────────────────────────────────────────────────────────────────────────
   // Rate limiting (module 6.14 foundation)
   // ───────────────────────────────────────────────────────────────────────────
@@ -334,6 +400,17 @@ export const envValidationSchema = Joi.object({
   AI_SERVICE_KEY_ID: Joi.string()
     .pattern(/^[A-Za-z0-9._-]{1,32}$/)
     .default('v1'),
+  /**
+   * Phase 5 — mutual TLS to the AI service. The client certificate and key
+   * this backend presents (both or neither), the CA that signed the AI
+   * service's server certificate (when it is a private CA), and the name to
+   * verify on it when that differs from the URL's host.
+   */
+  AI_SERVICE_TLS_CERT: pem(),
+  AI_SERVICE_TLS_KEY: pem(),
+  AI_SERVICE_TLS_KEY_PASSPHRASE: Joi.string().allow('').default(''),
+  AI_SERVICE_TLS_CA: pem(),
+  AI_SERVICE_TLS_SERVERNAME: Joi.string().hostname().allow('').default(''),
   AI_SERVICE_TIMEOUT: duration('30s'),
   /** Parsing a long scanned PDF can legitimately take minutes. */
   AI_SERVICE_PARSE_TIMEOUT: duration('300s'),
@@ -456,6 +533,11 @@ export const envValidationSchema = Joi.object({
     .valid('PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'RESTRICTED')
     .default('RESTRICTED'),
   LLM_MODEL_CACHE_TTL: duration('60s'),
+  /** Phase 5 — mutual TLS to a self-hosted model endpoint (a proxy that checks client certificates). */
+  LLM_TLS_CERT: pem(),
+  LLM_TLS_KEY: pem(),
+  LLM_TLS_KEY_PASSPHRASE: Joi.string().allow('').default(''),
+  LLM_TLS_CA: pem(),
 
   // ───────────────────────────────────────────────────────────────────────────
   // Phase 3 — PII redaction engine (module 6.12)
@@ -586,6 +668,112 @@ export const envValidationSchema = Joi.object({
   REALTIME_MAX_MESSAGE_SIZE: byteSize('4kb'),
 
   // ───────────────────────────────────────────────────────────────────────────
+  // Phase 5 — token quotas and throttling (module 6.14). Enforced at the LLM
+  // gateway, the one path every model call takes. Nothing to provision: the
+  // budgets live in PostgreSQL, the per-minute rate in Redis.
+  // ───────────────────────────────────────────────────────────────────────────
+  QUOTA_ENFORCEMENT_ENABLED: Joi.boolean().default(true),
+  /**
+   * The platform's monthly token allowance per workspace, by plan. 0 means
+   * unlimited. Workspaces may set stricter budgets of their own, never looser.
+   */
+  QUOTA_FREE_MONTHLY_TOKENS: Joi.number().integer().min(0).default(2_000_000),
+  QUOTA_PRO_MONTHLY_TOKENS: Joi.number().integer().min(0).default(20_000_000),
+  QUOTA_ENTERPRISE_MONTHLY_TOKENS: Joi.number().integer().min(0).default(0),
+  /** Tokens per minute one workspace may spend (a token bucket). 0 disables the rate. */
+  QUOTA_TOKENS_PER_MINUTE: Joi.number().integer().min(0).default(100_000),
+  /** Percentage of a budget at which administrators are alerted, once per period. */
+  QUOTA_ALERT_THRESHOLD: Joi.number().integer().min(1).max(100).default(80),
+  /** How long a reservation outlives a crashed call before the sweep releases it. */
+  QUOTA_RESERVATION_TTL: duration('10m'),
+  /** How long a workspace's quota definitions are cached per process. */
+  QUOTA_CACHE_TTL: duration('30s'),
+
+  // ── Circuit breaking for agents (conversations and across runs) ────────────
+  /** Tokens one conversation turn may spend across its tool-loop iterations. 0 = no limit. */
+  AGENT_MAX_TOKENS_PER_TURN: Joi.number().integer().min(0).max(100_000_000).default(60_000),
+  /** Tokens one conversation may spend over its lifetime. 0 = no limit. */
+  AGENT_MAX_TOKENS_PER_CONVERSATION: Joi.number()
+    .integer()
+    .min(0)
+    .max(1_000_000_000)
+    .default(1_000_000),
+  /** The per-agent breaker: opens on runaway spend or repeated agent-caused failures. */
+  AGENT_CIRCUIT_ENABLED: Joi.boolean().default(true),
+  AGENT_CIRCUIT_WINDOW: duration('60s'),
+  /** Tokens one agent may spend within the window before its circuit opens. 0 = off. */
+  AGENT_CIRCUIT_MAX_TOKENS: Joi.number().integer().min(0).default(250_000),
+  /** Consecutive agent-caused failures that open the circuit. 0 = off. */
+  AGENT_CIRCUIT_FAILURE_THRESHOLD: Joi.number().integer().min(0).max(1_000).default(5),
+  AGENT_CIRCUIT_COOLDOWN: duration('5m'),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 5 — observability: Prometheus metrics and OpenTelemetry traces
+  // ───────────────────────────────────────────────────────────────────────────
+  METRICS_ENABLED: Joi.boolean().default(true),
+  METRICS_PATH: Joi.string()
+    .pattern(/^\/?[A-Za-z0-9._/-]{1,64}$/)
+    .default('/metrics'),
+  /**
+   * Bearer token a scraper must present. Required to scrape outside
+   * development: without it the endpoint answers 401 in production.
+   */
+  METRICS_TOKEN: Joi.string().min(24).allow('').default(''),
+  /**
+   * The dedicated worker has no API port. Set this to serve /health/live,
+   * /health/ready and /metrics from it (for a platform health check or a
+   * scraper). 0 disables.
+   */
+  WORKER_HTTP_PORT: Joi.number().port().allow(0).default(0),
+  /**
+   * Standard OpenTelemetry variables, read by the SDK before the application
+   * starts (see src/observability/tracing.ts). Validated here so a typo fails
+   * the boot instead of silently disabling tracing.
+   */
+  OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string().uri().allow('').optional(),
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: Joi.string().uri().allow('').optional(),
+  OTEL_EXPORTER_OTLP_HEADERS: Joi.string().allow('').optional(),
+  OTEL_SERVICE_NAME: Joi.string().allow('').optional(),
+  OTEL_SDK_DISABLED: Joi.boolean().optional(),
+  OTEL_TRACES_SAMPLER: Joi.string()
+    .valid(
+      'always_on',
+      'always_off',
+      'traceidratio',
+      'parentbased_always_on',
+      'parentbased_always_off',
+      'parentbased_traceidratio',
+    )
+    .optional(),
+  OTEL_TRACES_SAMPLER_ARG: Joi.number().min(0).max(1).optional(),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 5 — data lifecycle: retention, pruning, export and erasure
+  // ───────────────────────────────────────────────────────────────────────────
+  /** How often the lifecycle sweep runs (one sweep at a time, cluster-wide). */
+  LIFECYCLE_SWEEP_INTERVAL: duration('6h'),
+  /**
+   * Audit records older than this are archived (encrypted, to object storage)
+   * and pruned, leaving a signed anchor so the remaining chain still verifies.
+   * 0 keeps the audit log forever. A workspace may choose its own period
+   * (settings.auditRetentionDays), never below AUDIT_RETENTION_MIN.
+   */
+  AUDIT_RETENTION: duration('0'),
+  AUDIT_RETENTION_MIN: duration('30d'),
+  /** Refuse to prune what could not first be archived. */
+  AUDIT_ARCHIVE_BEFORE_PRUNE: Joi.boolean().default(true),
+  /** Expired or revoked sessions are deleted this long after they ended. */
+  SESSION_RETENTION: duration('30d'),
+  /** The usage and tool ledgers (content-free). 0 keeps them forever. */
+  USAGE_RETENTION: duration('0'),
+  /** Conversations idle this long are crypto-shredded and deleted. 0 keeps them. */
+  CONVERSATION_RETENTION: duration('0'),
+  /** Self-service account erasure (the right to be forgotten). */
+  ACCOUNT_ERASURE_ENABLED: Joi.boolean().default(true),
+  /** Most messages, runs and records one personal-data export includes per kind. */
+  DATA_EXPORT_MAX_ITEMS: Joi.number().integer().min(100).max(1_000_000).default(20_000),
+
+  // ───────────────────────────────────────────────────────────────────────────
   // Outbound email
   // ───────────────────────────────────────────────────────────────────────────
   /** `log` prints messages to the console; nothing is sent. Ideal for development. */
@@ -628,8 +816,7 @@ export const envValidationSchema = Joi.object({
   MAX_MEMBERS_PER_ORGANIZATION: Joi.number().integer().min(0).default(0),
 })
   // Unknown keys are allowed: the shell environment always carries far more than
-  // we declare (PATH, HOME, CI variables, and the later-phase keys documented in
-  // .env.example but not yet read by any code).
+  // we declare (PATH, HOME, CI variables, the platform's own injected values).
   .unknown(true);
 
 export interface EnvValidationResult {
@@ -732,6 +919,80 @@ function crossFieldProblems(values: Record<string, unknown>): string[] {
   }
   if (production && values.TOOL_HTTP_ALLOW_INSECURE === true) {
     problems.push('"TOOL_HTTP_ALLOW_INSECURE" cannot be enabled outside development.');
+  }
+
+  // ── Phase 5 ────────────────────────────────────────────────────────────────
+  if (
+    ms('QUOTA_RESERVATION_TTL') <
+    ms('LLM_QUEUE_TIMEOUT') + ms('LLM_MAX_DURATION') + 30_000
+  ) {
+    problems.push(
+      '"QUOTA_RESERVATION_TTL" must exceed "LLM_QUEUE_TIMEOUT" + "LLM_MAX_DURATION" by at least ' +
+        '30s, or a slow but healthy generation would have its reservation released under it.',
+    );
+  }
+  const perTurn = Number(values.AGENT_MAX_TOKENS_PER_TURN);
+  if (perTurn > 0 && perTurn < Number(values.LLM_DEFAULT_CONTEXT_WINDOW)) {
+    problems.push(
+      '"AGENT_MAX_TOKENS_PER_TURN" must be 0 (no limit) or at least "LLM_DEFAULT_CONTEXT_WINDOW": ' +
+        'a single model call can use a whole context window.',
+    );
+  }
+  const perConversation = Number(values.AGENT_MAX_TOKENS_PER_CONVERSATION);
+  if (perConversation > 0 && perTurn > 0 && perConversation < perTurn) {
+    problems.push(
+      '"AGENT_MAX_TOKENS_PER_CONVERSATION" cannot be smaller than "AGENT_MAX_TOKENS_PER_TURN".',
+    );
+  }
+  const auditRetention = ms('AUDIT_RETENTION');
+  if (auditRetention > 0 && auditRetention < ms('AUDIT_RETENTION_MIN')) {
+    problems.push(
+      '"AUDIT_RETENTION" must be 0 (keep forever) or at least "AUDIT_RETENTION_MIN".',
+    );
+  }
+  if (ms('LIFECYCLE_SWEEP_INTERVAL') < 60_000) {
+    problems.push('"LIFECYCLE_SWEEP_INTERVAL" must be at least one minute.');
+  }
+  if (values.WORKER_HTTP_PORT && values.WORKER_HTTP_PORT === values.APP_PORT) {
+    problems.push(
+      '"WORKER_HTTP_PORT" must differ from "APP_PORT" (the API and a co-located worker ' +
+        'would both try to listen on it).',
+    );
+  }
+  for (const [prefix, label] of [
+    ['AI_SERVICE_TLS', 'the AI service'],
+    ['LLM_TLS', 'the model endpoint'],
+  ] as const) {
+    problems.push(
+      ...describeClientTlsProblems(
+        {
+          cert: values[`${prefix}_CERT`] as string,
+          key: values[`${prefix}_KEY`] as string,
+          passphrase: values[`${prefix}_KEY_PASSPHRASE`] as string,
+          ca: values[`${prefix}_CA`] as string,
+        },
+        prefix,
+        label,
+      ),
+    );
+  }
+  if (
+    values.AI_SERVICE_TLS_CERT &&
+    typeof values.AI_SERVICE_URL === 'string' &&
+    values.AI_SERVICE_URL.startsWith('http://')
+  ) {
+    problems.push(
+      '"AI_SERVICE_TLS_CERT" is set but "AI_SERVICE_URL" uses http://: mutual TLS needs https://.',
+    );
+  }
+  if (
+    values.LLM_TLS_CERT &&
+    typeof values.LLM_BASE_URL === 'string' &&
+    values.LLM_BASE_URL.startsWith('http://')
+  ) {
+    problems.push(
+      '"LLM_TLS_CERT" is set but "LLM_BASE_URL" uses http://: mutual TLS needs https://.',
+    );
   }
 
   return problems;

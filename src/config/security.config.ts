@@ -64,6 +64,21 @@ export interface SecurityConfig {
     enabled: boolean;
     hstsMaxAge: number;
   };
+  /** Phase 5: TOTP second factor. */
+  mfa: {
+    issuer: string;
+    challengeTtlMs: number;
+    maxAttempts: number;
+    recoveryCodes: number;
+    requiredForPlatformAdmins: boolean;
+  };
+  /** Phase 5: screening new passwords against known breaches (k-anonymity). */
+  breachedPasswords: {
+    mode: 'off' | 'warn' | 'enforce';
+    apiUrl: string;
+    timeoutMs: number;
+    minOccurrences: number;
+  };
 }
 
 export const SECURITY_CONFIG_KEY = 'security';
@@ -146,6 +161,23 @@ export default registerAs(SECURITY_CONFIG_KEY, (): SecurityConfig => {
     helmet: {
       enabled: process.env.HELMET_ENABLED !== 'false',
       hstsMaxAge: Number(process.env.HSTS_MAX_AGE),
+    },
+    mfa: {
+      issuer: process.env.MFA_ISSUER ?? 'DAIAP',
+      challengeTtlMs: parseDuration(process.env.MFA_CHALLENGE_TTL ?? '5m'),
+      maxAttempts: Number(process.env.MFA_MAX_ATTEMPTS ?? 5),
+      recoveryCodes: Number(process.env.MFA_RECOVERY_CODES ?? 10),
+      requiredForPlatformAdmins: process.env.MFA_REQUIRED_FOR_PLATFORM_ADMINS === 'true',
+    },
+    breachedPasswords: {
+      mode: (process.env.PASSWORD_BREACH_CHECK ?? 'enforce') as
+        'off' | 'warn' | 'enforce',
+      apiUrl: (process.env.PASSWORD_BREACH_API_URL ?? 'https://api.pwnedpasswords.com').replace(
+        /\/+$/,
+        '',
+      ),
+      timeoutMs: parseDuration(process.env.PASSWORD_BREACH_TIMEOUT ?? '3s'),
+      minOccurrences: Number(process.env.PASSWORD_BREACH_MIN_OCCURRENCES ?? 1),
     },
   };
 });

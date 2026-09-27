@@ -2,6 +2,7 @@ import { registerAs } from '@nestjs/config';
 import type { Classification } from '../modules/knowledge/domain/classification';
 import { parseByteSize } from '../common/utils/byte-size.util';
 import { parseDuration } from '../common/utils/duration.util';
+import { readClientTls, type ClientTlsConfig } from './client-tls';
 
 /**
  * The LLM gateway (proposal module 6.7).
@@ -64,6 +65,11 @@ export interface LlmConfig {
    */
   maxClassification: Classification;
   modelCacheTtlMs: number;
+  /**
+   * Phase 5: mutual TLS to a self-hosted endpoint whose proxy verifies client
+   * certificates, on top of (or instead of) the bearer token.
+   */
+  tls: ClientTlsConfig;
 }
 
 export const LLM_CONFIG_KEY = 'llm';
@@ -113,5 +119,6 @@ export default registerAs(LLM_CONFIG_KEY, (): LlmConfig => {
     maxClassification: (process.env.LLM_MAX_CLASSIFICATION ??
       'RESTRICTED') as Classification,
     modelCacheTtlMs: parseDuration(process.env.LLM_MODEL_CACHE_TTL as string),
+    tls: readClientTls('LLM_TLS'),
   };
 });

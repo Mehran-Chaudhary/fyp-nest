@@ -26,12 +26,17 @@ import {
 } from '../../common/decorators/auth.decorators';
 import {
   CurrentOrganizationId,
+  CurrentPermissions,
   CurrentUser,
 } from '../../common/decorators/param.decorators';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AuditAction } from '../../common/enums/audit-action.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
-import { ForbiddenError } from '../../common/exceptions/app.exception';
+import {
+  ForbiddenError,
+  PermissionDeniedError,
+} from '../../common/exceptions/app.exception';
+import { hasPermission } from '../../common/utils/permission.util';
 import type { AuthenticatedUser } from '../../common/interfaces/authenticated-request.interface';
 import type { PaginatedResult } from '../../common/utils/pagination.util';
 import {
@@ -153,8 +158,26 @@ export class OrganizationsController {
   async update(
     @Param('organizationId') _identifier: string,
     @CurrentOrganizationId() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentPermissions() permissions: string[],
     @Body() dto: UpdateOrganizationDto,
   ): Promise<OrganizationDto> {
+    const requireMfa = dto.settings?.requireMfa;
+    if (requireMfa !== undefined) {
+      // A security control, not a preference: it takes `security:update`, not
+      // just `workspace:update`.
+      if (!hasPermission(permissions, 'security:update')) {
+        throw new PermissionDeniedError(['security:update']);
+      }
+      // Whoever requires MFA must be able to pass it, or they lock the
+      // workspace — themselves included — out.
+      if (requireMfa && !user.mfaVerified) {
+        throw new ForbiddenError(ErrorCode.MFA_REQUIRED, {
+          message:
+            'Verify your own session with two-step verification before requiring it of the workspace.',
+        });
+      }
+    }
     const organization = await this.organizationsService.update(organizationId, dto);
     return this.toDto(organization);
   }

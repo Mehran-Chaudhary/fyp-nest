@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LLM_CONFIG_KEY, type LlmConfig } from '../../config/llm.config';
+import { createTlsFetch } from '../../shared/http/outbound-tls';
 import { PrivacyModule } from '../privacy/privacy.module';
+import { QuotasModule } from '../quotas/quotas.module';
 import { DirectChatService } from './direct-chat.service';
 import { LlmInvocation } from './entities/llm-invocation.entity';
 import { LlmPolicy } from './entities/llm-policy.entity';
@@ -28,12 +30,23 @@ import { UsageService } from './usage.service';
  * streaming, parsing, deadlines — without a GPU.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([LlmPolicy, LlmInvocation]), PrivacyModule],
+  imports: [
+    TypeOrmModule.forFeature([LlmPolicy, LlmInvocation]),
+    PrivacyModule,
+    // Phase 5: every model call is admitted by the governor (quotas, token
+    // rate, agent circuit breakers) before it is sent.
+    QuotasModule,
+  ],
   controllers: [LlmController],
   providers: [
     {
       provide: LLM_FETCH,
-      useValue: ((input, init) => fetch(input, init)) satisfies FetchLike,
+      inject: [ConfigService],
+      // Phase 5: a client certificate, when configured, for an endpoint whose
+      // proxy verifies them (mutual TLS); the global fetch otherwise.
+      useFactory: (configService: ConfigService): FetchLike =>
+        createTlsFetch(configService.getOrThrow<LlmConfig>(LLM_CONFIG_KEY).tls) ??
+        ((input, init) => fetch(input, init)),
     },
     {
       provide: LLM_PROVIDER,

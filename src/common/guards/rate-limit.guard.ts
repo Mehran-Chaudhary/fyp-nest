@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import type { Response } from 'express';
@@ -19,6 +19,7 @@ import {
 } from '../../config/throttle.config';
 import { RedisService } from '../../shared/redis/redis.service';
 import { AuditService } from '../../modules/audit/audit.service';
+import { MetricsService } from '../../observability/metrics.service';
 
 interface RateLimitDecision {
   allowed: boolean;
@@ -64,6 +65,7 @@ export class RateLimitGuard implements CanActivate {
     private readonly redis: RedisService,
     private readonly auditService: AuditService,
     private readonly configService: ConfigService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {
     this.config = this.configService.getOrThrow<ThrottleConfig>(THROTTLE_CONFIG_KEY);
   }
@@ -100,6 +102,7 @@ export class RateLimitGuard implements CanActivate {
     if (decision.allowed) return true;
 
     const retryAfterSeconds = Math.max(Math.ceil(decision.resetMs / 1000), 1);
+    this.metrics?.rateLimitRejections.inc({ policy: policyName });
 
     await this.auditService.recordSafe({
       action: AuditAction.RATE_LIMIT_TRIGGERED,

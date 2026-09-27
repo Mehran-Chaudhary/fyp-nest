@@ -9,8 +9,12 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { Session } from './entities/session.entity';
+import { UserRecoveryCode } from './entities/user-recovery-code.entity';
+import { MfaService } from './mfa/mfa.service';
+import { BreachedPasswordService } from './services/breached-password.service';
 import { JwtTokenService } from './services/jwt-token.service';
 import { SessionService } from './services/session.service';
+import { User } from '../users/entities/user.entity';
 
 /**
  * Authentication (proposal module 6.1).
@@ -24,7 +28,7 @@ import { SessionService } from './services/session.service';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Session]),
+    TypeOrmModule.forFeature([Session, User, UserRecoveryCode]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -46,7 +50,14 @@ import { SessionService } from './services/session.service';
     RbacModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, SessionService, JwtTokenService],
-  exports: [AuthService, JwtTokenService, SessionService],
+  providers: [
+    AuthService,
+    SessionService,
+    JwtTokenService,
+    // Phase 5: the second factor, and breached-password screening.
+    MfaService,
+    BreachedPasswordService,
+  ],
+  exports: [AuthService, JwtTokenService, SessionService, MfaService],
 })
 export class AuthModule {}

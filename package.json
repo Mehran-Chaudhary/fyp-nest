@@ -39,7 +39,8 @@
     "seed": "ts-node -r tsconfig-paths/register src/database/seeds/run-seed.ts",
     "db:setup": "npm run migration:run && npm run seed",
     "generate:secrets": "node scripts/generate-secrets.js",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "generate:mtls": "node scripts/generate-mtls.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1138.0",
@@ -54,6 +55,22 @@
     "@nestjs/terminus": "^12.1.0",
     "@nestjs/typeorm": "^12.0.1",
     "@nestjs/websockets": "^12.1.0",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/core": "^2.11.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
+    "@opentelemetry/instrumentation": "^0.222.0",
+    "@opentelemetry/instrumentation-express": "^0.70.0",
+    "@opentelemetry/instrumentation-http": "^0.222.0",
+    "@opentelemetry/instrumentation-ioredis": "^0.70.0",
+    "@opentelemetry/instrumentation-nestjs-core": "^0.68.0",
+    "@opentelemetry/instrumentation-pg": "^0.74.0",
+    "@opentelemetry/instrumentation-pino": "^0.68.0",
+    "@opentelemetry/instrumentation-undici": "^0.32.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-trace-base": "^2.11.0",
+    "@opentelemetry/sdk-trace-node": "^2.11.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
+    "@prometheus-io/client": "^0.16.1",
     "@qdrant/js-client-rest": "^1.19.0",
     "argon2": "^0.44.0",
     "bullmq": "^5.81.5",
@@ -73,7 +90,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "4.8.3",
-    "typeorm": "^1.1.1"
+    "typeorm": "^1.1.1",
+    "undici": "^7.30.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -81,6 +99,7 @@
     "@nestjs/cli": "^12.0.5",
     "@nestjs/schematics": "^12.0.4",
     "@nestjs/testing": "^12.0.4",
+    "@peculiar/x509": "^2.1.0",
     "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.0",

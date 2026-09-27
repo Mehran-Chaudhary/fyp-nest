@@ -25,6 +25,14 @@ export const QUEUE_NAME = {
   WORKFLOW_STEPS: 'workflow-steps',
   /** The workflow engine's reconciliation sweep. */
   WORKFLOW_MAINTENANCE: 'workflow-maintenance',
+  /**
+   * Phase 5: quota reservations released and counters reconciled with the
+   * usage ledger, every minute. A job scheduler, so exactly one sweep runs
+   * per interval however many workers exist.
+   */
+  GOVERNANCE_MAINTENANCE: 'governance-maintenance',
+  /** Phase 5: retention, pruning and archival, every LIFECYCLE_SWEEP_INTERVAL. */
+  LIFECYCLE_MAINTENANCE: 'lifecycle-maintenance',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAME)[keyof typeof QUEUE_NAME];

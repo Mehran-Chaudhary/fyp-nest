@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import {
   HEADER,
@@ -10,7 +11,9 @@ import { ErrorCode } from '../enums/error-code.enum';
 import { BadRequestError, ForbiddenError } from '../exceptions/app.exception';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import { normaliseIp } from '../utils/ip.util';
+import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
 import { RequestContextService } from '../../shared/context/request-context.service';
+import type { Organization } from '../../modules/organizations/entities/organization.entity';
 import { OrganizationsService } from '../../modules/organizations/organizations.service';
 
 /**
@@ -43,12 +46,16 @@ import { OrganizationsService } from '../../modules/organizations/organizations.
 @Injectable()
 export class OrganizationContextGuard implements CanActivate {
   private readonly logger = new Logger(OrganizationContextGuard.name);
+  private readonly mfa: SecurityConfig['mfa'];
 
   constructor(
     private readonly reflector: Reflector,
     private readonly organizationsService: OrganizationsService,
     private readonly requestContext: RequestContextService,
-  ) {}
+    configService: ConfigService,
+  ) {
+    this.mfa = configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY).mfa;
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     if (context.getType() !== 'http') return true;
@@ -120,9 +127,42 @@ export class OrganizationContextGuard implements CanActivate {
       organization: request.organization,
       membership: request.membership,
       permissions: accessContext.permissions,
+      // From here on, every connection this request checks out is scoped to
+      // this workspace by row-level security (phase 5).
+      tenantId: accessContext.organization.id,
     });
 
+    this.enforceMfaPolicy(
+      request,
+      accessContext.organization,
+      accessContext.membership.id.startsWith('platform-admin:'),
+    );
+
     return true;
+  }
+
+  /**
+   * A workspace can require that its members' sessions passed a second factor
+   * (`settings.requireMfa`, phase 5); the deployment can require it of
+   * platform administrators acting through the break-glass path. The check
+   * reads the verified access token, so a session established before MFA was
+   * enabled must sign in again — which is the point.
+   */
+  private enforceMfaPolicy(
+    request: AuthenticatedRequest,
+    organization: Organization,
+    viaPlatformAdmin: boolean,
+  ): void {
+    const user = request.user;
+    if (!user || user.mfaVerified) return;
+
+    const workspaceRequires = organization.settings?.requireMfa === true;
+    const platformRequires = viaPlatformAdmin && this.mfa.requiredForPlatformAdmins;
+    if (!workspaceRequires && !platformRequires) return;
+
+    throw new ForbiddenError(ErrorCode.MFA_REQUIRED, {
+      details: { requiredBy: workspaceRequires ? 'workspace' : 'platform' },
+    });
   }
 
   /**
@@ -156,6 +196,7 @@ export class OrganizationContextGuard implements CanActivate {
     this.requestContext.patch({
       organization: request.organization,
       permissions: apiKey.scopes,
+      tenantId: organization.id,
     });
   }
 

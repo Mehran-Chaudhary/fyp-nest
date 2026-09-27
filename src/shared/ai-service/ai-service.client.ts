@@ -12,6 +12,7 @@ import {
   type VectorStoreConfig,
 } from '../../config/vector-store.config';
 import { RequestContextService } from '../context/request-context.service';
+import { createTlsFetch, type TlsFetch } from '../http/outbound-tls';
 import {
   AI_CONTRACT_VERSION,
   AiServiceError,
@@ -73,6 +74,12 @@ export class AiServiceClient implements OnApplicationBootstrap {
   private readonly embeddingModel: string;
   private readonly embeddingDimensions: number;
   private readonly breaker: CircuitBreaker;
+  /**
+   * The transport: the global fetch, or — with a client certificate
+   * configured (phase 5) — one that authenticates this backend to the AI
+   * service with mutual TLS, on top of the HMAC signature.
+   */
+  private readonly transport: TlsFetch;
 
   constructor(
     configService: ConfigService,
@@ -83,6 +90,14 @@ export class AiServiceClient implements OnApplicationBootstrap {
     this.embeddingModel = vector.embedding.model;
     this.embeddingDimensions = vector.embedding.dimensions;
     this.breaker = new CircuitBreaker('ai-service', this.config.circuitBreaker);
+    this.transport =
+      createTlsFetch(this.config.tls ?? { enabled: false }) ??
+      ((input, init) => fetch(input, init));
+  }
+
+  /** Whether calls present a client certificate (mutual TLS). */
+  get mutualTls(): boolean {
+    return this.config.tls?.enabled === true;
   }
 
   get isConfigured(): boolean {
@@ -338,7 +353,7 @@ export class AiServiceClient implements OnApplicationBootstrap {
 
     let response: Response;
     try {
-      response = await fetch(`${this.config.url}${pathAndQuery}`, {
+      response = await this.transport(`${this.config.url}${pathAndQuery}`, {
         method: spec.method,
         headers,
         body: body ?? undefined,

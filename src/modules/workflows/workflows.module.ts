@@ -54,6 +54,12 @@ import { WorkflowsService } from './workflows.service';
     WorkflowsService,
     WorkflowRunsService,
   ],
-  exports: [WorkflowRunsService, WorkflowEngineService, WorkflowMaintenanceService],
+  exports: [
+    WorkflowRunsService,
+    WorkflowEngineService,
+    WorkflowMaintenanceService,
+    // Phase 5: a person's export decrypts the inputs and outputs of their own runs.
+    RunCryptoService,
+  ],
 })
 export class WorkflowsModule {}

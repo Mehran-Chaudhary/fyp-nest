@@ -205,6 +205,9 @@ export class WorkflowEngineService implements OnModuleInit {
         );
         throw new UnrecoverableError('job authentication failed');
       }
+      // The job is authentic: from here on it works for the run's workspace
+      // only, and every connection it checks out is scoped to it (phase 5).
+      this.requestContext.bindTenant(run.organizationId);
       return await this.executeStep(run, data, key);
     } finally {
       this.crypto.destroy(key);
@@ -1056,8 +1059,15 @@ export class WorkflowEngineService implements OnModuleInit {
     if (!final) {
       const node = graph.nodes.get(step.nodeId);
       const base = backoffOf(node) ?? this.config.stepBackoffMs;
+      // A throttled call says when to come back; waiting less would only be
+      // refused again (bounded by the backoff ceiling all the same).
+      const retryAfterMs =
+        error instanceof AppException && error.retryAfterSeconds
+          ? Math.min(error.retryAfterSeconds * 1000, this.config.stepBackoffMaxMs)
+          : 0;
       const delayMs = Math.max(
         250,
+        retryAfterMs,
         backoffDelay(step.attempt, base, this.config.stepBackoffMaxMs),
       );
       const rows = returnedRows<{ dispatch: number }>(
@@ -1608,6 +1618,10 @@ function backoffOf(node: WorkflowNode | undefined): number | undefined {
 }
 
 const TRANSIENT_CODES: ReadonlySet<string> = new Set([
+  // Phase 5: throttled, not crashed — a rate or an open agent circuit clears
+  // with time, and the step is retried after the Retry-After it came with.
+  ErrorCode.TOKEN_RATE_LIMITED,
+  ErrorCode.AGENT_CIRCUIT_OPEN,
   ErrorCode.LLM_BUSY,
   ErrorCode.LLM_UNAVAILABLE,
   ErrorCode.AI_SERVICE_UNAVAILABLE,
@@ -1621,6 +1635,8 @@ const TRANSIENT_CODES: ReadonlySet<string> = new Set([
 ]);
 
 const POLICY_CODES: ReadonlySet<string> = new Set([
+  // Phase 5: a spent budget does not come back by retrying within the period.
+  ErrorCode.QUOTA_EXCEEDED,
   ErrorCode.PII_EGRESS_BLOCKED,
   ErrorCode.LLM_CLASSIFICATION_EXCEEDED,
   ErrorCode.WORKFLOW_PRINCIPAL_REVOKED,

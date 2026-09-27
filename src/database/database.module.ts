@@ -1,9 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DATABASE_CONFIG_KEY, type DatabaseConfig } from '../config/database.config';
 import { entities } from './entities';
 import { migrations } from './migrations';
+import { RowLevelSecurityService } from './tenancy/row-level-security.service';
 
 /**
  * PostgreSQL connectivity.
@@ -13,6 +14,7 @@ import { migrations } from './migrations';
  * booting with a bad JWT secret also prevent it from booting pointed at an
  * unparseable pool size.
  */
+@Global()
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
@@ -60,5 +62,9 @@ import { migrations } from './migrations';
       },
     }),
   ],
+  // Phase 5: binds every pooled connection to the workspace of the work using
+  // it, for PostgreSQL row-level security (the third tenancy layer).
+  providers: [RowLevelSecurityService],
+  exports: [RowLevelSecurityService],
 })
 export class DatabaseModule {}

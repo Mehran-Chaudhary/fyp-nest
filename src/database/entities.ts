@@ -3,6 +3,7 @@ import { AgentVersion } from '../modules/agents/entities/agent-version.entity';
 import { Conversation } from '../modules/agents/entities/conversation.entity';
 import { ConversationMessage } from '../modules/agents/entities/conversation-message.entity';
 import { ApiKey } from '../modules/api-keys/entities/api-key.entity';
+import { AuditChainAnchor } from '../modules/audit/entities/audit-chain-anchor.entity';
 import { AuditLog } from '../modules/audit/entities/audit-log.entity';
 import { Invitation } from '../modules/invitations/entities/invitation.entity';
 import { Document } from '../modules/knowledge/entities/document.entity';
@@ -18,6 +19,9 @@ import { Permission } from '../modules/rbac/entities/permission.entity';
 import { PiiPolicy } from '../modules/privacy/entities/pii-policy.entity';
 import { Role } from '../modules/rbac/entities/role.entity';
 import { Session } from '../modules/auth/entities/session.entity';
+import { UserRecoveryCode } from '../modules/auth/entities/user-recovery-code.entity';
+import { UsageCounter } from '../modules/quotas/entities/usage-counter.entity';
+import { UsageQuota } from '../modules/quotas/entities/usage-quota.entity';
 import { ToolExecution } from '../modules/tools/entities/tool-execution.entity';
 import { Tool } from '../modules/tools/entities/tool.entity';
 import { WorkflowRun } from '../modules/workflows/entities/workflow-run.entity';
@@ -66,9 +70,17 @@ export const entities = [
   WorkflowVersion,
   WorkflowRun,
   WorkflowStep,
+  UsageQuota,
+  UsageCounter,
+  UserRecoveryCode,
+  AuditChainAnchor,
 ];
 
 export {
+  AuditChainAnchor,
+  UsageCounter,
+  UsageQuota,
+  UserRecoveryCode,
   Tool,
   ToolExecution,
   Workflow,

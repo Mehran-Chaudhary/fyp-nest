@@ -20,7 +20,7 @@ import {
   InvocationStatus,
   type InvocationMetrics,
 } from './entities/llm-invocation.entity';
-import { GenerationInterruptedError } from './llm-errors';
+import { invocationStatusOf } from './llm-errors';
 import {
   LlmGatewayService,
   type GatewayHandlers,
@@ -175,17 +175,22 @@ export class DirectChatService {
               ? { mode: 'masked', session: outcome.session }
               : { mode: 'disabled', reason: 'workspace-policy' },
             signal,
+            attribution: {
+              userId: principal.userId ?? null,
+              apiKeyId: principal.apiKeyId ?? null,
+              purpose: InvocationPurpose.DIRECT_CHAT,
+            },
           },
           gatewayHandlers,
         );
       } catch (error) {
-        const status =
-          error instanceof AppException && error.code === ErrorCode.PII_EGRESS_BLOCKED
-            ? InvocationStatus.BLOCKED
-            : error instanceof GenerationInterruptedError && error.cancelled
-              ? InvocationStatus.CANCELLED
-              : InvocationStatus.FAILED;
-        await this.recordFailure(base, status, error, performance.now() - started, outcome);
+        await this.recordFailure(
+          base,
+          invocationStatusOf(error),
+          error,
+          performance.now() - started,
+          outcome,
+        );
         throw error;
       }
 

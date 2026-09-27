@@ -71,6 +71,11 @@ export class KnowledgeMaintenanceService {
       },
       async () => {
         const { organizationId, documentId, knowledgeBaseId } = job.data;
+        // A job about one workspace works for that workspace only (row-level
+        // security, phase 5). The sweep spans every workspace and stays unbound.
+        if (organizationId && job.name !== MAINTENANCE_JOB.SWEEP) {
+          this.requestContext.bindTenant(organizationId);
+        }
 
         switch (job.name) {
           case MAINTENANCE_JOB.SWEEP:

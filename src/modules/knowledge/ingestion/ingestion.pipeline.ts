@@ -157,6 +157,9 @@ export class IngestionPipeline {
     const deadline = startedAt + this.config.jobTimeoutMs;
 
     const document = await this.loadDocument(data.documentId);
+    // From here on the job works for the document's workspace only: every
+    // connection it checks out is scoped to it by row-level security (phase 5).
+    if (document) this.requestContext.bindTenant(document.organizationId);
     const skip = this.skipReason(document, data);
     if (skip) {
       this.logger.debug(

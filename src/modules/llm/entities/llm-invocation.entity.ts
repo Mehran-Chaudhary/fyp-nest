@@ -19,6 +19,11 @@ export enum InvocationStatus {
   REFUSED = 'REFUSED',
   /** Stopped by the gateway's egress check. */
   BLOCKED = 'BLOCKED',
+  /**
+   * Refused before sending by governance (phase 5): a token budget exhausted,
+   * the token rate exceeded, or the agent's circuit open.
+   */
+  THROTTLED = 'THROTTLED',
 }
 
 /** Detailed per-stage timings and redaction statistics, for the benchmark. */

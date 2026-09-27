@@ -1,6 +1,7 @@
 import { HttpStatus } from '@nestjs/common';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import { AppException } from '../../common/exceptions/app.exception';
+import { InvocationStatus } from './entities/llm-invocation.entity';
 import { LlmProviderError } from './providers/provider.types';
 
 /** What had been generated when a stream stopped early. */
@@ -75,4 +76,28 @@ export function toGatewayException(error: LlmProviderError): AppException {
         details: { reason: error.code },
       });
   }
+}
+
+/**
+ * Governance refusals (phase 5): a model call throttled by a token budget, the
+ * token rate, an agent's circuit breaker or a conversation budget — refused
+ * before anything was sent, and recorded as THROTTLED rather than FAILED.
+ */
+const THROTTLING_CODES: ReadonlySet<string> = new Set([
+  ErrorCode.QUOTA_EXCEEDED,
+  ErrorCode.TOKEN_RATE_LIMITED,
+  ErrorCode.AGENT_CIRCUIT_OPEN,
+  ErrorCode.CONVERSATION_TOKEN_BUDGET_EXCEEDED,
+]);
+
+/** The usage-ledger status a failed model call is recorded with. */
+export function invocationStatusOf(error: unknown): InvocationStatus {
+  if (error instanceof GenerationInterruptedError && error.cancelled) {
+    return InvocationStatus.CANCELLED;
+  }
+  if (error instanceof AppException) {
+    if (error.code === ErrorCode.PII_EGRESS_BLOCKED) return InvocationStatus.BLOCKED;
+    if (THROTTLING_CODES.has(error.code)) return InvocationStatus.THROTTLED;
+  }
+  return InvocationStatus.FAILED;
 }

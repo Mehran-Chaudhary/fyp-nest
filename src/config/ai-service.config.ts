@@ -1,6 +1,7 @@
 import { registerAs } from '@nestjs/config';
 import { parseByteSize } from '../common/utils/byte-size.util';
 import { parseDuration } from '../common/utils/duration.util';
+import { readClientTls, type ClientTlsConfig } from './client-tls';
 
 /**
  * The Python AI service: document parsing and chunking, embeddings, and
@@ -23,6 +24,12 @@ export interface AiServiceConfig {
     failureThreshold: number;
     cooldownMs: number;
   };
+  /**
+   * Phase 5: mutual TLS. The AI service sees every document in plaintext, so
+   * the connection to it is authenticated in both directions — this backend
+   * proves itself with a client certificate on top of the HMAC signature.
+   */
+  tls: ClientTlsConfig;
 }
 
 export const AI_SERVICE_CONFIG_KEY = 'aiService';
@@ -43,5 +50,6 @@ export default registerAs(AI_SERVICE_CONFIG_KEY, (): AiServiceConfig => {
       failureThreshold: Number(process.env.AI_SERVICE_CIRCUIT_THRESHOLD),
       cooldownMs: parseDuration(process.env.AI_SERVICE_CIRCUIT_COOLDOWN as string),
     },
+    tls: readClientTls('AI_SERVICE_TLS'),
   };
 });

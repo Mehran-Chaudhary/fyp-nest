@@ -442,9 +442,11 @@ async function main(): Promise<void> {
     (await as(employee, () =>
       organizations.create(employee.userId as string, { name: 'E2E Isolation' }),
     ));
-  const tokenOf = async (email: string) =>
-    (await auth.login({ email, password: DEMO_PASSWORD }, { ip: '127.0.0.1' })).tokens
-      .accessToken;
+  const tokenOf = async (email: string) => {
+    const outcome = await auth.login({ email, password: DEMO_PASSWORD }, { ip: '127.0.0.1' });
+    assert.equal(outcome.kind, 'session', `${email} unexpectedly requires MFA`);
+    return (outcome as Extract<typeof outcome, { kind: 'session' }>).result.tokens.accessToken;
+  };
   const ownerToken = await tokenOf('owner@acme.test');
   const adminToken = await tokenOf('admin@acme.test');
   const employeeToken = await tokenOf('employee@acme.test');

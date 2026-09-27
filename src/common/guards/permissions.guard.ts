@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { METADATA_KEY } from '../constants/app.constants';
 import { AuditAction, AuditStatus } from '../enums/audit-action.enum';
@@ -7,6 +8,7 @@ import { ErrorCode } from '../enums/error-code.enum';
 import { ForbiddenError, PermissionDeniedError } from '../exceptions/app.exception';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import { hasAnyPermission, missingPermissions } from '../utils/permission.util';
+import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
 import { AuditService } from '../../modules/audit/audit.service';
 
 /**
@@ -31,10 +33,17 @@ import { AuditService } from '../../modules/audit/audit.service';
  */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
+  private readonly mfaRequiredForPlatformAdmins: boolean;
+
   constructor(
     private readonly reflector: Reflector,
     private readonly auditService: AuditService,
-  ) {}
+    configService: ConfigService,
+  ) {
+    this.mfaRequiredForPlatformAdmins =
+      configService.get<SecurityConfig>(SECURITY_CONFIG_KEY)?.mfa.requiredForPlatformAdmins ??
+      false;
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     if (context.getType() !== 'http') return true;
@@ -62,6 +71,14 @@ export class PermissionsGuard implements CanActivate {
         await this.recordDenial(request, ['platform:admin']);
         throw new ForbiddenError(ErrorCode.FORBIDDEN, {
           message: 'This endpoint is restricted to platform administrators.',
+        });
+      }
+      // Phase 5: operating the platform can be made to require a session
+      // that passed a second factor (MFA_REQUIRED_FOR_PLATFORM_ADMINS).
+      if (this.mfaRequiredForPlatformAdmins && !request.user.mfaVerified) {
+        throw new ForbiddenError(ErrorCode.MFA_REQUIRED, {
+          message: 'Platform administration requires a session verified with two-step verification.',
+          details: { requiredBy: 'platform' },
         });
       }
       return true;

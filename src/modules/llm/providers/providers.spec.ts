@@ -201,6 +201,7 @@ const CONFIG: LlmConfig = {
   keepAlive: '30m',
   maxClassification: Classification.RESTRICTED,
   modelCacheTtlMs: 60_000,
+  tls: { enabled: false },
 };
 
 const PARAMETERS: GenerationParameters = {

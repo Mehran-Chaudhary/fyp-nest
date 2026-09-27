@@ -7,6 +7,7 @@ import { AuditAction, AuditStatus } from '../../common/enums/audit-action.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import { AppException, ConflictError } from '../../common/exceptions/app.exception';
 import { AGENTS_CONFIG_KEY, type AgentsConfig } from '../../config/agents.config';
+import { GOVERNANCE_CONFIG_KEY, type GovernanceConfig } from '../../config/governance.config';
 import { LLM_CONFIG_KEY, type LlmConfig } from '../../config/llm.config';
 import { RAG_CONFIG_KEY, type RagConfig } from '../../config/rag.config';
 import { AuditService } from '../audit/audit.service';
@@ -28,11 +29,12 @@ import {
   InvocationStatus,
   type InvocationMetrics,
 } from '../llm/entities/llm-invocation.entity';
-import { GenerationInterruptedError } from '../llm/llm-errors';
+import { GenerationInterruptedError, invocationStatusOf } from '../llm/llm-errors';
 import { LlmGatewayService, type GatewayResult } from '../llm/llm-gateway.service';
 import { LlmPolicyService, type ResolvedModel } from '../llm/llm-policy.service';
 import { UsageService } from '../llm/usage.service';
 import { RedactionService, type RedactionOutcome } from '../privacy/redaction.service';
+import { GovernorService } from '../quotas/governor.service';
 import { Integrity, meetIntegrity } from '../tools/domain/information-flow';
 import type { ToolDescriptor } from '../tools/domain/tool-definition';
 import { InMemoryToolBudget, ToolExecutorService } from '../tools/tool-executor.service';
@@ -172,6 +174,7 @@ export class AgentRuntimeService {
   private readonly llmConfig: LlmConfig;
   private readonly agentsConfig: AgentsConfig;
   private readonly ragConfig: RagConfig;
+  private readonly circuitConfig: GovernanceConfig['circuit'];
 
   constructor(
     private readonly agents: AgentsService,
@@ -186,10 +189,13 @@ export class AgentRuntimeService {
     private readonly toolExecutor: ToolExecutorService,
     private readonly toolLoop: ToolLoopService,
     configService: ConfigService,
+    private readonly governor: GovernorService,
   ) {
     this.llmConfig = configService.getOrThrow<LlmConfig>(LLM_CONFIG_KEY);
     this.agentsConfig = configService.getOrThrow<AgentsConfig>(AGENTS_CONFIG_KEY);
     this.ragConfig = configService.getOrThrow<RagConfig>(RAG_CONFIG_KEY);
+    this.circuitConfig =
+      configService.getOrThrow<GovernanceConfig>(GOVERNANCE_CONFIG_KEY).circuit;
   }
 
   // ── A turn ────────────────────────────────────────────────────────────────
@@ -218,6 +224,7 @@ export class AgentRuntimeService {
       conversation.agentId,
     );
     await this.conversations.assertNotDuplicate(conversation.id, input.clientMessageId);
+    await this.assertConversationBudget(principal, executable, conversation);
     const model = await this.llmPolicies.resolve(
       principal.organizationId,
       [executable.config.model],
@@ -265,6 +272,7 @@ export class AgentRuntimeService {
 
       handlers.onStatus?.('queued', this.gateway.load);
       const activePlan = plan;
+      let turnTokens = 0;
       const progress: ToolLoopProgress = {
         visible: '',
         iterations: 0,
@@ -292,9 +300,12 @@ export class AgentRuntimeService {
             actorLabel: actorLabelOf(principal),
             executionId: () => randomUUID(),
             callBudget: new InMemoryToolBudget(this.toolExecutor.maxIterations),
+            purpose: InvocationPurpose.AGENT_TURN,
             // Intermediate model calls (those that ended in a tool call) are
             // recorded as they happen; the final one commits with the answer.
             onIteration: async (iteration) => {
+              turnTokens +=
+                iteration.result.usage.promptTokens + iteration.result.usage.completionTokens;
               if (iteration.final) return;
               await this.usage.record(
                 this.iterationEntry(
@@ -305,6 +316,9 @@ export class AgentRuntimeService {
                   iteration,
                 ),
               );
+              // The turn's circuit breaker (phase 5): no further model call
+              // once one answer has spent its budget.
+              await this.assertTurnBudget(principal, executable, conversation, turnTokens);
             },
             handlers: {
               // The question is stored only once the model has accepted the
@@ -1039,12 +1053,7 @@ export class AgentRuntimeService {
     const partialIntegrity = context.progress?.flow?.integrity ?? plan.integrity;
     const code =
       error instanceof AppException ? error.code : ErrorCode.INTERNAL_SERVER_ERROR;
-    const status =
-      code === ErrorCode.PII_EGRESS_BLOCKED
-        ? InvocationStatus.BLOCKED
-        : interrupted?.cancelled
-          ? InvocationStatus.CANCELLED
-          : InvocationStatus.FAILED;
+    const status = invocationStatusOf(error);
     const totalMs = Math.round(performance.now() - context.started);
     const partialTtft = interrupted?.partial.ttftMs ?? null;
 
@@ -1126,7 +1135,8 @@ export class AgentRuntimeService {
       );
     }
 
-    if (status !== InvocationStatus.BLOCKED) {
+    // Egress blocks and governance refusals are audited where they happen.
+    if (status !== InvocationStatus.BLOCKED && status !== InvocationStatus.THROTTLED) {
       await this.auditService.recordSafe({
         action: AuditAction.LLM_INFERENCE_FAILED,
         status:
@@ -1183,6 +1193,84 @@ export class AgentRuntimeService {
       redactionDegraded: false,
       metrics: {},
     });
+  }
+
+  // ── Circuit breaking (phase 5) ────────────────────────────────────────────
+
+  /**
+   * A conversation's lifetime budget: a conversation that has spent it takes
+   * no more turns (start a new one), which also bounds how large a history an
+   * automation can grow by talking to an agent in a loop.
+   */
+  private async assertConversationBudget(
+    principal: AccessPrincipal,
+    executable: ExecutableAgent,
+    conversation: Conversation,
+  ): Promise<void> {
+    const limit = this.circuitConfig.maxTokensPerConversation;
+    if (limit <= 0) return;
+    const used = Number(conversation.promptTokens ?? 0) + Number(conversation.completionTokens ?? 0);
+    if (used < limit) return;
+
+    await this.auditService.recordSafe({
+      action: AuditAction.AGENT_CIRCUIT_BROKEN,
+      status: AuditStatus.DENIED,
+      organizationId: principal.organizationId,
+      resourceType: 'conversation',
+      resourceId: conversation.id,
+      metadata: {
+        scope: 'conversation',
+        reason: 'TOKEN_BUDGET',
+        agentId: executable.agent.id,
+        conversationId: conversation.id,
+        tokens: used,
+        limit,
+      },
+    });
+    throw new ConflictError(ErrorCode.CONVERSATION_TOKEN_BUDGET_EXCEEDED, {
+      details: { tokensUsed: used, limit },
+    });
+  }
+
+  /**
+   * One answer's budget across its tool-loop iterations. Checked after each
+   * model call that ended in a tool call — before the next one is made — so a
+   * model that keeps calling tools cannot keep spending.
+   */
+  private async assertTurnBudget(
+    principal: AccessPrincipal,
+    executable: ExecutableAgent,
+    conversation: Conversation,
+    tokens: number,
+  ): Promise<void> {
+    const limit = this.circuitConfig.maxTokensPerTurn;
+    if (limit <= 0 || tokens < limit) return;
+
+    await this.auditService.recordSafe({
+      action: AuditAction.AGENT_CIRCUIT_BROKEN,
+      status: AuditStatus.DENIED,
+      organizationId: principal.organizationId,
+      resourceType: 'agent',
+      resourceId: executable.agent.id,
+      resourceLabel: executable.agent.name,
+      metadata: {
+        scope: 'turn',
+        reason: 'TOKEN_BUDGET',
+        conversationId: conversation.id,
+        tokens,
+        limit,
+      },
+    });
+    await this.governor.recordAgentFault(
+      principal.organizationId,
+      executable.agent.id,
+      ErrorCode.AGENT_TOKEN_BUDGET_EXCEEDED,
+    );
+    throw new AppException(
+      ErrorCode.AGENT_TOKEN_BUDGET_EXCEEDED,
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      { details: { tokens, limit } },
+    );
   }
 
   /** The agent's bounds, as the tool engine applies them (delegation, ADR 0003). */

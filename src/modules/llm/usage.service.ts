@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, type EntityManager } from 'typeorm';
+import { MetricsService } from '../../observability/metrics.service';
 import type { UsageSummaryDto } from './dto/llm.dto';
-import { LlmInvocation } from './entities/llm-invocation.entity';
+import { InvocationStatus, LlmInvocation } from './entities/llm-invocation.entity';
 
 type InvocationEntry = Omit<LlmInvocation, 'createdAt'>;
 
@@ -13,6 +14,7 @@ interface SummaryRow {
   cancelled: number;
   refused: number;
   blocked: number;
+  throttled: number;
   prompt_tokens: string;
   completion_tokens: string;
   entities_masked: string;
@@ -40,6 +42,7 @@ export class UsageService {
   constructor(
     @InjectRepository(LlmInvocation)
     private readonly repository: Repository<LlmInvocation>,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   /**
@@ -51,15 +54,55 @@ export class UsageService {
   async record(entry: InvocationEntry, manager?: EntityManager): Promise<void> {
     if (manager) {
       await manager.getRepository(LlmInvocation).insert(entry);
+      this.observe(entry);
       return;
     }
     try {
       await this.repository.insert(entry);
+      this.observe(entry);
     } catch (error) {
       this.logger.error(
         { invocationId: entry.id, err: error as Error },
         'Failed to record an LLM invocation in the usage ledger.',
       );
+    }
+  }
+
+  /**
+   * The ledger row, as Prometheus metrics (phase 5): every model call passes
+   * through here, so this is the one place they are counted. Labels are the
+   * purpose, the outcome, the model and entity types — never who or which
+   * workspace (see MetricsService).
+   */
+  private observe(entry: InvocationEntry): void {
+    const metrics = this.metrics;
+    if (!metrics) return;
+    const model = entry.model.slice(0, 100);
+    metrics.llmInvocations.inc({ purpose: entry.purpose, status: entry.status, model });
+    if (entry.promptTokens > 0) {
+      metrics.llmTokens.inc(
+        { purpose: entry.purpose, kind: 'prompt', model },
+        entry.promptTokens,
+      );
+    }
+    if (entry.completionTokens > 0) {
+      metrics.llmTokens.inc(
+        { purpose: entry.purpose, kind: 'completion', model },
+        entry.completionTokens,
+      );
+    }
+    if (entry.status !== InvocationStatus.COMPLETED) return;
+    if (entry.totalMs !== null) {
+      metrics.llmDuration.observe({ purpose: entry.purpose, model }, entry.totalMs / 1000);
+    }
+    if (entry.ttftMs !== null) {
+      metrics.llmTimeToFirstToken.observe({ model }, entry.ttftMs / 1000);
+    }
+    if (entry.redactionMs !== null) {
+      metrics.redactionDuration.observe(Number(entry.redactionMs) / 1000);
+    }
+    for (const [entityType, count] of Object.entries(entry.metrics?.redaction?.byType ?? {})) {
+      if (count > 0) metrics.entitiesMasked.inc({ entity_type: entityType.slice(0, 40) }, count);
     }
   }
 
@@ -73,6 +116,7 @@ export class UsageService {
               count(*) FILTER (WHERE status = 'CANCELLED')::int                AS cancelled,
               count(*) FILTER (WHERE status = 'REFUSED')::int                  AS refused,
               count(*) FILTER (WHERE status = 'BLOCKED')::int                  AS blocked,
+              count(*) FILTER (WHERE status = 'THROTTLED')::int                AS throttled,
               COALESCE(sum(prompt_tokens), 0)::text                            AS prompt_tokens,
               COALESCE(sum(completion_tokens), 0)::text                        AS completion_tokens,
               COALESCE(sum(entities_masked), 0)::text                          AS entities_masked,
@@ -148,6 +192,7 @@ export class UsageService {
         cancelled: totals.cancelled,
         refused: totals.refused,
         blocked: totals.blocked,
+        throttled: totals.throttled,
         promptTokens: Number(totals.prompt_tokens),
         completionTokens: Number(totals.completion_tokens),
         entitiesMasked: Number(totals.entities_masked),

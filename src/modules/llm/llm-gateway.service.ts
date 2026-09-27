@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { performance } from 'node:perf_hooks';
 import { AuditAction, AuditStatus } from '../../common/enums/audit-action.enum';
@@ -12,7 +12,14 @@ import {
   SemaphoreTimeoutError,
 } from '../../common/utils/semaphore';
 import { LLM_CONFIG_KEY, type LlmConfig } from '../../config/llm.config';
+import { circuitStateValue, MetricsService } from '../../observability/metrics.service';
+import { withSpan } from '../../observability/telemetry';
 import { AuditService } from '../audit/audit.service';
+import {
+  GovernorService,
+  type AdmissionLease,
+  type InvocationAttribution,
+} from '../quotas/governor.service';
 import type { MaskingSession } from '../privacy/domain/masking-session';
 import type { ChatMessage, GenerationParameters } from './domain/generation';
 import { ThinkFilter } from './domain/think-filter';
@@ -43,6 +50,12 @@ export interface GatewayChatRequest {
   privacy: PrivacyGuard;
   /** Aborted when the client goes away; generation stops on the GPU too. */
   signal?: AbortSignal;
+  /**
+   * Who the call is for (phase 5): the member or API key, and the agent.
+   * Every token budget, the token rate and the agent's circuit breaker are
+   * keyed by it. Absent, only the workspace's own limits apply.
+   */
+  attribution?: InvocationAttribution;
 }
 
 export interface GatewayHandlers {
@@ -143,6 +156,8 @@ export class LlmGatewayService {
     @Inject(LLM_PROVIDER) private readonly provider: LlmProvider,
     private readonly auditService: AuditService,
     configService: ConfigService,
+    @Optional() private readonly governor?: GovernorService,
+    @Optional() metrics?: MetricsService,
   ) {
     this.config = configService.getOrThrow<LlmConfig>(LLM_CONFIG_KEY);
     this.breaker = new CircuitBreaker('llm', this.config.circuitBreaker);
@@ -152,6 +167,11 @@ export class LlmGatewayService {
       this.config.maxConcurrency,
       this.config.maxConcurrency * 8,
     );
+    metrics?.onScrape(() => {
+      metrics.llmInFlight.set(this.bulkhead.inUse);
+      metrics.llmWaiting.set(this.bulkhead.waiting);
+      metrics.circuitState.set({ dependency: 'llm' }, circuitStateValue(this.breaker.state));
+    });
   }
 
   get isConfigured(): boolean {
@@ -191,6 +211,85 @@ export class LlmGatewayService {
     handlers: GatewayHandlers = {},
   ): Promise<GatewayResult> {
     this.assertConfigured();
+    return withSpan(
+      'llm.chat',
+      {
+        'gen_ai.system': this.provider.kind,
+        'gen_ai.request.model': request.model,
+        'gen_ai.request.max_tokens': request.parameters.maxOutputTokens,
+        'daiap.purpose': request.attribution?.purpose ?? 'unspecified',
+        'daiap.redaction': request.privacy.mode,
+      },
+      async (span) => {
+        const result = await this.governedChat(request, handlers);
+        span.setAttributes({
+          'gen_ai.usage.input_tokens': result.usage.promptTokens,
+          'gen_ai.usage.output_tokens': result.usage.completionTokens,
+          'gen_ai.response.finish_reasons': [result.finishReason ?? 'unknown'],
+          'daiap.ttft_ms': result.timings.ttftMs ?? -1,
+          'daiap.placeholders_unresolved': result.placeholders.unresolved,
+        });
+        return result;
+      },
+    );
+  }
+
+  /**
+   * Admission first (phase 5): the token budgets, the token rate and the
+   * agent's circuit breaker are consulted before anything else happens, with
+   * the call's worst case — the prompt it is about to send plus the most it
+   * may generate. The lease is settled with what the call really consumed,
+   * however it ended.
+   */
+  private async governedChat(
+    request: GatewayChatRequest,
+    handlers: GatewayHandlers,
+  ): Promise<GatewayResult> {
+    const lease: AdmissionLease | null = this.governor
+      ? await this.governor.admit({
+          organizationId: request.organizationId,
+          attribution: request.attribution,
+          estimatedTokens:
+            this.tokens.estimateMessages(request.model, request.messages) +
+            request.parameters.maxOutputTokens,
+        })
+      : null;
+
+    try {
+      const result = await this.guardedChat(request, handlers);
+      await lease?.settle({
+        tokens: result.usage.promptTokens + result.usage.completionTokens,
+      });
+      return result;
+    } catch (error) {
+      await lease?.settle(this.consumedOnFailure(request, error));
+      throw error;
+    }
+  }
+
+  /** What a failed call cost: nothing, unless the model had begun answering. */
+  private consumedOnFailure(
+    request: GatewayChatRequest,
+    error: unknown,
+  ): { tokens: number; errorCode: string | null; cancelled: boolean } {
+    // GenerationInterruptedError is an AppException too, with its own code.
+    const errorCode = error instanceof AppException ? error.code : null;
+    if (error instanceof GenerationInterruptedError) {
+      return {
+        tokens:
+          this.tokens.estimateMessages(request.model, request.messages) +
+          this.tokens.estimate(request.model, error.partial.maskedText),
+        errorCode,
+        cancelled: error.cancelled,
+      };
+    }
+    return { tokens: 0, errorCode, cancelled: false };
+  }
+
+  private async guardedChat(
+    request: GatewayChatRequest,
+    handlers: GatewayHandlers,
+  ): Promise<GatewayResult> {
     const started = performance.now();
 
     // ── 1. Egress check ───────────────────────────────────────────────────
