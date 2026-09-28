@@ -13,6 +13,13 @@ Supervisor: Ms. Maryam Wardah · Co-Supervisor: Mr. Qaiser Manzoor
 
 ## Status
 
+For the current configuration audit and a step-by-step local/cloud setup, start
+with [the complete backend setup guide](docs/ENVIRONMENT.md) and
+[all 317 environment variables](docs/ENVIRONMENT_VARIABLES.md). The guide includes
+the governance configuration present in this checkout, current verification
+results, provider setup, and real-service smoke tests. The phase status and
+historical test/database observations below predate that audit.
+
 **Phases 1 to 4 of 5 are implemented. One phase remains.**
 
 - **Phase 1:** foundation, identity, multi-tenancy, RBAC and the tamper-evident
