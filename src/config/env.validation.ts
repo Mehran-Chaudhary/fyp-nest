@@ -458,6 +458,19 @@ export const envValidationSchema = Joi.object({
    * separately to scale ingestion independently.
    */
   QUEUE_WORKERS_ENABLED: Joi.boolean().default(true),
+  /**
+   * How long an idle worker waits on Redis before polling its queue again. A
+   * new job wakes it at once, so this only sets the idle traffic: every worker
+   * runs one poll cycle per interval. Raise it (60s) on a hosted Redis that
+   * bills per command, such as Upstash (BullMQ still polls a queue holding a
+   * scheduled job at least every 10 seconds).
+   */
+  QUEUE_DRAIN_DELAY: duration('5s'),
+  /**
+   * How often each worker looks for jobs whose worker died. The engines have
+   * their own stall sweeps in PostgreSQL; this is BullMQ's own safety net.
+   */
+  QUEUE_STALLED_INTERVAL: duration('30s'),
   INGESTION_CONCURRENCY: Joi.number().integer().min(1).max(32).default(2),
   INGESTION_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
   INGESTION_BACKOFF_DELAY: duration('15s'),
@@ -880,6 +893,15 @@ function crossFieldProblems(values: Record<string, unknown>): string[] {
     problems.push(
       '"PRESIDIO_ANALYZER_URL" is required when "PII_NER_PROVIDER" is presidio.',
     );
+  }
+
+  const drainDelay = ms('QUEUE_DRAIN_DELAY');
+  if (drainDelay < 1_000 || drainDelay > 300_000) {
+    problems.push('"QUEUE_DRAIN_DELAY" must be between 1s and 5m.');
+  }
+  const stalledInterval = ms('QUEUE_STALLED_INTERVAL');
+  if (stalledInterval < 5_000 || stalledInterval > 600_000) {
+    problems.push('"QUEUE_STALLED_INTERVAL" must be between 5s and 10m.');
   }
 
   // ── Phase 4 ────────────────────────────────────────────────────────────────

@@ -378,6 +378,8 @@ LLM_MAX_CLASSIFICATION=INTERNAL
 
 Here `openai` means the **OpenAI-compatible protocol**, not a requirement to use OpenAI billing. The backend calls `/models` and `/chat/completions`; confirm the provider/model supports the parameters and streaming behavior your use case needs. Groq documents its compatible base URL and unsupported differences in [its compatibility guide](https://console.groq.com/docs/openai). Model availability and limits change, so no hard-coded hosted model is promised here.
 
+Agents call tools through a text protocol (`<tool_call>{…}</tool_call>` in the answer; see `src/modules/tools/domain/tool-call-protocol.ts`), so the model must follow it. Qwen models do. `openai/gpt-oss-*` models call tools through their own native channel, and Groq rejects that with `tool_use_failed` when no `tools` parameter was sent: every agent with a tool then fails with `LLM_UNAVAILABLE`. On Groq's free tier, Qwen also refuses any request whose `max_tokens` exceeds 1,000, so keep `LLM_DEFAULT_MAX_OUTPUT_TOKENS` (512 works) and `LLM_MAX_OUTPUT_TOKENS` at or below 1000. See `docs/CLOUD_ONLY_SETUP.md` section 8 for the configuration verified on 2026-09-29.
+
 A provider key funds generation only. It does not configure the project's custom embedding/parse service. Lower classification settings can correctly withhold confidential documents from external inference. Existing workspace model policies or agent model IDs can also restrict a newly selected default; inspect `GET .../llm/policy` and each agent if model selection is rejected.
 
 Initially keep the coordinated timeout defaults:

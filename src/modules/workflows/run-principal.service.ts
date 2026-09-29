@@ -1,9 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import { AppException } from '../../common/exceptions/app.exception';
 import { hasPermission } from '../../common/utils/permission.util';
+import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
 import type { AccessPrincipal } from '../knowledge/domain/access';
+import { UserStatus } from '../users/entities/user.entity';
 import type { WorkflowRun } from './entities/workflow-run.entity';
 
 /** The permission a run's initiator must still hold for it to keep running. */
@@ -30,7 +33,17 @@ export class PrincipalRevokedError extends AppException {
  */
 @Injectable()
 export class RunPrincipalService {
-  constructor(private readonly dataSource: DataSource) {}
+  private readonly requireEmailVerification: boolean;
+
+  constructor(
+    private readonly dataSource: DataSource,
+    configService: ConfigService,
+  ) {
+    this.requireEmailVerification =
+      configService.getOrThrow<SecurityConfig>(
+        SECURITY_CONFIG_KEY,
+      ).tokens.requireEmailVerification;
+  }
 
   async resolve(
     run: Pick<
@@ -77,13 +90,21 @@ export class RunPrincipalService {
 
     if (!run.initiatorUserId) throw new PrincipalRevokedError('NO_INITIATOR');
 
-    const [user]: Array<{ status: string; is_platform_admin: boolean }> =
-      await this.dataSource.query(
-        `SELECT status, is_platform_admin FROM users WHERE id = $1 AND deleted_at IS NULL`,
-        [run.initiatorUserId],
-      );
-    if (!user || user.status !== 'ACTIVE')
+    const [user]: Array<{
+      status: UserStatus;
+      is_platform_admin: boolean;
+      verified: boolean;
+    }> = await this.dataSource.query(
+      `SELECT status, is_platform_admin, email_verified_at IS NOT NULL AS verified
+           FROM users WHERE id = $1 AND deleted_at IS NULL`,
+      [run.initiatorUserId],
+    );
+    // The same rule as every HTTP request and socket: an account that has not
+    // confirmed its email (PENDING) may act unless verification is required.
+    if (!user || (user.status !== UserStatus.ACTIVE && user.status !== UserStatus.PENDING))
       throw new PrincipalRevokedError('ACCOUNT_INACTIVE');
+    if (this.requireEmailVerification && !user.verified)
+      throw new PrincipalRevokedError('EMAIL_NOT_VERIFIED');
 
     const [member]: Array<{ id: string; status: string; permissions: string[] }> =
       await this.dataSource.query(

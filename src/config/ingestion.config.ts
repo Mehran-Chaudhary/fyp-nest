@@ -5,6 +5,10 @@ export interface IngestionConfig {
   /** BullMQ key prefix. BullMQ manages its own prefix and must not share ioredis's. */
   queuePrefix: string;
   workersEnabled: boolean;
+  /** BullMQ `drainDelay`: seconds an idle worker blocks before polling again. */
+  drainDelaySeconds: number;
+  /** BullMQ `stalledInterval`: milliseconds between stalled-job checks. */
+  stalledIntervalMs: number;
   concurrency: number;
   maxAttempts: number;
   backoffDelayMs: number;
@@ -25,6 +29,8 @@ export default registerAs(INGESTION_CONFIG_KEY, (): IngestionConfig => {
   return {
     queuePrefix: process.env.QUEUE_PREFIX || `${redisPrefix}:bull`,
     workersEnabled: process.env.QUEUE_WORKERS_ENABLED !== 'false',
+    drainDelaySeconds: parseDuration(process.env.QUEUE_DRAIN_DELAY as string) / 1000,
+    stalledIntervalMs: parseDuration(process.env.QUEUE_STALLED_INTERVAL as string),
     concurrency: Number(process.env.INGESTION_CONCURRENCY),
     maxAttempts: Number(process.env.INGESTION_MAX_ATTEMPTS),
     backoffDelayMs: parseDuration(process.env.INGESTION_BACKOFF_DELAY as string),

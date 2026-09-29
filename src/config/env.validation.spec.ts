@@ -57,6 +57,24 @@ describe('environment validation (phase 2)', () => {
     expect(() => validateEnvironment({ RAG_SEARCH_MODE: 'keyword' })).toThrow();
   });
 
+  it('bounds the queue polling intervals', () => {
+    const env = validateEnvironment({});
+    expect(env.QUEUE_DRAIN_DELAY).toBe('5s');
+    expect(env.QUEUE_STALLED_INTERVAL).toBe('30s');
+    expect(() =>
+      validateEnvironment({ QUEUE_DRAIN_DELAY: '60s', QUEUE_STALLED_INTERVAL: '120s' }),
+    ).not.toThrow();
+    expect(() => validateEnvironment({ QUEUE_DRAIN_DELAY: '500ms' })).toThrow(
+      /QUEUE_DRAIN_DELAY/,
+    );
+    expect(() => validateEnvironment({ QUEUE_DRAIN_DELAY: '10m' })).toThrow(
+      /QUEUE_DRAIN_DELAY/,
+    );
+    expect(() => validateEnvironment({ QUEUE_STALLED_INTERVAL: '1s' })).toThrow(
+      /QUEUE_STALLED_INTERVAL/,
+    );
+  });
+
   it('accepts a realistic cloud configuration', () => {
     expect(() =>
       validateEnvironment({

@@ -86,6 +86,10 @@ export class QueueService implements OnApplicationShutdown {
       prefix: this.prefix,
       concurrency: options.concurrency ?? 1,
       lockDuration: options.lockDuration ?? 60_000,
+      // Idle Redis traffic: one poll cycle per worker per drain delay, plus
+      // one stalled check per interval (QUEUE_DRAIN_DELAY, QUEUE_STALLED_INTERVAL).
+      drainDelay: this.ingestionConfig.drainDelaySeconds,
+      stalledInterval: this.ingestionConfig.stalledIntervalMs,
       // A job whose worker died is picked up again once more before being
       // failed. Twice-stalled usually means the job itself kills the process.
       maxStalledCount: options.maxStalledCount ?? 2,

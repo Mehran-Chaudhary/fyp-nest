@@ -960,16 +960,21 @@ async function main(): Promise<void> {
     (row) => row.action === 'agent.circuit_broken',
   );
   assert.equal(breaker?.metadata.reason, 'STEP_LIMIT');
-  const counts = await stepQueue.getJobCounts(
-    'waiting',
-    'delayed',
-    'active',
-    'prioritized',
-  );
-  assert.equal(
-    counts.waiting + counts.delayed + counts.active + (counts.prioritized ?? 0),
-    0,
-  );
+  // The run is marked FAILED inside the last step's job, so that job may still
+  // be moving to "completed" in Redis — a round trip to a hosted Redis. Allow
+  // it to settle; a step left waiting or scheduled would never drain.
+  let pending = Number.POSITIVE_INFINITY;
+  for (let attempt = 0; attempt < 50 && pending > 0; attempt += 1) {
+    if (attempt > 0) await sleep(100);
+    const counts = await stepQueue.getJobCounts(
+      'waiting',
+      'delayed',
+      'active',
+      'prioritized',
+    );
+    pending = counts.waiting + counts.delayed + counts.active + (counts.prioritized ?? 0);
+  }
+  assert.equal(pending, 0);
   step(
     `a loop that always asks for another round stopped after ${callsTo('looper')} rounds at ` +
       `the ceiling (${runaway.stepsScheduled}/${runaway.maxSteps} steps), circuit breaker ` +

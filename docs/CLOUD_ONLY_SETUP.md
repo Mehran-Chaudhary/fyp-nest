@@ -252,6 +252,19 @@ LLM_MAX_CONCURRENCY=1
 
 Here `openai` means the compatible API protocol. You do not need an OpenAI account for this Groq configuration. Free quotas vary by model. [Groq compatibility](https://console.groq.com/docs/openai), [free plan limits](https://console.groq.com/docs/rate-limits).
 
+**Pick a model that follows the platform's tool protocol.** Agents call tools (calculator, date, email, knowledge search) by writing `<tool_call>{…}</tool_call>` in their answer. Qwen models do this. `openai/gpt-oss-*` models use their own native tool channel instead, and Groq rejects the request with `tool_use_failed` ("Tool choice is none, but model called a tool"), so every agent with a tool fails with `LLM_UNAVAILABLE`. Use gpt-oss only for agents without tools and for direct chat. Verified on 2026-09-29:
+
+```dotenv
+LLM_DEFAULT_MODEL=qwen/qwen3.8-27b
+LLM_ALLOWED_MODELS=qwen/qwen3.8-27b,openai/gpt-oss-120b
+# Groq's free tier refuses any Qwen request asking for more than 1,000 output tokens.
+LLM_DEFAULT_MAX_OUTPUT_TOKENS=512
+LLM_MAX_OUTPUT_TOKENS=1000
+# The free tier allows 8,000 tokens per minute per model; throttle to match.
+QUOTA_TOKENS_PER_MINUTE=8000
+LLM_MAX_RETRIES=2
+```
+
 The default privacy policy still requires a functioning name detector before model calls. A correct Groq key alone may therefore not make chat work until section 7 is complete.
 
 For an explicitly limited demo with synthetic data, pattern-only privacy can be configured with `PII_NER_PROVIDER=none` and `PII_DEFAULT_ON_FAILURE=DEGRADE_TO_PATTERNS`. This does not detect names and may require updating an existing workspace's saved policy. It is not the configuration for full privacy testing.
