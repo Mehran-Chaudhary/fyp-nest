@@ -1,4 +1,4 @@
-import { SetMetadata } from '@nestjs/common';
+import { applyDecorators, SetMetadata } from '@nestjs/common';
 import type { RequestTimeoutBudget } from '../../config/app.config';
 import { METADATA_KEY } from '../constants/app.constants';
 import { AuthType } from '../enums/auth-type.enum';
@@ -77,6 +77,22 @@ export const RequireAnyPermission = (...permissions: string[]) => {
  */
 export const SkipOrganizationContext = () =>
   SetMetadata(METADATA_KEY.SKIP_ORGANIZATION_CONTEXT, true);
+
+/**
+ * Resolves the workspace when the request names one (`X-Organization-Id`,
+ * `X-Organization-Slug` or a route parameter), with every check a
+ * workspace-scoped route gets — membership, suspension, IP allowlist, MFA and
+ * email requirements — and proceeds without a workspace when it names none.
+ *
+ * Overrides a class-level {@link SkipOrganizationContext}; used by
+ * `GET /auth/me`, which reports the caller's permissions in the workspace
+ * they name.
+ */
+export const OptionalOrganizationContext = () =>
+  applyDecorators(
+    SetMetadata(METADATA_KEY.SKIP_ORGANIZATION_CONTEXT, false),
+    SetMetadata(METADATA_KEY.OPTIONAL_ORGANIZATION_CONTEXT, true),
+  );
 
 /**
  * Restricts a route to platform administrators.

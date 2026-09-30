@@ -81,6 +81,8 @@ export enum ErrorCode {
   ORGANIZATION_LIMIT_REACHED = 'ORGANIZATION_LIMIT_REACHED',
   CROSS_TENANT_ACCESS_DENIED = 'CROSS_TENANT_ACCESS_DENIED',
   IP_NOT_ALLOWED = 'IP_NOT_ALLOWED',
+  /** The allowlist change would block the administrator making it. */
+  IP_ALLOWLIST_SELF_LOCKOUT = 'IP_ALLOWLIST_SELF_LOCKOUT',
 
   // ── Membership ────────────────────────────────────────────────────────────
   MEMBERSHIP_NOT_FOUND = 'MEMBERSHIP_NOT_FOUND',
@@ -271,7 +273,8 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.MFA_CODE_INVALID]: 'The verification code is not valid.',
   [ErrorCode.MFA_CHALLENGE_INVALID]:
     'This sign-in attempt has expired or was already completed. Sign in again.',
-  [ErrorCode.MFA_ALREADY_ENABLED]: 'Two-step verification is already enabled on this account.',
+  [ErrorCode.MFA_ALREADY_ENABLED]:
+    'Two-step verification is already enabled on this account.',
   [ErrorCode.MFA_NOT_ENABLED]: 'Two-step verification is not enabled on this account.',
   [ErrorCode.MFA_NOT_ENROLLING]:
     'Start two-step verification setup before confirming a code.',
@@ -313,6 +316,8 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   [ErrorCode.CROSS_TENANT_ACCESS_DENIED]: 'The resource belongs to a different workspace.',
   [ErrorCode.IP_NOT_ALLOWED]:
     'Your network address is not permitted to access this workspace.',
+  [ErrorCode.IP_ALLOWLIST_SELF_LOCKOUT]:
+    'This change would block your own network address from the workspace. Add a rule that includes it first.',
 
   [ErrorCode.MEMBERSHIP_NOT_FOUND]: 'That member does not belong to this workspace.',
   [ErrorCode.MEMBERSHIP_ALREADY_EXISTS]: 'That user is already a member of this workspace.',
@@ -358,7 +363,8 @@ export const ERROR_CODE_MESSAGES: Readonly<Record<ErrorCode, string>> = {
 
   [ErrorCode.ACCOUNT_ERASURE_BLOCKED]:
     'You still own workspaces that other people belong to. Transfer or delete them first.',
-  [ErrorCode.ACCOUNT_ERASURE_DISABLED]: 'Self-service account erasure is disabled on this deployment.',
+  [ErrorCode.ACCOUNT_ERASURE_DISABLED]:
+    'Self-service account erasure is disabled on this deployment.',
 
   [ErrorCode.KNOWLEDGE_BASE_NOT_FOUND]: 'The knowledge base was not found.',
   [ErrorCode.KNOWLEDGE_BASE_NAME_TAKEN]:

@@ -12,7 +12,7 @@ import { ActorType, AuthType } from '../enums/auth-type.enum';
 import { ErrorCode } from '../enums/error-code.enum';
 import { ForbiddenError, UnauthorizedError } from '../exceptions/app.exception';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
-import { hasSecondFactor } from '../interfaces/jwt-payload.interface';
+import { hasSecondFactor, issuedAtMs } from '../interfaces/jwt-payload.interface';
 import { normaliseIp } from '../utils/ip.util';
 import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
 import { RequestContextService } from '../../shared/context/request-context.service';
@@ -133,7 +133,7 @@ export class AuthenticationGuard implements CanActivate, OnModuleInit {
     // authoritative cut-off also lives in PostgreSQL, and is enforced here on
     // every request regardless of Redis' health.
     const validFrom = await this.usersService.getTokensValidFrom(claims.sub);
-    if (validFrom && (claims.iat ?? 0) * 1000 < validFrom.getTime()) {
+    if (validFrom && issuedAtMs(claims) < validFrom.getTime()) {
       throw new UnauthorizedError(ErrorCode.AUTH_TOKEN_REVOKED, {
         message: 'This session ended when the account password or status changed.',
       });

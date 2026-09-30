@@ -25,6 +25,7 @@ import {
   SkipOrganizationContext,
 } from '../../common/decorators/auth.decorators';
 import {
+  ClientIp,
   CurrentOrganizationId,
   CurrentPermissions,
   CurrentUser,
@@ -178,6 +179,13 @@ export class OrganizationsController {
         });
       }
     }
+    // Like the MFA requirement: whoever requires a verified email must have
+    // one, or they lock themselves out of their own workspace.
+    if (dto.settings?.requireVerifiedEmail === true && !user.emailVerified) {
+      throw new ForbiddenError(ErrorCode.ACCOUNT_EMAIL_NOT_VERIFIED, {
+        message: 'Verify your own email address before requiring it of the workspace.',
+      });
+    }
     const organization = await this.organizationsService.update(organizationId, dto);
     return this.toDto(organization);
   }
@@ -323,8 +331,10 @@ export class OrganizationsController {
     summary: 'Remove an allowed network',
     description:
       'Refused when it would remove the last active rule while enforcement is on, ' +
-      'which would lock every member out with no way back in.',
+      'which would lock every member out with no way back in, or when the remaining ' +
+      'rules would no longer include your own address.',
   })
+  @ApiErrorResponse(409, [ErrorCode.RESOURCE_CONFLICT, ErrorCode.IP_ALLOWLIST_SELF_LOCKOUT])
   @ApiStandardErrors()
   @Audit({
     action: AuditAction.ORGANIZATION_IP_RULE_REMOVED,
@@ -335,8 +345,9 @@ export class OrganizationsController {
     @Param('organizationId') _identifier: string,
     @CurrentOrganizationId() organizationId: string,
     @Param('ruleId', new ParseUUIDPipe({ version: '4' })) ruleId: string,
+    @ClientIp() ip: string,
   ): Promise<{ removed: true }> {
-    await this.organizationsService.removeIpRule(organizationId, ruleId);
+    await this.organizationsService.removeIpRule(organizationId, ruleId, ip);
     return { removed: true };
   }
 
@@ -346,9 +357,12 @@ export class OrganizationsController {
   @ApiParam({ name: 'organizationId' })
   @ApiOperation({
     summary: 'Enable or disable IP restriction',
-    description: 'Enabling with no active rules is refused, for the same lockout reason.',
+    description:
+      'Enabling with no active rules is refused, for the same lockout reason, and so is ' +
+      'enabling with rules that do not include your own address.',
   })
   @ApiEnvelopedResponse(OrganizationDto)
+  @ApiErrorResponse(409, [ErrorCode.IP_ALLOWLIST_SELF_LOCKOUT])
   @ApiStandardErrors()
   @Audit({
     action: AuditAction.ORGANIZATION_SETTINGS_UPDATED,
@@ -359,10 +373,12 @@ export class OrganizationsController {
     @Param('organizationId') _identifier: string,
     @CurrentOrganizationId() organizationId: string,
     @Body() dto: SetIpEnforcementDto,
+    @ClientIp() ip: string,
   ): Promise<OrganizationDto> {
     const organization = await this.organizationsService.setIpEnforcement(
       organizationId,
       dto.enabled,
+      ip,
     );
     return this.toDto(organization);
   }

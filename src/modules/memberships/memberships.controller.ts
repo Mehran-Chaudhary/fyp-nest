@@ -109,7 +109,9 @@ export class MembershipsController {
     @CurrentOrganizationId() organizationId: string,
     @Param('memberId', new ParseUUIDPipe({ version: '4' })) memberId: string,
   ): Promise<MemberDto> {
-    return this.membershipsService.getMemberView(organizationId, memberId);
+    return this.membershipsService.getMemberView(organizationId, memberId, {
+      includeRemoved: true,
+    });
   }
 
   @Put(':memberId/roles')
@@ -123,10 +125,8 @@ export class MembershipsController {
       'not hold yourself.',
   })
   @ApiEnvelopedResponse(MemberDto)
-  @ApiErrorResponse(403, [
-    ErrorCode.CANNOT_ESCALATE_PRIVILEGES,
-    ErrorCode.CANNOT_MODIFY_SELF,
-  ])
+  @ApiErrorResponse(400, [ErrorCode.CANNOT_MODIFY_SELF])
+  @ApiErrorResponse(403, [ErrorCode.CANNOT_ESCALATE_PRIVILEGES, ErrorCode.FORBIDDEN])
   @ApiErrorResponse(409, [ErrorCode.CANNOT_REMOVE_LAST_OWNER])
   @ApiStandardErrors()
   @Audit({
@@ -159,6 +159,7 @@ export class MembershipsController {
       'Editing your own entry needs no elevated permission; editing someone ' +
       "else's requires `member:update` and a higher role ranking than theirs.",
   })
+  @ApiErrorResponse(403, [ErrorCode.PERMISSION_DENIED, ErrorCode.FORBIDDEN])
   @ApiEnvelopedResponse(MemberDto)
   @ApiStandardErrors()
   @Audit({
@@ -173,8 +174,15 @@ export class MembershipsController {
     @Param('memberId', new ParseUUIDPipe({ version: '4' })) memberId: string,
     @Body() dto: UpdateMemberProfileDto,
     @CurrentMembership() actor: RequestMembership,
+    @CurrentPermissions() permissions: string[],
   ): Promise<MemberDto> {
-    return this.membershipsService.updateProfile(organizationId, memberId, dto, actor);
+    return this.membershipsService.updateProfile(
+      organizationId,
+      memberId,
+      dto,
+      actor,
+      permissions,
+    );
   }
 
   @Post(':memberId/suspend')

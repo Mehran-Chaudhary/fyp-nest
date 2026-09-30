@@ -282,6 +282,9 @@ export class MembershipSummaryDto {
 }
 
 export class CurrentUserDto extends AuthUserDto {
+  @ApiProperty({ nullable: true, maxLength: 2048 })
+  avatarUrl: string | null;
+
   @ApiProperty({ type: [MembershipSummaryDto] })
   memberships: MembershipSummaryDto[];
 
@@ -327,13 +330,19 @@ export class MfaRequiredResponseDto {
 
 /** Exactly one of `code` and `recoveryCode`. */
 export class SecondFactorDto {
-  @ApiPropertyOptional({ description: 'The six-digit code from the authenticator app.', example: '492039' })
+  @ApiPropertyOptional({
+    description: 'The six-digit code from the authenticator app.',
+    example: '492039',
+  })
   @IsOptional()
   @IsString()
   @Matches(/^\s*\d{3}\s?\d{3}\s*$/, { message: 'code must be six digits.' })
   code?: string;
 
-  @ApiPropertyOptional({ description: 'A single-use recovery code.', example: 'k7m2p-x9qrt' })
+  @ApiPropertyOptional({
+    description: 'A single-use recovery code.',
+    example: 'k7m2p-x9qrt',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(32)
@@ -349,7 +358,9 @@ export class VerifyMfaDto extends SecondFactorDto {
 }
 
 export class BeginMfaSetupDto {
-  @ApiProperty({ description: 'Your password: a session alone cannot attach an authenticator.' })
+  @ApiProperty({
+    description: 'Your password: a session alone cannot attach an authenticator.',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(1024)
@@ -368,7 +379,10 @@ export class MfaSetupResponseDto {
 }
 
 export class EnableMfaDto {
-  @ApiProperty({ description: 'A current code from the authenticator app.', example: '492039' })
+  @ApiProperty({
+    description: 'A current code from the authenticator app.',
+    example: '492039',
+  })
   @IsString()
   @Matches(/^\s*\d{3}\s?\d{3}\s*$/, { message: 'code must be six digits.' })
   code: string;

@@ -12,6 +12,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
+import { IsOptionalNotNull } from '../../../../common/validation/optional';
 import { AccessLevel, KnowledgeBaseAccessMode } from '../../domain/access';
 import { Classification } from '../../domain/classification';
 import { GrantSubjectType } from '../../entities/knowledge-base-grant.entity';
@@ -78,43 +79,57 @@ export class CreateKnowledgeBaseDto {
 
 export class UpdateKnowledgeBaseDto {
   @ApiPropertyOptional({ maxLength: 120 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @IsNotEmpty()
   @MaxLength(120)
   @Trim()
   name?: string;
 
-  @ApiPropertyOptional({ maxLength: 2000, nullable: true })
+  @ApiPropertyOptional({
+    maxLength: 2000,
+    nullable: true,
+    description: '`null` or an empty string removes the description.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(2000)
   @Trim()
-  description?: string;
+  description?: string | null;
 
   @ApiPropertyOptional({ enum: KnowledgeBaseAccessMode })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEnum(KnowledgeBaseAccessMode)
   accessMode?: KnowledgeBaseAccessMode;
 
   @ApiPropertyOptional({ enum: Classification })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEnum(Classification)
   defaultClassification?: Classification;
 
-  @ApiPropertyOptional({ minimum: 64, maximum: 4096 })
+  @ApiPropertyOptional({
+    minimum: 64,
+    maximum: 4096,
+    nullable: true,
+    description: '`null` returns to the workspace default.',
+  })
   @IsOptional()
   @IsInt()
   @Min(64)
   @Max(4096)
-  chunkSize?: number;
+  chunkSize?: number | null;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 1024 })
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 1024,
+    nullable: true,
+    description: '`null` returns to the workspace default.',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1024)
-  chunkOverlap?: number;
+  chunkOverlap?: number | null;
 }
 
 export class ListKnowledgeBasesQueryDto extends PaginationQueryDto {}

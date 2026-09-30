@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, LessThan, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { AuditAction, AuditStatus } from '../../common/enums/audit-action.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import {
@@ -20,6 +20,7 @@ import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.
 import { TokenService } from '../../shared/crypto/token.service';
 import { MailService } from '../../shared/mail/mail.service';
 import { AuditService } from '../audit/audit.service';
+import { MembershipStatus } from '../memberships/entities/organization-member.entity';
 import { MembershipsService } from '../memberships/memberships.service';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { RbacService } from '../rbac/rbac.service';
@@ -145,6 +146,14 @@ export class InvitationsService {
       if (existingMembership && existingMembership.isActive) {
         throw new ConflictError(ErrorCode.MEMBERSHIP_ALREADY_EXISTS);
       }
+      // Accepting would lift the suspension, which only `member:update` may do.
+      if (existingMembership?.status === MembershipStatus.SUSPENDED) {
+        throw new ConflictError(ErrorCode.MEMBERSHIP_SUSPENDED, {
+          message:
+            'This person is a suspended member of this workspace. Reactivate them instead of ' +
+            'inviting them.',
+        });
+      }
     }
 
     // A pending invitation for this address already exists. Enforced by a partial
@@ -221,12 +230,29 @@ export class InvitationsService {
   async resend(organizationId: string, invitationId: string): Promise<InvitationView> {
     const invitation = await this.findByIdOrFail(organizationId, invitationId);
 
-    if (invitation.status !== InvitationStatus.PENDING) {
-      throw new ConflictError(
-        invitation.status === InvitationStatus.ACCEPTED
-          ? ErrorCode.INVITATION_ALREADY_ACCEPTED
-          : ErrorCode.INVITATION_REVOKED,
-      );
+    if (invitation.status === InvitationStatus.ACCEPTED) {
+      throw new ConflictError(ErrorCode.INVITATION_ALREADY_ACCEPTED);
+    }
+    if (invitation.status === InvitationStatus.REVOKED) {
+      throw new ConflictError(ErrorCode.INVITATION_REVOKED);
+    }
+
+    // Pending or expired: resending revives it — whether it lapsed a moment ago
+    // (still PENDING) or the lifecycle sweep has already marked it EXPIRED. The
+    // one obstacle is a newer pending invitation for the same address.
+    if (invitation.status === InvitationStatus.EXPIRED) {
+      const pending = await this.invitationRepository.findOne({
+        where: {
+          organizationId,
+          emailNormalized: invitation.emailNormalized,
+          status: InvitationStatus.PENDING,
+        },
+      });
+      if (pending) {
+        throw new ConflictError(ErrorCode.INVITATION_ALREADY_PENDING, {
+          details: { invitationId: pending.id, expiresAt: pending.expiresAt },
+        });
+      }
     }
 
     const organization = await this.organizationsService.findByIdOrFail(organizationId);
@@ -238,6 +264,7 @@ export class InvitationsService {
 
     const generated = this.tokenService.generateToken(32);
 
+    invitation.status = InvitationStatus.PENDING;
     invitation.tokenHash = generated.hash;
     invitation.expiresAt = new Date(Date.now() + this.security.tokens.invitationTtlMs);
     invitation.sendCount += 1;
@@ -285,6 +312,7 @@ export class InvitationsService {
       throw new ConflictError(ErrorCode.INVITATION_REVOKED);
     }
     if (invitation.isExpired) {
+      await this.markExpired(invitation.id);
       throw new ConflictError(ErrorCode.INVITATION_EXPIRED);
     }
 
@@ -320,6 +348,24 @@ export class InvitationsService {
     token: string,
     acceptingUser: { id: string; emailNormalized: string },
   ): Promise<{ organizationId: string; organizationSlug: string; memberId: string }> {
+    let expiredId: string | undefined;
+    try {
+      return await this.acceptInTransaction(token, acceptingUser, (id) => {
+        expiredId = id;
+      });
+    } catch (error) {
+      // Recorded after the fact: the error just rolled back the transaction
+      // that found the invitation expired.
+      if (expiredId) await this.markExpired(expiredId);
+      throw error;
+    }
+  }
+
+  private async acceptInTransaction(
+    token: string,
+    acceptingUser: { id: string; emailNormalized: string },
+    onExpired: (invitationId: string) => void,
+  ): Promise<{ organizationId: string; organizationSlug: string; memberId: string }> {
     return this.dataSource.transaction(async (manager) => {
       const repository = manager.getRepository(Invitation);
       const tokenHash = this.tokenService.hashToken(token);
@@ -339,8 +385,7 @@ export class InvitationsService {
         throw new ConflictError(ErrorCode.INVITATION_REVOKED);
       }
       if (invitation.isExpired) {
-        invitation.status = InvitationStatus.EXPIRED;
-        await repository.save(invitation);
+        onExpired(invitation.id);
         throw new ConflictError(ErrorCode.INVITATION_EXPIRED);
       }
 
@@ -462,14 +507,16 @@ export class InvitationsService {
     return this.toView(invitation);
   }
 
-  /** Marks lapsed invitations as expired, for accurate dashboard counts. */
-  async expireStale(): Promise<number> {
-    const result = await this.invitationRepository.update(
-      { status: InvitationStatus.PENDING, expiresAt: LessThan(new Date()) },
+  /**
+   * Marks one lapsed invitation EXPIRED as soon as it is examined. The data
+   * lifecycle sweep does the same for all of them on its schedule
+   * (LIFECYCLE_SWEEP_INTERVAL); this keeps the list accurate in between.
+   */
+  private async markExpired(invitationId: string): Promise<void> {
+    await this.invitationRepository.update(
+      { id: invitationId, status: InvitationStatus.PENDING },
       { status: InvitationStatus.EXPIRED },
     );
-
-    return result.affected ?? 0;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

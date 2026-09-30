@@ -33,7 +33,9 @@ const Trim = () =>
  */
 export class OrganizationSettingsDto {
   @ApiPropertyOptional({
-    description: 'Default ingestion chunk size in tokens.',
+    description:
+      'Default ingestion chunk size in tokens, for knowledge bases that do not set their ' +
+      'own. Overrides CHUNK_SIZE_DEFAULT for this workspace.',
     example: 512,
   })
   @IsOptional()
@@ -43,7 +45,9 @@ export class OrganizationSettingsDto {
   defaultChunkSize?: number;
 
   @ApiPropertyOptional({
-    description: 'Token overlap between adjacent chunks.',
+    description:
+      'Default token overlap between adjacent chunks, for knowledge bases that do not set ' +
+      'their own. Must be smaller than the chunk size.',
     example: 64,
   })
   @IsOptional()
@@ -77,7 +81,11 @@ export class OrganizationSettingsDto {
   @IsBoolean()
   requireMfa?: boolean;
 
-  @ApiPropertyOptional({ description: 'Require every member to verify their email.' })
+  @ApiPropertyOptional({
+    description:
+      'Require every member to have verified their email address to act in this workspace ' +
+      '(ACCOUNT_EMAIL_NOT_VERIFIED otherwise). Enabling it needs your own address verified.',
+  })
   @IsOptional()
   @IsBoolean()
   requireVerifiedEmail?: boolean;
@@ -152,7 +160,12 @@ export class UpdateOrganizationDto {
   @Trim()
   logoUrl?: string;
 
-  @ApiPropertyOptional({ type: OrganizationSettingsDto })
+  @ApiPropertyOptional({
+    type: OrganizationSettingsDto,
+    description:
+      'A partial update: only the settings you send change, and `null` clears one back to ' +
+      'its default.',
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => OrganizationSettingsDto)

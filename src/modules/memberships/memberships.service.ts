@@ -8,7 +8,9 @@ import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
+  PermissionDeniedError,
 } from '../../common/exceptions/app.exception';
+import { hasPermission } from '../../common/utils/permission.util';
 import type { RequestMembership } from '../../common/interfaces/authenticated-request.interface';
 import {
   buildPaginationMeta,
@@ -112,12 +114,18 @@ export class MembershipsService {
       .createQueryBuilder('member')
       .innerJoinAndSelect('member.user', 'user')
       .leftJoinAndSelect('member.roles', 'role')
-      .where('member.organization_id = :organizationId', { organizationId })
-      .andWhere('member.deleted_at IS NULL');
+      .where('member.organization_id = :organizationId', { organizationId });
 
-    if (query.status) {
-      builder.andWhere('member.status = :status', { status: query.status });
+    if (query.status === MembershipStatus.REMOVED) {
+      // Removed memberships are soft-deleted (they are kept so audit records
+      // stay resolvable), so they are only reachable with the deleted rows.
+      builder.withDeleted().andWhere('member.status = :status', { status: query.status });
+    } else if (query.status) {
+      builder
+        .andWhere('member.deleted_at IS NULL')
+        .andWhere('member.status = :status', { status: query.status });
     } else {
+      builder.andWhere('member.deleted_at IS NULL');
       // Removed members are retained for audit resolution but are not part of
       // the directory.
       builder.andWhere('member.status != :removed', { removed: MembershipStatus.REMOVED });
@@ -170,6 +178,7 @@ export class MembershipsService {
     organizationId: string,
     memberId: string,
     manager?: EntityManager,
+    options: { includeRemoved?: boolean } = {},
   ): Promise<OrganizationMember> {
     const repository = manager
       ? manager.getRepository(OrganizationMember)
@@ -178,6 +187,7 @@ export class MembershipsService {
     const member = await repository.findOne({
       where: { id: memberId, organizationId },
       relations: { user: true, roles: true },
+      withDeleted: options.includeRemoved === true,
     });
 
     if (!member) throw new NotFoundError(ErrorCode.MEMBERSHIP_NOT_FOUND);
@@ -199,8 +209,13 @@ export class MembershipsService {
     });
   }
 
-  async getMemberView(organizationId: string, memberId: string): Promise<MemberView> {
-    const member = await this.findByIdOrFail(organizationId, memberId);
+  /** `includeRemoved`: also return a removed member, for the directory's read-only view. */
+  async getMemberView(
+    organizationId: string,
+    memberId: string,
+    options: { includeRemoved?: boolean } = {},
+  ): Promise<MemberView> {
+    const member = await this.findByIdOrFail(organizationId, memberId, undefined, options);
     const organization = await this.organizationRepository.findOne({
       where: { id: organizationId },
       select: { id: true, ownerId: true },
@@ -236,6 +251,15 @@ export class MembershipsService {
 
     if (existing && existing.status === MembershipStatus.ACTIVE && !existing.deletedAt) {
       throw new ConflictError(ErrorCode.MEMBERSHIP_ALREADY_EXISTS);
+    }
+
+    // A suspension is lifted by reactivation (`member:update`), never as a side
+    // effect of accepting an invitation.
+    if (existing && existing.status === MembershipStatus.SUSPENDED && !existing.deletedAt) {
+      throw new ConflictError(ErrorCode.MEMBERSHIP_SUSPENDED, {
+        message:
+          'Your membership of this workspace is suspended. Ask an administrator to reactivate it.',
+      });
     }
 
     const roles = await manager
@@ -339,11 +363,16 @@ export class MembershipsService {
     memberId: string,
     changes: { displayName?: string; title?: string },
     actor: RequestMembership,
+    actorPermissions: readonly string[],
   ): Promise<MemberView> {
     const member = await this.findByIdOrFail(organizationId, memberId);
 
-    // Editing your own workspace profile needs no elevated permission.
+    // Editing your own workspace profile needs no elevated permission;
+    // editing someone else's needs `member:update` and a higher rank.
     if (member.id !== actor.id) {
+      if (!hasPermission(actorPermissions, 'member:update')) {
+        throw new PermissionDeniedError(['member:update']);
+      }
       this.assertCanActOn(actor, member, 'edit the profile of');
     }
 
@@ -532,14 +561,6 @@ export class MembershipsService {
     await this.rbacService.invalidateMemberCache(organizationId, userId);
 
     return { left: true };
-  }
-
-  /** Records activity, used to populate "last active" in the directory. */
-  async touchActivity(organizationId: string, userId: string): Promise<void> {
-    await this.memberRepository.update(
-      { organizationId, userId },
-      { lastActiveAt: new Date() },
-    );
   }
 
   // ── Guard rails ───────────────────────────────────────────────────────────

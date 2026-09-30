@@ -57,6 +57,36 @@ export interface AccessTokenClaims extends BaseJwtClaims {
    * code was. Phase 5 policies that require a second factor read this.
    */
   amr?: AuthenticationMethod[];
+  /**
+   * Issued-at in milliseconds. `iat` has whole-second precision, which is too
+   * coarse for revocation cut-offs: a token minted in the same second as a
+   * password change or a "sign out everywhere" would be indistinguishable
+   * from the ones the cut-off is meant to reject. Absent on tokens issued
+   * before it was introduced; see {@link issuedAtMs}.
+   */
+  iatMs?: number;
+}
+
+/**
+ * When an access token was issued, in milliseconds.
+ *
+ * Uses `iatMs` when it is present and consistent with `iat` (it must fall
+ * within the same second). Otherwise, and for tokens issued before `iatMs`
+ * existed, falls back to the start of `iat`'s second, which is the reading
+ * that treats the token as older and so errs towards revoking it.
+ */
+export function issuedAtMs(claims: { iat?: number; iatMs?: number }): number {
+  const fromIat = (claims.iat ?? 0) * 1000;
+  const precise = claims.iatMs;
+  if (
+    typeof precise === 'number' &&
+    Number.isFinite(precise) &&
+    precise >= fromIat &&
+    precise < fromIat + 1000
+  ) {
+    return precise;
+  }
+  return fromIat;
 }
 
 /**

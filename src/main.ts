@@ -1,11 +1,6 @@
 // Must stay first: OpenTelemetry instruments modules as they load (phase 5).
 import './observability/tracing';
-import {
-  ClassSerializerInterceptor,
-  Logger,
-  ValidationPipe,
-  VersioningType,
-} from '@nestjs/common';
+import { ClassSerializerInterceptor, Logger, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -15,7 +10,6 @@ import { useContainer } from 'class-validator';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import type { Express } from 'express';
 import { AppModule } from './app.module';
 import { RealtimeIoAdapter } from './modules/realtime/realtime-io.adapter';
 import { REALTIME_CONFIG_KEY, type RealtimeConfig } from './config/realtime.config';
@@ -33,8 +27,9 @@ import {
   ApiErrorBody,
   ApiErrorResponseDto,
   ResponseMeta,
-  ValidationFieldError,
+  ValidationErrorDetails,
 } from './common/dto/api-response.dto';
+import { createValidationPipe } from './common/validation/validation-pipe';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -87,13 +82,15 @@ async function bootstrap(): Promise<void> {
   // API prefix and versioning: `/metrics`, like the health probes, is for
   // infrastructure. It authenticates with its own bearer token (METRICS_TOKEN),
   // not with user credentials, so the global guards do not apply to it.
-  const observability = configService.getOrThrow<ObservabilityConfig>(OBSERVABILITY_CONFIG_KEY);
+  const observability = configService.getOrThrow<ObservabilityConfig>(
+    OBSERVABILITY_CONFIG_KEY,
+  );
   if (observability.metrics.enabled) {
     const serveMetrics = createMetricsHandler(app.get(MetricsService), {
       token: observability.metrics.token,
       isProduction: appConfig.isProduction,
     });
-    const express = app.getHttpAdapter().getInstance() as Express;
+    const express = app.getHttpAdapter().getInstance();
     express.get(observability.metrics.path, (request, response) =>
       serveMetrics(request, response),
     );
@@ -194,25 +191,8 @@ async function bootstrap(): Promise<void> {
   // is what allows `@IsStrongPassword()` to read the live password policy.
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      // Strips properties with no decorator. Without it, a client could set
-      // fields the DTO never declared and any code doing `Object.assign(entity,
-      // dto)` would write them straight to the database.
-      whitelist: true,
-      // Rejects rather than silently dropping, so an integration sending a
-      // misspelled field learns about it instead of losing data quietly.
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: false },
-      // 422 rather than 400: distinguishes "malformed request" from "well-formed
-      // but semantically invalid", which the frontend renders differently.
-      errorHttpStatusCode: 422,
-      // Validator internals are not useful to a client and describe our DTOs.
-      validationError: { target: false, value: false },
-      stopAtFirstError: false,
-    }),
-  );
+  // Whitelisting, 422s, and field errors keyed by property path: see the factory.
+  app.useGlobalPipes(createValidationPipe());
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
@@ -305,7 +285,10 @@ async function bootstrap(): Promise<void> {
         'Runs, their steps, approvals, the audit trace and dead letters',
       )
       .addTag('Governance', 'Token quotas, the token rate and agent circuit breakers')
-      .addTag('Command Centre', 'Analytics: throughput, latency, spend, privacy and security')
+      .addTag(
+        'Command Centre',
+        'Analytics: throughput, latency, spend, privacy and security',
+      )
       .addTag('Personal data', 'Your data: a copy of it, and the erasure of your account')
       .addTag('Health', 'Liveness and readiness probes')
       .build();
@@ -313,7 +296,12 @@ async function bootstrap(): Promise<void> {
     const document = SwaggerModule.createDocument(app, documentConfig, {
       // The envelope types are referenced only from decorator schemas, so they
       // must be declared explicitly or the generated client loses them.
-      extraModels: [ResponseMeta, ApiErrorBody, ApiErrorResponseDto, ValidationFieldError],
+      extraModels: [
+        ResponseMeta,
+        ApiErrorBody,
+        ApiErrorResponseDto,
+        ValidationErrorDetails,
+      ],
       operationIdFactory: (controllerKey, methodKey) =>
         `${controllerKey.replace(/Controller$/, '')}_${methodKey}`,
     });

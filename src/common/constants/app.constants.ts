@@ -19,6 +19,8 @@ export const METADATA_KEY = {
   REQUIRED_ROLES: 'daiap:required-roles',
   /** Marks a route as not needing a workspace context. */
   SKIP_ORGANIZATION_CONTEXT: 'daiap:skip-organization-context',
+  /** Resolves the workspace context when one is supplied, and proceeds without it otherwise. */
+  OPTIONAL_ORGANIZATION_CONTEXT: 'daiap:optional-organization-context',
   /** Marks a route as requiring platform-administrator status. */
   PLATFORM_ADMIN_ONLY: 'daiap:platform-admin-only',
   /** Audit descriptor attached by `@Audit()`. */

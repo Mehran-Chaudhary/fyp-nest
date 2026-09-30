@@ -44,6 +44,7 @@ import {
   CreateInvitationDto,
   InvitationDto,
   InvitationPreviewDto,
+  InvitationTokenQueryDto,
   ListInvitationsQueryDto,
 } from './dto/invitation.dto';
 import { InvitationsService } from './invitations.service';
@@ -96,6 +97,7 @@ export class OrganizationInvitationsController {
   @ApiErrorResponse(409, [
     ErrorCode.INVITATION_ALREADY_PENDING,
     ErrorCode.MEMBERSHIP_ALREADY_EXISTS,
+    ErrorCode.MEMBERSHIP_SUSPENDED,
   ])
   @ApiStandardErrors()
   @Audit({
@@ -128,9 +130,15 @@ export class OrganizationInvitationsController {
     summary: 'Re-send an invitation',
     description:
       'Issues a brand-new token and invalidates the previous one, so a link the ' +
-      'administrator believes they replaced is genuinely dead.',
+      'administrator believes they replaced is genuinely dead. Revives an expired ' +
+      'invitation with a fresh expiry.',
   })
   @ApiEnvelopedResponse(InvitationDto)
+  @ApiErrorResponse(409, [
+    ErrorCode.INVITATION_ALREADY_ACCEPTED,
+    ErrorCode.INVITATION_REVOKED,
+    ErrorCode.INVITATION_ALREADY_PENDING,
+  ])
   @ApiStandardErrors()
   @Audit({
     action: AuditAction.MEMBER_INVITATION_RESENT,
@@ -203,8 +211,9 @@ export class InvitationsController {
     ErrorCode.INVITATION_REVOKED,
     ErrorCode.INVITATION_ALREADY_ACCEPTED,
   ])
-  async preview(@Query('token') token: string): Promise<InvitationPreviewDto> {
-    return this.invitationsService.preview(token);
+  @ApiErrorResponse(422, [ErrorCode.VALIDATION_FAILED])
+  async preview(@Query() query: InvitationTokenQueryDto): Promise<InvitationPreviewDto> {
+    return this.invitationsService.preview(query.token);
   }
 
   @Post('accept')
@@ -223,6 +232,8 @@ export class InvitationsController {
     ErrorCode.INVITATION_EXPIRED,
     ErrorCode.INVITATION_REVOKED,
     ErrorCode.INVITATION_ALREADY_ACCEPTED,
+    ErrorCode.MEMBERSHIP_ALREADY_EXISTS,
+    ErrorCode.MEMBERSHIP_SUSPENDED,
   ])
   @ApiStandardErrors()
   async accept(

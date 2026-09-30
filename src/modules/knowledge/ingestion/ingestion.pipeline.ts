@@ -41,6 +41,7 @@ import {
 import { chunkId, DocumentChunk } from '../entities/document-chunk.entity';
 import { Document, type DocumentProcessingMetrics } from '../entities/document.entity';
 import { KnowledgeBase } from '../entities/knowledge-base.entity';
+import { resolveChunking } from './chunking';
 import { chunkAad, dataKeyBinding, originalObjectAad } from '../documents/content-binding';
 import type { IngestionJobData } from './knowledge-jobs';
 import { KnowledgeJobsService } from './knowledge-jobs.service';
@@ -173,6 +174,7 @@ export class IngestionPipeline {
       where: { id: current.knowledgeBaseId },
     });
     if (!knowledgeBase) return { outcome: 'skipped', reason: 'knowledge base deleted' };
+    const chunking = await this.resolveChunking(current.organizationId, knowledgeBase);
 
     const metrics: DocumentProcessingMetrics = {
       ...(current.status === DocumentStatus.EMBEDDING ? current.processingMetrics : {}),
@@ -213,8 +215,8 @@ export class IngestionPipeline {
             fileType: FILE_TYPE_DETAILS[current.fileType].wire,
             filename: current.originalFilename,
             content,
-            chunkSize: knowledgeBase.chunkSize ?? this.config.chunkSizeDefault,
-            chunkOverlap: knowledgeBase.chunkOverlap ?? this.config.chunkOverlapDefault,
+            chunkSize: chunking.size,
+            chunkOverlap: chunking.overlap,
             maxChunks: this.config.maxChunksPerDocument,
             signal: AbortSignal.timeout(Math.max(deadline - Date.now(), 1)),
           }),
@@ -330,6 +332,21 @@ export class IngestionPipeline {
     } finally {
       this.contentEncryption.destroy(key);
     }
+  }
+
+  /** Chunking for this document: knowledge base, else workspace, else platform. */
+  private async resolveChunking(
+    organizationId: string,
+    knowledgeBase: KnowledgeBase,
+  ): Promise<{ size: number; overlap: number }> {
+    const rows: Array<{ settings: Record<string, unknown> | null }> =
+      await this.dataSource.query('SELECT settings FROM organizations WHERE id = $1', [
+        organizationId,
+      ]);
+    return resolveChunking(knowledgeBase, rows[0]?.settings, {
+      chunkSize: this.config.chunkSizeDefault,
+      chunkOverlap: this.config.chunkOverlapDefault,
+    });
   }
 
   /**

@@ -8,6 +8,8 @@
 This file is the plan. Each phase gets its own detailed specification (endpoints,
 request and response shapes, screens, flows, acceptance criteria) before work on it
 starts. **Phase 1:** [`PHASE_1_FOUNDATION_AUTH_WORKSPACE.md`](PHASE_1_FOUNDATION_AUTH_WORKSPACE.md).
+**Phase 2:** [`PHASE_2_WORKSPACE_ADMINISTRATION.md`](PHASE_2_WORKSPACE_ADMINISTRATION.md).
+**Phase 3:** [`PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md`](PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md).
 
 The backend is complete. The phases are ordered by what depends on what: nothing in a
 phase needs a later phase, and every phase ends with something demonstrable.
@@ -84,7 +86,7 @@ personal data.
 
 **Endpoints:** `auth/*` (20), `auth/me/export`, `DELETE auth/me`, `GET/POST
 organizations`, `GET organizations/:id`, `GET organizations/:id/members/me`,
-`GET organizations/:id/roles` (permission fallback), `GET permissions`,
+`GET permissions`,
 `GET /health/live`.
 
 ---
@@ -95,11 +97,14 @@ organizations`, `GET organizations/:id`, `GET organizations/:id/members/me`,
 roles, build custom roles (such as "HR Manager"), issue API keys and lock the
 workspace down.
 
-- [ ] Workspace settings: name, description, logo URL; chunking defaults; audit
-      retention; require MFA (needs `security:update` and an MFA-verified session);
-      allowed email domains
+**Detailed spec:** [`PHASE_2_WORKSPACE_ADMINISTRATION.md`](PHASE_2_WORKSPACE_ADMINISTRATION.md).
+
+- [ ] Workspace settings: name, description, logo URL; audit retention; document
+      chunking defaults; require MFA (needs `security:update` and an MFA-verified
+      session); require a verified email; allowed email domains
 - [ ] Danger zone: transfer ownership, delete workspace (owner only)
-- [ ] Team directory: search, filter by status and role, pagination; member detail
+- [ ] Team directory: search, filter by status (including removed) and role,
+      pagination, last active; member detail
 - [ ] Member actions: replace roles, suspend / reactivate, remove, edit workspace
       profile (display name, title), leave workspace. The UI must respect role
       priority: you cannot act on members who rank at or above you.
@@ -112,8 +117,8 @@ workspace down.
       priority, colour; delete; "recompute" repair action
 - [ ] API keys: list, create (scopes from `api-keys/scopes`, expiry, optional IP
       pinning), **show the secret once**, revoke
-- [ ] Security: IP allowlist rules (CIDR, IPv4/IPv6), enable/disable enforcement
-      (refused with no active rules)
+- [ ] Security: IP allowlist rules (CIDR, IPv4/IPv6, last matched), enable/disable
+      enforcement (refused with no active rules, or when it would lock you out)
 
 **Endpoints:** `PATCH/DELETE organizations/:id`, `…/transfer-ownership`,
 `…/ip-rules` (GET/POST/DELETE), `…/ip-enforcement`; `…/members` (list, get, roles,
@@ -123,8 +128,8 @@ delete, recompute); `…/api-keys` (scopes, list, create, revoke).
 
 **Watch out:** error codes `CANNOT_ESCALATE_PRIVILEGES`, `CANNOT_MODIFY_SELF`,
 `CANNOT_REMOVE_LAST_OWNER`, `ROLE_IMMUTABLE`, `ROLE_IN_USE`, `SEAT_LIMIT_REACHED`,
-`INVITATION_*`. The workspace setting `requireVerifiedEmail` is saved but not
-enforced by the backend today, so label it accordingly.
+`MEMBERSHIP_SUSPENDED`, `IP_ALLOWLIST_SELF_LOCKOUT`, `INVITATION_*`. Saving
+`settings` is a partial update: send only what changed.
 
 ---
 
@@ -134,29 +139,44 @@ enforced by the backend today, so label it accordingly.
 them go through the ingestion pipeline, inspect their chunks and PII report, and
 query them securely. This is mockup screen 5.
 
+**Detailed spec:** [`PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md`](PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md).
+Build it against `npm run start:standins` (in-memory storage, vector store and AI
+service) until the real knowledge layer is deployed.
+
 - [ ] Knowledge bases: list (sidebar with document counts), create/edit (access
-      mode `WORKSPACE` / `RESTRICTED`, default classification), delete
-- [ ] Access grants on restricted knowledge bases: role / member / API key with
-      `READ` / `WRITE` / `MANAGE`
-- [ ] Document Vault table: filter by knowledge base, status and classification;
-      search; sort; pagination
-- [ ] Upload: drag and drop, multipart field `file` + optional `title` /
-      `classification`, progress bar, per-file error codes (`DOCUMENT_DUPLICATE`,
-      `DOCUMENT_TYPE_NOT_ALLOWED`, `DOCUMENT_CONTENT_MISMATCH`,
-      `STORAGE_QUOTA_EXCEEDED`, …)
+      mode `WORKSPACE` / `RESTRICTED`, default classification, inherited chunking),
+      delete (type the name)
+- [ ] Access grants on restricted knowledge bases: role / member (membership id) /
+      API key with `READ` / `WRITE` / `MANAGE`, with a self-lockout warning
+- [ ] Document Vault table: filter by knowledge base, status (Indexing =
+      `PARSING,CHUNKING,EMBEDDING`) and classification; title search and an "Ask"
+      mode backed by retrieval; sort; pagination; bulk actions
+- [ ] Upload: drag and drop, client-side pre-checks, one file per request (3 in
+      parallel) with an XHR progress bar, classification always sent, per-file error
+      messages (`DOCUMENT_DUPLICATE`, `DOCUMENT_TYPE_NOT_ALLOWED`,
+      `DOCUMENT_CONTENT_MISMATCH`, `STORAGE_QUOTA_EXCEEDED`, …)
 - [ ] Pipeline status: `UPLOADED → PARSING → CHUNKING → EMBEDDING → READY | FAILED`
-      (poll while any document is in progress), pipeline status panel
-- [ ] Document detail: metadata, chunks, reclassify, reindex, download (filename
-      from `Content-Disposition`), delete (irreversible: crypto-shredded)
-- [ ] PII redaction report per document (masked; `pii:reveal` to unmask)
-- [ ] Retrieval playground: query → passages with sources; "my access scope" panel
-- [ ] Graceful `503 KNOWLEDGE_LAYER_NOT_CONFIGURED` / `AI_SERVICE_UNAVAILABLE` states
+      (poll while any document is in progress; retries visible in `statusMessage`;
+      a reindex keeps the previous version searchable), pipeline status panel
+- [ ] Document detail: metadata, processing timings, chunks, edit and reclassify,
+      reindex / retry, download (filename from `filename*`), delete (irreversible:
+      crypto-shredded)
+- [ ] PII redaction report per document (placeholders, per-page counts, degraded
+      banner; `pii:reveal` to unmask, audited)
+- [ ] Retrieval playground: query → passages with sources, relative scores and
+      timings; "my access scope" panel
+- [ ] Graceful `503 KNOWLEDGE_LAYER_NOT_CONFIGURED` / `OBJECT_STORAGE_UNAVAILABLE` /
+      `AI_SERVICE_UNAVAILABLE` / `VECTOR_STORE_UNAVAILABLE` /
+      `PII_DETECTION_UNAVAILABLE` states
 
-**Endpoints:** `…/knowledge-bases` (8), `…/documents` (8), `…/rag/query`,
-`…/rag/access-scope`, `…/pii/documents/:id/report`.
+**Endpoints (E60–E78, 19):** `…/knowledge-bases` (8, including grants),
+`…/documents` (8, including upload), `…/rag/query`, `…/rag/access-scope`,
+`…/pii/documents/:id/report`.
 
-**Watch out:** documents in knowledge bases you cannot read return 404. Uploads are
-limited to 50 MB and 100 per hour.
+**Watch out:** hidden knowledge bases and documents above your clearance return 404
+and are left out of lists and counts. The Administrator role does not bypass restricted
+knowledge bases; only the owner does. Uploads are limited to 50 MB, 120 s including the
+transfer, and 100 per hour.
 
 ---
 
@@ -305,15 +325,31 @@ and 6).
 
 ---
 
-## Backend issues that affect the frontend
+## Backend issues found while writing the specifications
 
-Found while preparing Phase 1 and verified against a running server. Details and
-workarounds are in the Phase 1 specification, section 14.
+Eighteen backend issues surfaced while preparing the phase specifications. **All were
+fixed in the backend on 2026-09-30** and re-verified against a running server; the
+phase specifications describe the fixed behaviour. Details: Phase 1 specification
+section 14 (BF-1…BF-5), Phase 2 specification section 10 (BF-6…BF-12), Phase 3
+specification section 11 (BF-13…BF-18).
 
-| # | Issue | Impact | Fix belongs in |
-|---|-------|--------|----------------|
-| BF-1 | `GET /auth/me` never returns `permissions` / `activeOrganizationId` (the auth controller skips workspace resolution) | The frontend must compute permissions with a fallback | Backend |
-| BF-2 | Rate limiting runs before authentication, so every bucket is per IP. `refresh`, `change-password`, `mfa/*`, `verify-email` and `reset-password` share **10 requests / 15 min per IP** | Page reloads and office NAT can lock users out of refreshing | Backend (and raise `THROTTLE_AUTH_LIMIT` in development) |
-| BF-3 | After `change-password`, a refresh within the same second returns an access token that is already rejected (`AUTH_TOKEN_REVOKED`) | The frontend must wait about 1.1 s before refreshing | Backend |
-| BF-4 | Password-policy validation errors are keyed `"Password"` (or `"That"`) instead of the field name | Form error mapping needs a special case | Backend |
-| BF-5 | `GET /auth/me` omits `mfaEnabled` and `avatarUrl` | Read MFA state from `GET /auth/mfa`; avatars show initials in Phase 1 | Backend (optional) |
+| # | Was | Fixed behaviour |
+|---|-----|-----------------|
+| BF-1 | `GET /auth/me` never returned `permissions` / `activeOrganizationId` | Returned when `X-Organization-Id` is sent |
+| BF-2 | Every rate-limit bucket was per IP; refresh and the account actions shared 10 requests / 15 min per IP | Signed-in calls count per user; refresh has its own policy (60 / 15 min per session) |
+| BF-3 | A refresh in the same second as `change-password` returned an already-revoked token | Revocation is millisecond-precise: refresh immediately |
+| BF-4 | Some validation errors were keyed by the message's first word (`"Password"`, `"a"`, `"each"`) | Always keyed by the property path |
+| BF-5 | `GET /auth/me` omitted `mfaEnabled` and `avatarUrl` | Both returned |
+| BF-6 | **Security.** Saving workspace `settings` replaced the whole object (turning off `requireMfa`) | Partial update; `null` clears one setting |
+| BF-7 | Editing another member's profile checked rank only | Also requires `member:update` |
+| BF-8 | Re-inviting a suspended member (or their acceptance) reactivated them | Refused with `409 MEMBERSHIP_SUSPENDED` |
+| BF-9 | Invitation preview without a token returned 500 | `422 VALIDATION_FAILED` |
+| BF-10 | Resending an invitation the sweep had marked `EXPIRED` failed; expiry at acceptance was not saved | Resend revives it; preview and accept mark expiry |
+| BF-11 | **Security.** IP enforcement could lock out everyone, including the admin enabling it | Refused with `409 IP_ALLOWLIST_SELF_LOCKOUT` |
+| BF-12 | Chunking defaults and `requireVerifiedEmail` were not applied; `lastMatchedAt` / `lastActiveAt` never written; `REMOVED` filter empty | All applied or recorded |
+| BF-13 | `null` for a knowledge base's name, access mode or default classification failed in the database with a field-less `422`; `""` descriptions were stored | Field-keyed `422`; `""`/`null` clears the description; `null` chunk settings inherit |
+| BF-14 | `PATCH` document with `classification: null` returned **500**; `title`/`tags: null` a field-less `422` | Field-keyed `422` |
+| BF-15 | A knowledge base's chunk overlap was validated against the platform size, not the effective one, then silently shrunk at ingestion | Validated against knowledge base → workspace → platform; field-keyed `422` |
+| BF-16 | Knowledge-base list ignored `sortDirection` for `sortBy=name` | Honoured |
+| BF-17 | Over-long retrieval query: `422` without a field | `details.fields.query` |
+| BF-18 | Document list filtered by one status only | `status` accepts a comma-separated list |

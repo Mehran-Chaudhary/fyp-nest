@@ -14,6 +14,7 @@ import {
 import { ErrorCode } from '../../../common/enums/error-code.enum';
 import { UnauthorizedError } from '../../../common/exceptions/app.exception';
 import {
+  issuedAtMs,
   TokenType,
   type AccessTokenClaims,
   type AuthenticationMethod,
@@ -112,7 +113,10 @@ export class JwtTokenService {
     organizationId?: string,
     amr: AuthenticationMethod[] = ['pwd'],
   ): Promise<string> {
-    const claims: Omit<AccessTokenClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
+    // `iat` is set here rather than by the signer so that it and `iatMs` come
+    // from one clock reading and always agree (see issuedAtMs).
+    const nowMs = Date.now();
+    const claims: Omit<AccessTokenClaims, 'exp' | 'iss' | 'aud'> = {
       sub: user.id,
       type: TokenType.ACCESS,
       jti: randomUUID(),
@@ -120,6 +124,8 @@ export class JwtTokenService {
       isPlatformAdmin: user.isPlatformAdmin,
       sid: sessionId,
       amr,
+      iat: Math.floor(nowMs / 1000),
+      iatMs: nowMs,
       ...(organizationId ? { org: organizationId } : {}),
     };
 
@@ -204,6 +210,36 @@ export class JwtTokenService {
     return claims;
   }
 
+  /**
+   * Who an access token was issued to, if its signature, issuer, audience and
+   * expiry check out — or null. No revocation check and no database access.
+   *
+   * For the rate limiter only, which runs before authentication: it needs a
+   * cheap, unforgeable identity to key budgets per user rather than per IP
+   * address. It must never be used to authorise anything.
+   */
+  async identifyAccessToken(token: string): Promise<string | null> {
+    try {
+      const claims = await this.verify<AccessTokenClaims>(token, this.config.accessSecret);
+      return claims.type === TokenType.ACCESS && claims.sub ? claims.sub : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * The session family a refresh token belongs to, if it verifies — or null.
+   * Like {@link identifyAccessToken}: for keying rate limits only.
+   */
+  async identifyRefreshToken(token: string): Promise<string | null> {
+    try {
+      const claims = await this.verifyRefreshToken(token);
+      return claims.fam ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   private async verify<T extends object>(token: string, secret: string): Promise<T> {
     try {
       return await this.jwtService.verifyAsync<T>(token, {
@@ -250,7 +286,9 @@ export class JwtTokenService {
    * password change could survive it.
    */
   async revokeAllUserTokens(userId: string): Promise<void> {
-    const epoch = Math.floor(Date.now() / 1000) + 1;
+    // Milliseconds: tokens issued before this instant are revoked, and a token
+    // minted a moment later — a fresh sign-in — is not (see issuedAtMs).
+    const epoch = Date.now();
     await this.redis.set(
       CacheKeys.userTokenEpoch(userId),
       String(epoch),
@@ -289,7 +327,10 @@ export class JwtTokenService {
 
       if (epochRaw) {
         const epoch = Number(epochRaw);
-        if (Number.isFinite(epoch) && (claims.iat ?? 0) < epoch) return true;
+        // Epochs written before millisecond precision are in seconds (and were
+        // rounded up to the next second); read them as such.
+        const epochMs = epoch < 1e12 ? epoch * 1000 : epoch;
+        if (Number.isFinite(epochMs) && issuedAtMs(claims) < epochMs) return true;
       }
 
       return false;

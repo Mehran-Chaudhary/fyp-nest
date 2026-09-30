@@ -6,6 +6,7 @@ import { AuditAction, AuditStatus } from '../../common/enums/audit-action.enum';
 import { ActorType } from '../../common/enums/auth-type.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import { AppException } from '../../common/exceptions/app.exception';
+import { issuedAtMs } from '../../common/interfaces/jwt-payload.interface';
 import { normaliseIp } from '../../common/utils/ip.util';
 import { REALTIME_CONFIG_KEY, type RealtimeConfig } from '../../config/realtime.config';
 import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
@@ -218,7 +219,7 @@ export class RealtimeAuthService {
     }
     // The durable revocation cut-off, independent of Redis — as for every HTTP request.
     const validFrom = await this.users.getTokensValidFrom(claims.sub);
-    if (validFrom && (claims.iat ?? 0) * 1000 < validFrom.getTime()) {
+    if (validFrom && issuedAtMs(claims) < validFrom.getTime()) {
       throw new AppException(ErrorCode.AUTH_TOKEN_REVOKED, HttpStatus.UNAUTHORIZED);
     }
 

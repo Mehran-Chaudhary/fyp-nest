@@ -34,6 +34,7 @@ import {
   KnowledgeBaseGrant,
 } from '../entities/knowledge-base-grant.entity';
 import { KnowledgeBase } from '../entities/knowledge-base.entity';
+import { effectiveChunking } from '../ingestion/chunking';
 import { MAINTENANCE_JOB } from '../ingestion/knowledge-jobs';
 import { KnowledgeJobsService } from '../ingestion/knowledge-jobs.service';
 import type {
@@ -108,8 +109,11 @@ export class KnowledgeBasesService {
       });
     }
 
+    // Alphabetical by default; an explicit `sortBy` honours `sortDirection`.
+    const direction = query.sortBy === undefined ? 'ASC' : query.sortDirection;
+
     const [bases, total] = await builder
-      .orderBy(`kb.${sortBy}`, sortBy === 'name' ? 'ASC' : query.sortDirection)
+      .orderBy(`kb.${sortBy}`, direction)
       .addOrderBy('kb.id', 'ASC')
       .skip((query.page - 1) * query.limit)
       .take(query.limit)
@@ -204,7 +208,12 @@ export class KnowledgeBasesService {
     const defaultClassification = input.defaultClassification ?? Classification.INTERNAL;
 
     this.assertWithinClearance(scope, defaultClassification);
-    this.assertChunking(input.chunkSize ?? null, input.chunkOverlap ?? null);
+    await this.assertChunking(
+      principal.organizationId,
+      input.chunkSize ?? null,
+      input.chunkOverlap ?? null,
+      input,
+    );
 
     try {
       const created = await this.dataSource.transaction(async (manager) => {
@@ -212,7 +221,7 @@ export class KnowledgeBasesService {
           manager.getRepository(KnowledgeBase).create({
             organizationId: principal.organizationId,
             name: input.name,
-            description: input.description ?? null,
+            description: input.description || null,
             accessMode,
             defaultClassification,
             embeddingModel: this.vectorStore.embeddingModel,
@@ -267,9 +276,13 @@ export class KnowledgeBasesService {
     if (input.defaultClassification) {
       this.assertWithinClearance(scope, input.defaultClassification);
     }
-    this.assertChunking(
-      input.chunkSize ?? knowledgeBase.chunkSize,
-      input.chunkOverlap ?? knowledgeBase.chunkOverlap,
+    // `null` is an explicit return to the workspace default, so only an absent
+    // field keeps the stored value.
+    await this.assertChunking(
+      principal.organizationId,
+      input.chunkSize !== undefined ? input.chunkSize : knowledgeBase.chunkSize,
+      input.chunkOverlap !== undefined ? input.chunkOverlap : knowledgeBase.chunkOverlap,
+      input,
     );
 
     const changes: Record<string, { from: unknown; to: unknown }> = {};
@@ -283,7 +296,8 @@ export class KnowledgeBasesService {
     };
 
     apply('name', input.name);
-    apply('description', input.description);
+    // An empty description is no description.
+    apply('description', input.description === '' ? null : input.description);
     apply('accessMode', input.accessMode);
     apply('defaultClassification', input.defaultClassification);
     apply('chunkSize', input.chunkSize);
@@ -610,13 +624,41 @@ export class KnowledgeBasesService {
     }
   }
 
-  private assertChunking(chunkSize: number | null, chunkOverlap: number | null): void {
-    const size = chunkSize ?? this.ingestion.chunkSizeDefault;
-    const overlap = chunkOverlap ?? this.ingestion.chunkOverlapDefault;
+  /**
+   * The overlap must be smaller than the chunk size that will actually apply:
+   * a level this base leaves unset is inherited from the workspace, then the
+   * platform, exactly as ingestion resolves it. Validating against the platform
+   * default alone accepted overlaps that ingestion then silently shrank.
+   */
+  private async assertChunking(
+    organizationId: string,
+    chunkSize: number | null,
+    chunkOverlap: number | null,
+    requested: { chunkSize?: number | null; chunkOverlap?: number | null },
+  ): Promise<void> {
+    const rows: Array<{ settings: Record<string, unknown> | null }> =
+      await this.dataSource.query('SELECT settings FROM organizations WHERE id = $1', [
+        organizationId,
+      ]);
+    const { size, overlap } = effectiveChunking(
+      { chunkSize, chunkOverlap },
+      rows[0]?.settings,
+      {
+        chunkSize: this.ingestion.chunkSizeDefault,
+        chunkOverlap: this.ingestion.chunkOverlapDefault,
+      },
+    );
 
     if (overlap >= size) {
+      // Filed under the field the caller sent, so the form can mark it.
+      const fields =
+        requested.chunkOverlap !== undefined && requested.chunkOverlap !== null
+          ? { chunkOverlap: [`must be smaller than the chunk size (${size})`] }
+          : { chunkSize: [`must be larger than the chunk overlap (${overlap})`] };
+
       throw new ValidationError({
         message: `Chunk overlap (${overlap}) must be smaller than chunk size (${size}).`,
+        details: { fields },
       });
     }
   }

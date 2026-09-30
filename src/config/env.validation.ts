@@ -321,6 +321,9 @@ export const envValidationSchema = Joi.object({
   /** Deliberately tight bucket for credential-handling endpoints. */
   THROTTLE_AUTH_TTL: duration('15m'),
   THROTTLE_AUTH_LIMIT: Joi.number().integer().min(1).default(10),
+  /** Access token renewal, per session. Each page load of the web app renews once. */
+  THROTTLE_REFRESH_TTL: duration('15m'),
+  THROTTLE_REFRESH_LIMIT: Joi.number().integer().min(1).default(60),
   /** Bucket for endpoints that send email, to prevent using us as a spam relay. */
   THROTTLE_EMAIL_TTL: duration('1h'),
   THROTTLE_EMAIL_LIMIT: Joi.number().integer().min(1).default(5),

@@ -122,6 +122,14 @@ export class RedisService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
+  /**
+   * Sets a key only if it does not exist (SET NX EX). True when this call set
+   * it — used to let one caller in per window, for example to debounce writes.
+   */
+  async setIfAbsent(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    return (await this.client.set(key, value, 'EX', ttlSeconds, 'NX')) === 'OK';
+  }
+
   async del(...keys: string[]): Promise<number> {
     if (keys.length === 0) return 0;
     return this.client.del(...keys);

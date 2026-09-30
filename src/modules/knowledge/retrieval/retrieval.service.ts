@@ -142,6 +142,11 @@ export class RetrievalService {
     if (request.query.length > this.config.maxQueryLength) {
       throw new AppException(ErrorCode.VALIDATION_FAILED, HttpStatus.UNPROCESSABLE_ENTITY, {
         message: `The query exceeds ${this.config.maxQueryLength} characters.`,
+        details: {
+          fields: {
+            query: [`must be at most ${this.config.maxQueryLength} characters`],
+          },
+        },
       });
     }
 

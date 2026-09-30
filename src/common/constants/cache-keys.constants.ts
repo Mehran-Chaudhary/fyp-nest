@@ -49,6 +49,14 @@ export const CacheKeys = {
   organizationIpAllowlist: (organizationId: string): string =>
     `${CACHE_NAMESPACE.ORG}:ip-allowlist:${organizationId}`,
 
+  /** Debounce marker: a member's `last_active_at` was written recently. */
+  memberActivity: (membershipId: string): string =>
+    `${CACHE_NAMESPACE.ORG}:member-activity:${membershipId}`,
+
+  /** Debounce marker: an IP rule's `last_matched_at` was written recently. */
+  ipRuleMatched: (ruleId: string): string =>
+    `${CACHE_NAMESPACE.ORG}:ip-rule-matched:${ruleId}`,
+
   /** Cached membership record. */
   membership: (organizationId: string, userId: string): string =>
     `${CACHE_NAMESPACE.ORG}:member:${organizationId}:${userId}`,
@@ -160,6 +168,8 @@ export const CACHE_TTL_SECONDS = {
   MEMBERSHIP: 300,
   USER_PROFILE: 120,
   IP_ALLOWLIST: 300,
+  /** How often, at most, activity timestamps are written for one member or IP rule. */
+  ACTIVITY_DEBOUNCE: 60,
   API_KEY: 60,
   /** Long, because the epoch must outlive the longest possible refresh token. */
   USER_TOKEN_EPOCH: 60 * 60 * 24 * 60,

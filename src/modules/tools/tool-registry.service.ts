@@ -46,6 +46,7 @@ import type {
 } from './dto/tool.dto';
 import { Tool } from './entities/tool.entity';
 import { HttpToolRunner } from './http/http-tool.runner';
+import { definedOnly } from '../../common/utils/object.util';
 
 const PG_UNIQUE_VIOLATION = '23505';
 
@@ -368,7 +369,9 @@ export class ToolRegistryService {
       const http = input.http ? normalizeHttp(input.http as HttpToolConfig) : tool.config;
       const parameters = (input.parameters as JsonSchema | undefined) ?? tool.parameters;
       const dataPolicy = input.dataPolicy
-        ? this.resolvePolicy(http, { ...tool.dataPolicy, ...input.dataPolicy })
+        ? // Only the policy fields the client sent: the DTO instance carries the
+          // others as `undefined`, and spreading it would reset them to defaults.
+          this.resolvePolicy(http, { ...tool.dataPolicy, ...definedOnly(input.dataPolicy) })
         : input.http
           ? this.resolvePolicy(http, tool.dataPolicy)
           : tool.dataPolicy;

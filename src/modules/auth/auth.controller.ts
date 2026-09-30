@@ -23,6 +23,7 @@ import {
   ApiStandardErrors,
 } from '../../common/decorators/api-response.decorators';
 import {
+  OptionalOrganizationContext,
   Public,
   SkipOrganizationContext,
   ThrottlePolicy,
@@ -137,7 +138,7 @@ export class AuthController {
   })
   @ApiEnvelopedResponse(AuthResponseDto, 'Account created and signed in')
   @ApiErrorResponse(409, [ErrorCode.ACCOUNT_ALREADY_EXISTS])
-  @ApiErrorResponse(422, [ErrorCode.VALIDATION_FAILED, ErrorCode.AUTH_PASSWORD_TOO_WEAK])
+  @ApiErrorResponse(422, [ErrorCode.VALIDATION_FAILED, ErrorCode.AUTH_PASSWORD_BREACHED])
   async register(
     @Body() dto: RegisterDto,
     @ClientIp() ip: string,
@@ -292,7 +293,8 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Replace your recovery codes',
-    description: 'Invalidates every unused code and returns a new set. Requires password and code.',
+    description:
+      'Invalidates every unused code and returns a new set. Requires password and code.',
   })
   @ApiEnvelopedResponse(RecoveryCodesDto)
   @ApiErrorResponse(401, [ErrorCode.AUTH_PASSWORD_MISMATCH, ErrorCode.MFA_CODE_INVALID])
@@ -312,7 +314,9 @@ export class AuthController {
 
   @Post('refresh')
   @Public()
-  @ThrottlePolicy(THROTTLE_POLICY.AUTH)
+  // Its own budget, per session: renewing a token is not guessing a
+  // credential, and a browser renews on every page load.
+  @ThrottlePolicy(THROTTLE_POLICY.REFRESH)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Rotate the token pair',
@@ -397,13 +401,16 @@ export class AuthController {
   // ── Identity ──────────────────────────────────────────────────────────────
 
   @Get('me')
+  @OptionalOrganizationContext()
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'The signed-in user',
     description:
       'Profile, workspace memberships and — when a workspace is selected via ' +
       'X-Organization-Id — the effective permissions in it, with wildcards expanded ' +
-      'to concrete keys so the frontend can drive per-control visibility directly.',
+      'to concrete keys so the frontend can drive per-control visibility directly. ' +
+      'Naming a workspace applies the same checks as any workspace route (membership, ' +
+      'suspension, IP allowlist, MFA and email requirements).',
   })
   @ApiEnvelopedResponse(CurrentUserDto)
   @ApiStandardErrors()
@@ -424,6 +431,8 @@ export class AuthController {
       emailVerified: user.isEmailVerified,
       isPlatformAdmin: user.isPlatformAdmin,
       status: user.status,
+      mfaEnabled: user.mfaEnabled,
+      avatarUrl: user.avatarUrl,
       memberships: memberships.items.map((entry) => ({
         organizationId: entry.organization.id,
         organizationName: entry.organization.name,

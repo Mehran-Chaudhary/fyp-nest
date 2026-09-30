@@ -1,10 +1,16 @@
-import { CanActivate, ExecutionContext, Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import type { Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import { CacheKeys } from '../constants/cache-keys.constants';
-import { HEADER, METADATA_KEY } from '../constants/app.constants';
+import { BEARER_PREFIX, HEADER, METADATA_KEY } from '../constants/app.constants';
 import { AuditAction, AuditStatus } from '../enums/audit-action.enum';
 import { AuthType } from '../enums/auth-type.enum';
 import { ErrorCode } from '../enums/error-code.enum';
@@ -17,8 +23,10 @@ import {
   type ThrottleConfig,
   type ThrottlePolicyConfig,
 } from '../../config/throttle.config';
+import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
 import { RedisService } from '../../shared/redis/redis.service';
 import { AuditService } from '../../modules/audit/audit.service';
+import { JwtTokenService } from '../../modules/auth/services/jwt-token.service';
 import { MetricsService } from '../../observability/metrics.service';
 
 interface RateLimitDecision {
@@ -26,6 +34,41 @@ interface RateLimitDecision {
   limit: number;
   remaining: number;
   resetMs: number;
+}
+
+/** What the limiter could establish about a request before authentication. */
+export interface ThrottleIdentityInput {
+  policyName: string;
+  /** Subject of a correctly signed, unexpired access token, if one was presented. */
+  userId: string | null;
+  /** Family of a correctly signed refresh token, on the refresh route only. */
+  sessionFamily: string | null;
+  ip: string;
+  /** The address a credential endpoint was asked about, if its body names one. */
+  email: string | null;
+}
+
+/**
+ * Chooses the bucket a request counts against.
+ *
+ * The refresh route counts per session: a browser renews on every page load,
+ * and one person's tabs must not starve another's. A request whose body names
+ * an email address counts per source address *and* that email, so one address
+ * cannot spray many accounts from one budget and one account cannot be cheaply
+ * locked out from many addresses. Everything else counts per signed-in user —
+ * an identity that cannot be spoofed, and which keeps an office behind one NAT
+ * address from sharing a single budget — or, without one, per source address.
+ */
+export function resolveThrottleIdentity(input: ThrottleIdentityInput): string {
+  if (input.policyName === THROTTLE_POLICY.REFRESH && input.sessionFamily) {
+    return `session:${input.sessionFamily}`;
+  }
+  // A request naming an email address (sign-in, registration, recovery, an
+  // invitation) keeps its per-address budget even when a token is presented:
+  // those budgets protect the address, not the caller.
+  if (input.email) return `ip:${input.ip}:email:${input.email.toLowerCase().slice(0, 320)}`;
+  if (input.userId) return `user:${input.userId}`;
+  return `ip:${input.ip}`;
 }
 
 /**
@@ -43,10 +86,14 @@ interface RateLimitDecision {
  *
  * ## Identity, not just address
  *
- * Buckets are keyed by principal where one exists (user id, then API key id) and
- * fall back to source IP only for unauthenticated traffic. Keying purely on IP
- * would let one user behind a corporate NAT exhaust the budget for their whole
- * office, and would let an attacker with a proxy pool bypass the limit entirely.
+ * This guard runs before authentication, deliberately: a rejected request
+ * should not pay for a database lookup. It therefore identifies the caller
+ * cheaply itself — by verifying the access token's signature and expiry (no
+ * database, no revocation check) and keying the budget by its subject, or the
+ * refresh token's session family on the refresh route. Only traffic without a
+ * verifiable identity falls back to the source address (see
+ * {@link resolveThrottleIdentity}). Keying purely on IP would let one user
+ * behind a corporate NAT exhaust the budget for their whole office.
  *
  * ## Fails open
  *
@@ -59,15 +106,19 @@ interface RateLimitDecision {
 export class RateLimitGuard implements CanActivate {
   private readonly logger = new Logger(RateLimitGuard.name);
   private readonly config: ThrottleConfig;
+  private readonly refreshCookieName: string;
 
   constructor(
     private readonly reflector: Reflector,
     private readonly redis: RedisService,
     private readonly auditService: AuditService,
     private readonly configService: ConfigService,
+    private readonly jwtTokenService: JwtTokenService,
     @Optional() private readonly metrics?: MetricsService,
   ) {
     this.config = this.configService.getOrThrow<ThrottleConfig>(THROTTLE_CONFIG_KEY);
+    this.refreshCookieName =
+      this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY).refreshCookie.name;
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -85,7 +136,7 @@ export class RateLimitGuard implements CanActivate {
 
     const policy =
       this.config.policies[policyName] ?? this.config.policies[THROTTLE_POLICY.DEFAULT];
-    const identifier = this.identify(request);
+    const identifier = await this.identify(request, policyName);
 
     const decision = await this.consume(policyName, identifier, policy);
 
@@ -186,29 +237,46 @@ export class RateLimitGuard implements CanActivate {
     }
   }
 
-  /**
-   * Chooses the bucket key for a request.
-   *
-   * Authenticated principals get their own budget. Unauthenticated traffic falls
-   * back to source IP, which is the only identity available — and is why
-   * `TRUST_PROXY` must be configured correctly, since a spoofable client IP
-   * would make the limit trivially evadable.
-   */
-  private identify(request: AuthenticatedRequest): string {
-    if (request.user) return `user:${request.user.id}`;
-    if (request.apiKey) return `key:${request.apiKey.id}`;
+  /** Establishes the caller's identity for {@link resolveThrottleIdentity}. */
+  private async identify(
+    request: AuthenticatedRequest,
+    policyName: string,
+  ): Promise<string> {
+    const bearer = this.bearerToken(request);
+    const userId = bearer ? await this.jwtTokenService.identifyAccessToken(bearer) : null;
 
-    const ip = normaliseIp(request.ip);
-
-    // For unauthenticated credential endpoints, the attempted identity is folded
-    // into the key so that one address cannot spray many accounts from a single
-    // budget, and one account cannot be locked out cheaply from many addresses.
-    const body = request.body as { email?: unknown } | undefined;
-    if (typeof body?.email === 'string') {
-      return `ip:${ip}:email:${body.email.toLowerCase().slice(0, 320)}`;
+    let sessionFamily: string | null = null;
+    if (policyName === THROTTLE_POLICY.REFRESH) {
+      const body = request.body as { refreshToken?: unknown } | undefined;
+      const cookies = (request as unknown as { cookies?: Record<string, string> }).cookies;
+      const refreshToken =
+        typeof body?.refreshToken === 'string'
+          ? body.refreshToken
+          : cookies?.[this.refreshCookieName];
+      if (refreshToken) {
+        sessionFamily = await this.jwtTokenService.identifyRefreshToken(refreshToken);
+      }
     }
 
-    return `ip:${ip}`;
+    const body = request.body as { email?: unknown } | undefined;
+    return resolveThrottleIdentity({
+      policyName,
+      userId,
+      sessionFamily,
+      // `TRUST_PROXY` must be configured correctly: a spoofable client IP would
+      // make the anonymous budget trivially evadable.
+      ip: normaliseIp(request.ip),
+      email: typeof body?.email === 'string' ? body.email : null,
+    });
+  }
+
+  private bearerToken(request: AuthenticatedRequest): string | null {
+    const header = request.headers.authorization;
+    if (!header) return null;
+    const [scheme, ...rest] = header.split(' ');
+    if (scheme?.toLowerCase() !== BEARER_PREFIX.toLowerCase()) return null;
+    const token = rest.join(' ').trim();
+    return token.length > 0 ? token : null;
   }
 
   /** Exposed for tests and for the sign-in path's pre-emptive check. */

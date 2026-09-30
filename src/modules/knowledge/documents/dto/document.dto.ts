@@ -11,6 +11,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
+import { IsOptionalNotNull } from '../../../../common/validation/optional';
 import { Classification } from '../../domain/classification';
 import { DocumentFileType, DocumentStatus } from '../../domain/document-status';
 
@@ -94,19 +95,23 @@ export class UploadDocumentDto {
 
 export class UpdateDocumentDto {
   @ApiPropertyOptional({ maxLength: 255 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
   @Trim()
   title?: string;
 
-  @ApiPropertyOptional({ maxLength: 2000 })
+  @ApiPropertyOptional({
+    maxLength: 2000,
+    nullable: true,
+    description: '`null` or an empty string removes the description.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(2000)
   @Trim()
-  description?: string;
+  description?: string | null;
 
   @ApiPropertyOptional({
     enum: Classification,
@@ -114,12 +119,15 @@ export class UpdateDocumentDto {
       'Reclassification. Requires clearance for both the old and the new level — ' +
       'you cannot declassify what you are not cleared to read.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEnum(Classification)
   classification?: Classification;
 
-  @ApiPropertyOptional({ type: [String] })
-  @IsOptional()
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Replaces the tags; `[]` removes them.',
+  })
+  @IsOptionalNotNull()
   @NormaliseTags()
   @IsArray()
   @ArrayMaxSize(20)
@@ -134,10 +142,27 @@ export class ListDocumentsQueryDto extends PaginationQueryDto {
   @IsUUID('4')
   knowledgeBaseId?: string;
 
-  @ApiPropertyOptional({ enum: DocumentStatus })
+  @ApiPropertyOptional({
+    enum: DocumentStatus,
+    isArray: true,
+    description:
+      'One status, or several separated by commas: `PARSING,CHUNKING,EMBEDDING` is ' +
+      '"being processed".',
+    example: 'PARSING,CHUNKING,EMBEDDING',
+  })
   @IsOptional()
-  @IsEnum(DocumentStatus)
-  status?: DocumentStatus;
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value
+          .split(',')
+          .map((status) => status.trim())
+          .filter(Boolean)
+      : value,
+  )
+  @IsArray()
+  @ArrayMaxSize(6)
+  @IsEnum(DocumentStatus, { each: true })
+  status?: DocumentStatus[];
 
   @ApiPropertyOptional({ enum: Classification })
   @IsOptional()

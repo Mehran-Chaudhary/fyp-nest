@@ -15,7 +15,7 @@ Supervisor: Ms. Maryam Wardah · Co-Supervisor: Mr. Qaiser Manzoor
 
 For the current configuration audit and a step-by-step local/cloud setup, start
 with [the complete backend setup guide](docs/ENVIRONMENT.md) and
-[all 317 environment variables](docs/ENVIRONMENT_VARIABLES.md). The guide includes
+[all 319 environment variables](docs/ENVIRONMENT_VARIABLES.md). The guide includes
 the governance configuration present in this checkout, current verification
 results, provider setup, and real-service smoke tests. The phase status and
 historical test/database observations below predate that audit.
@@ -283,6 +283,7 @@ Helpdesk drafts, a person approves — not the one who asked).
 | `npm run start:prod` | Run the compiled build |
 | `npm run start:worker:prod` | Run the compiled background worker (optional separate service) |
 | `npm run start:worker:dev` | Worker in watch mode |
+| `npm run start:standins` | Development API with in-memory object storage, vector store and AI service, for frontend work before the knowledge layer is provisioned (development only; files are lost on restart) |
 | `npm run typecheck` | Type check without emitting |
 | `npm test` | Unit tests |
 | `npm run test:integration` | Live tests against cloud services (skipped unless configured) |

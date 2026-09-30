@@ -45,6 +45,14 @@ export class CreateInvitationDto {
   message?: string;
 }
 
+export class InvitationTokenQueryDto {
+  @ApiProperty({ description: 'Token from the invitation link.' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(512)
+  token: string;
+}
+
 export class AcceptInvitationDto {
   @ApiProperty({ description: 'Token from the invitation link.' })
   @IsString()

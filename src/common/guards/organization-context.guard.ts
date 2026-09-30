@@ -75,6 +75,11 @@ export class OrganizationContextGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
+    const optional = this.reflector.getAllAndOverride<boolean>(
+      METADATA_KEY.OPTIONAL_ORGANIZATION_CONTEXT,
+      [context.getHandler(), context.getClass()],
+    );
+
     // An API key is intrinsically bound to one workspace, so its context is
     // always established even on routes that opt out for human callers.
     if (request.apiKey) {
@@ -93,6 +98,7 @@ export class OrganizationContextGuard implements CanActivate {
     const identifier = this.extractOrganizationIdentifier(request);
 
     if (!identifier) {
+      if (optional) return true;
       throw new BadRequestError(ErrorCode.ORGANIZATION_CONTEXT_REQUIRED);
     }
 
@@ -132,13 +138,38 @@ export class OrganizationContextGuard implements CanActivate {
       tenantId: accessContext.organization.id,
     });
 
-    this.enforceMfaPolicy(
-      request,
-      accessContext.organization,
-      accessContext.membership.id.startsWith('platform-admin:'),
-    );
+    const viaPlatformAdmin = accessContext.membership.id.startsWith('platform-admin:');
+    this.enforceMfaPolicy(request, accessContext.organization, viaPlatformAdmin);
+    this.enforceVerifiedEmailPolicy(request, accessContext.organization, viaPlatformAdmin);
+
+    // "Last active" in the member directory. Debounced and fire-and-forget:
+    // bookkeeping never delays or fails the request it describes.
+    if (!viaPlatformAdmin) {
+      void this.organizationsService.recordMemberActivity(accessContext.membership.id);
+    }
 
     return true;
+  }
+
+  /**
+   * A workspace can require that its members have verified their email
+   * address (`settings.requireVerifiedEmail`). Platform administrators acting
+   * through the break-glass path are not members and are exempt.
+   */
+  private enforceVerifiedEmailPolicy(
+    request: AuthenticatedRequest,
+    organization: Organization,
+    viaPlatformAdmin: boolean,
+  ): void {
+    const user = request.user;
+    if (!user || user.emailVerified || viaPlatformAdmin) return;
+    if (organization.settings?.requireVerifiedEmail !== true) return;
+
+    throw new ForbiddenError(ErrorCode.ACCOUNT_EMAIL_NOT_VERIFIED, {
+      message:
+        'This workspace requires a verified email address. Verify yours to continue.',
+      details: { requiredBy: 'workspace' },
+    });
   }
 
   /**

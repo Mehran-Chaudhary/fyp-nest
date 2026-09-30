@@ -29,6 +29,7 @@ export const THROTTLE_CONFIG_KEY = 'throttle';
 export const THROTTLE_POLICY = {
   DEFAULT: 'default',
   AUTH: 'auth',
+  REFRESH: 'refresh',
   EMAIL: 'email',
   UPLOAD: 'upload',
   RAG: 'rag',
@@ -50,7 +51,15 @@ export default registerAs(THROTTLE_CONFIG_KEY, (): ThrottleConfig => {
       ttlMs: parseDuration(process.env.THROTTLE_AUTH_TTL as string),
       limit: Number(process.env.THROTTLE_AUTH_LIMIT),
       description:
-        'Credential-handling endpoints (sign-in, refresh, password reset). Tight, to blunt credential stuffing.',
+        'Credential-handling endpoints (sign-in, password reset, second factors). Tight, to blunt credential stuffing.',
+    },
+    [THROTTLE_POLICY.REFRESH]: {
+      name: THROTTLE_POLICY.REFRESH,
+      ttlMs: parseDuration(process.env.THROTTLE_REFRESH_TTL as string),
+      limit: Number(process.env.THROTTLE_REFRESH_LIMIT),
+      description:
+        'Access token renewal, counted per session (refresh token family). Separate from the ' +
+        'credential policy: renewing is not guessing, and every page load of the app renews once.',
     },
     [THROTTLE_POLICY.EMAIL]: {
       name: THROTTLE_POLICY.EMAIL,

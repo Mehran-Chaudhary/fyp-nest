@@ -3,7 +3,9 @@
 **Status:** ready to implement
 **Roadmap:** [`FRONTEND_PHASES.md`](FRONTEND_PHASES.md), Phase 1 of 9
 **Backend:** this repository (NestJS). Every request and response shape in this
-document was checked against a running instance of the backend on 2026-09-30.
+document was checked against a running instance of the backend on 2026-09-30,
+**including the backend fixes made that day** (§14 lists what changed; if you started
+from an earlier copy of this document, read §14 first).
 **Design:** mockup screens 1 (Sign In) and 2 (the shell around the Command Centre) in
 `doc/Updated_FYP_Proposal_Distributed_AI_Agents (2).docx`, section 13.
 
@@ -24,7 +26,7 @@ document was checked against a running instance of the backend on 2026-09-30.
 11. [State, caching and query keys](#11-state-caching-and-query-keys)
 12. [Visual design](#12-visual-design)
 13. [Local development against the backend](#13-local-development-against-the-backend)
-14. [Known backend issues and the workarounds to build](#14-known-backend-issues-and-the-workarounds-to-build)
+14. [Backend fixes of 2026-09-30 (what changed for the frontend)](#14-backend-fixes-of-2026-09-30-what-changed-for-the-frontend)
 15. [Definition of done](#15-definition-of-done)
 16. [Appendix A: TypeScript types](#appendix-a-typescript-types)
 17. [Appendix B: reference implementation of the API client and token manager](#appendix-b-reference-implementation-of-the-api-client-and-token-manager)
@@ -156,8 +158,7 @@ The proxy is still recommended because it is what production must look like (see
 - Health probes are **not** under the prefix: `/health`, `/health/live`,
   `/health/ready`.
 - Swagger UI for browsing: `http://localhost:3000/docs`. This document is the source
-  of truth for Phase 1: in a few places Swagger describes the intent rather than
-  what the server does (see §14).
+  of truth for Phase 1.
 
 ### 3.2 The response envelope
 
@@ -226,7 +227,7 @@ Rules:
 
 ### 3.3 Validation errors (422)
 
-When the request body fails validation, the server answers `422` with code
+When the request body or query fails validation, the server answers `422` with code
 `VALIDATION_FAILED` and a map of messages per field:
 
 ```json
@@ -238,8 +239,8 @@ When the request body fails validation, the server answers `422` with code
     "details": {
       "fields": {
         "email": ["email must be a valid email address"],
-        "firstName": ["firstName should not be empty"],
-        "property": ["property extra should not exist"]
+        "password": ["Password must be at least 12 characters long. Password must contain an uppercase letter."],
+        "extra": ["property extra should not exist"]
       }
     }
   },
@@ -247,19 +248,14 @@ When the request body fails validation, the server answers `422` with code
 }
 ```
 
-`details.fields` is `Record<string, string[]>`. Swagger describes it as an array,
-which is wrong. The key is the **first word of the message**, which is usually the
-field name, with three exceptions to handle:
+`details.fields` is `Record<string, string[]>`, keyed by the **property path** in the
+request: `email`, `newPassword`, nested fields as `settings.defaultChunkSize`, array
+items as `items.0.name`. A field the server does not accept is reported under its
+own name (`extra` above); that is a frontend bug, so also log it to the console.
 
-| Key you receive | Meaning | Map it to |
-|---|---|---|
-| `"Password"` | The password policy failed. All policy messages are joined into one string: `"Password must be at least 12 characters long. Password must contain an uppercase letter."` | the password field of the form (`password` on sign-up and reset, `newPassword` on change password) |
-| `"That"` | Same policy, when the first failing rule is `"That password is too common. …"` | the same password field |
-| `"property"` | The client sent a field the server does not accept (`"property email should not exist"`). This is a frontend bug. | a form-level error, plus a console error |
-
-Recommended mapping: match keys case-insensitively to your form fields; send
-`Password` / `That` to the password field of password forms; show anything else that
-does not match as a form-level error.
+Map each key to the form field with the same name, and show any key that matches no
+field as a form-level error. All password-policy failures for a field arrive as one
+joined message under that field.
 
 ### 3.4 Request headers the client sends
 
@@ -293,34 +289,30 @@ CORS exposes these (verified):
 
 ### 3.6 Rate limits
 
-The server uses named throttle policies. Default values:
+The server uses named throttle policies. Defaults:
 
-| Policy | Limit | Used by (Phase 1) |
-|---|---|---|
-| `default` | 120 requests / 60 s | everything not listed below |
-| `auth` | 10 requests / 15 min | `register`, `login`, `mfa/verify`, `refresh`, `verify-email`, `reset-password`, `change-password`, `mfa/setup`, `mfa/enable`, `mfa/disable`, `mfa/recovery-codes`, `DELETE /auth/me` |
-| `email` | 5 requests / 1 hour | `resend-verification`, `forgot-password`, `GET /auth/me/export` |
+| Policy | Limit | Counted per | Used by (Phase 1) |
+|---|---|---|---|
+| `default` | 120 requests / 60 s | signed-in user; source IP when signed out | everything not listed below |
+| `refresh` | 60 requests / 15 min | session (the refresh cookie's); source IP without a valid cookie | `refresh` |
+| `auth` | 10 requests / 15 min | source IP **and** email when the body names one (`register`, `login`); the signed-in user (`change-password`, `mfa/setup`, `mfa/enable`, `mfa/disable`, `mfa/recovery-codes`, `DELETE /auth/me`); source IP otherwise (`mfa/verify`, `verify-email`, `reset-password`) | credential endpoints |
+| `email` | 5 requests / 1 hour | source IP and email (`resend-verification`, `forgot-password`); the signed-in user (`GET /auth/me/export`) | endpoints that send email or files |
 
-**Buckets are per IP address**, not per user. Rate limiting runs before
-authentication, so the server never knows who you are when it counts. When the body
-contains an `email` field (`login`, `register`, `forgot-password`,
-`resend-verification`), the bucket is per IP **and** email. Everything else in the
-`auth` policy shares **one bucket per IP**: `refresh`, `change-password`, all
-`mfa/*`, `verify-email`, `reset-password`, `DELETE /auth/me`. **Failed requests
-count too.** This was verified: ten `refresh` calls exhausted the bucket, and the
-next `change-password` got `429` with `Retry-After: 900`.
+The limiter identifies a signed-in caller from the access token's signature (cheaply,
+before authentication), so colleagues behind one office IP do not share a budget.
+**Failed requests count too.** Verified: 16 consecutive refreshes of one session all
+succeed; one user exhausting their `auth` budget does not affect another user on the
+same IP.
 
 Consequences for the frontend:
 
-1. **Every page reload costs one `refresh`** (the access token lives in memory). Ten
-   reloads within 15 minutes and the next refresh is refused for up to 15 minutes. §4
-   shows how to avoid unnecessary refreshes: share tokens between tabs, and skip the
-   boot refresh when the browser has no session.
+1. **Every page reload costs one `refresh`** (the access token lives in memory), from
+   a budget of 60 per 15 minutes per session. That is plenty for normal use; still
+   share tokens between tabs and skip the boot refresh when the browser has no
+   session (§4), which avoids needless refreshes.
 2. **A `429` on refresh is not a sign-out.** Keep the user's state, show "Too many
    requests, try again in N minutes", and retry after `Retry-After`. Do not wipe the
    session.
-3. For development, raise the limit in the **backend** `.env`:
-   `THROTTLE_AUTH_LIMIT=200` (see §13).
 
 The error body for `429`:
 
@@ -414,8 +406,8 @@ Required design (reference code in Appendix B):
    A tab waiting for the lock checks, once it gets the lock, whether a new token
    arrived in the meantime, and uses it instead of refreshing again.
 4. **Share at boot.** A new tab first asks the others (`{ type: 'token-request' }`,
-   wait ~150 ms) and refreshes only if nobody answers. This also saves `auth` rate
-   limit budget (§3.6).
+   wait ~150 ms) and refreshes only if nobody answers. This also saves refresh
+   budget (§3.6).
 5. **Share sign-out.** Signing out in one tab broadcasts `{ type: 'signed-out' }` and
    every tab clears its state.
 
@@ -423,7 +415,7 @@ Required design (reference code in Appendix B):
 
 - **On demand, before a request:** if the in-memory token expires within 30 s,
   refresh first, then send the request. Use no background timer. Timers make idle
-  tabs spend the `auth` bucket for nothing.
+  tabs spend the refresh budget for nothing.
 - **Reactively, on `401`,** but only for these codes: `AUTH_TOKEN_EXPIRED`,
   `AUTH_TOKEN_REVOKED`, `AUTH_TOKEN_INVALID`, `AUTH_TOKEN_MISSING`. Refresh once,
   retry the original request once. If the retry fails with `401` again, sign out.
@@ -480,7 +472,7 @@ ends the session for every tab, which is why the broadcast matters.
 
 | Event | What the server did | What the client must do |
 |---|---|---|
-| **Change password** succeeds | Kept this device's session (because the cookie was sent) but invalidated **every access token issued before now**, including the one in memory | Call `expireTokenAndDelayRefresh()` (Appendix B), then `await refreshAccessToken()`. The next refresh, in every tab, waits 1.1 s, because an immediate refresh returns a token that is rejected as `AUTH_TOKEN_REVOKED` (verified; see §14, BF-3). Requests made during the wait queue behind that refresh instead of failing. |
+| **Change password** succeeds | Kept this device's session (because the cookie was sent) but invalidated **every access token issued before now**, including the one in memory | Call `expireAccessToken()` (Appendix B) so nothing else uses the dead token, then `await refreshAccessToken()`. The refreshed token works immediately (verified), and the refresh broadcasts it to the other tabs. |
 | **MFA enable** succeeds | Signed out every other device; this session is now MFA-verified | Replace the in-memory token with `data.accessToken` (`expiresAt = now + expiresIn*1000`) and broadcast it |
 | **Reset password** succeeds | Revoked every session and cleared the cookie | If this browser was signed in, run the sign-out cleanup locally (no API call) |
 | **Erase account** succeeds | Account anonymised, all sessions revoked | Local sign-out cleanup, then show a goodbye page |
@@ -529,34 +521,24 @@ also counts towards the account lockout, just like a wrong password.
 
 ### 5.2 Getting the current user's permissions in a workspace
 
-`GET /auth/me` is documented to return the effective permissions when
-`X-Organization-Id` is sent. **The current backend never returns them** (verified;
-§14, BF-1). Until the backend is fixed, compute them. The algorithm below is
-written so it starts using the server's answer automatically once the fix lands:
+`GET /auth/me` with `X-Organization-Id: <workspace id>` (E7) returns
+`permissions`, the caller's effective permissions in that workspace with wildcards
+already expanded into concrete keys, and `activeOrganizationId`.
 
 ```
 loadWorkspacePermissions(workspaceId):
-  1. me = GET /auth/me   (header X-Organization-Id: workspaceId)
-     if Array.isArray(me.permissions) → return new Set(me.permissions)   // after BF-1 fix
-  2. catalogue = GET /permissions → permissions[].key          (cache for the session)
-  3. mine = GET /organizations/{workspaceId}/members/me → roles[].id   (no permission needed)
-  4. roles = GET /organizations/{workspaceId}/roles            (needs role:read)
-       on 403 PERMISSION_DENIED → return null ("unknown": see below)
-  5. granted = union of role.permissionKeys for every role whose id is in mine
-  6. return new Set(expandPermissions(granted, catalogue))
+  me = GET /auth/me   (header X-Organization-Id: workspaceId)
+  return new Set(me.permissions)
 ```
 
-`expandPermissions` must match the server exactly (Appendix B,
-`lib/permissions/expand.ts`).
+Naming a workspace sends this call through every workspace check (membership,
+suspension, IP allowlist, required MFA, required verified email). It fails with the
+same codes as any workspace request (§9.2), which makes it the workspace gate's access
+check too (§6.2).
 
-- All four built-in roles, and both demo custom roles, include `role:read`, so step 4
-  works for them. A custom role without `role:read` makes step 4 fail. Then treat
-  permissions as **unknown**: show all navigation and rely on the server's `403`s.
-  (The server also records each such attempt as an `access.denied` audit event, so
-  call step 4 once per workspace entry, not on every render.)
-- Refetch permissions when the user enters a workspace, when any request returns
-  `403 PERMISSION_DENIED`, and on window focus (with a staleTime of about 60 s).
-  Permissions change the moment an admin edits a role, so treat them as server state.
+Refetch permissions when the user enters a workspace, when any request returns
+`403 PERMISSION_DENIED`, and on window focus (with a staleTime of about 60 s).
+Permissions change the moment an admin edits a role, so treat them as server state.
 
 ### 5.3 The `can()` helper
 
@@ -627,10 +609,10 @@ Logs; `owner@acme.test` sees all.
      missing, show the "Workspace not found" state (§7.11).
   2. Set the active workspace (`{ id, slug, name }`) in context and write
      `localStorage['av.lastWorkspace'] = slug`.
-  3. Probe access with `GET /organizations/{id}/members/me`. This needs no
-     permission, so it separates "you can't be here" from "you lack a permission".
-     Error codes map to the §7.11 states.
-  4. Load permissions (§5.2). Render the shell.
+  3. Load permissions with `GET /auth/me` + `X-Organization-Id` (§5.2). This is also
+     the access check: its error codes map to the §7.11 states.
+  4. Load your membership, `GET /organizations/{id}/members/me` (E26): your roles
+     and rank, for the Home page and for Phase 2. Render the shell.
 
 ### 6.3 Default landing after sign-in or at `/`
 
@@ -714,7 +696,7 @@ A "Back" link returns to the password step and discards the challenge.
 | Code | UI |
 |---|---|
 | `409 ACCOUNT_ALREADY_EXISTS` | On the email field: "An account with this email already exists." + link "Sign in instead" |
-| `422 VALIDATION_FAILED` | Inline, using the §3.3 mapping (`Password` → password field) |
+| `422 VALIDATION_FAILED` | Inline, using the §3.3 mapping |
 | `422 AUTH_PASSWORD_BREACHED` | On the password field: "This password has appeared in a known data breach ({details.occurrences} times). Choose a different one." |
 | `429` | Countdown message |
 
@@ -761,7 +743,9 @@ limited to 5 per hour; after sending, show "Sent. Check your inbox." for 60 s.
 If the backend runs with `REQUIRE_EMAIL_VERIFICATION=true`, every authenticated call
 of an unverified user fails with `403 ACCOUNT_EMAIL_NOT_VERIFIED`. On that code,
 render a full-page "Verify your email to continue" screen with the resend button and
-a "Sign out" link.
+a "Sign out" link. A workspace can also require it (`settings.requireVerifiedEmail`,
+set in Phase 2). Then only that workspace's requests fail, with
+`details.requiredBy: "workspace"`, and the gate shows the §7.11 state instead.
 
 ### 7.7 Invitation link placeholder: `/invitations/accept?token=…`
 
@@ -830,10 +814,11 @@ from the previous workspace can leak into the new one.
 | `403 MEMBERSHIP_SUSPENDED` | "Your access to this workspace is suspended" + `details.reason` | Your workspaces |
 | `403 IP_NOT_ALLOWED` | "Your network isn't allowed": "This workspace only accepts connections from approved networks. Contact your administrator." | Your workspaces |
 | `403 MFA_REQUIRED` (`details.requiredBy: "workspace"`) | "Two-step verification required": "{workspace} requires two-step verification." | "Set up two-step verification" → `/account/security?next=/w/{slug}`. If MFA is already on but this session is not verified (`GET /auth/mfa` → `sessionVerified: false`): "Sign in again" (sign out, then sign in with a code) |
+| `403 ACCOUNT_EMAIL_NOT_VERIFIED` (`details.requiredBy: "workspace"`) | "Verify your email to use this workspace" | "Resend verification email" (E10); Your workspaces |
 
-`MFA_REQUIRED` can also arrive on any later request (an admin enabled the
-requirement while the user was working). Handle it globally: when a workspace-scoped
-request returns it, switch the gate to this state.
+`MFA_REQUIRED` and `ACCOUNT_EMAIL_NOT_VERIFIED` can also arrive on any later request
+(an admin enabled the requirement while the user was working). Handle them globally:
+when a workspace-scoped request returns one, switch the gate to that state.
 
 ### 7.12 Account → Profile: `/account/profile`
 
@@ -848,8 +833,9 @@ data**; a "← Back to {last workspace}" link.
   name").
 - Save → `PATCH /auth/me` (E8) with **only the changed fields**. The response is only
   `{ id, displayName }`, so invalidate `me` afterwards.
-- Do **not** build avatar upload. `avatarUrl` is writable but `GET /auth/me` does not
-  return it (BF-5). Use initials everywhere in Phase 1.
+- **Avatar URL** (optional, ≤2048): there is no upload endpoint, only a URL field.
+  `GET /auth/me` returns it as `avatarUrl`. Show the image where set, initials
+  otherwise (and if the image fails to load).
 
 ### 7.13 Account → Security: `/account/security`
 
@@ -860,15 +846,15 @@ password** (meter + rules), **Confirm**.
 → `POST /auth/change-password` (E13) with `credentials: 'include'`. The cookie tells
 the server which device to keep signed in.
 On `200 { changed: true, revokedSessions: n }`: the access token in memory is now
-dead. Call `expireTokenAndDelayRefresh()` then `await refreshAccessToken()` (§4.7;
-this takes about 1.1 s), and only then close the dialog with the toast "Password
-changed. {n} other device(s) were signed out."
+dead. Call `expireAccessToken()` then `await refreshAccessToken()` (§4.7), and only
+then close the dialog with the toast "Password changed. {n} other device(s) were
+signed out."
 
 | Code | UI |
 |---|---|
 | `401 AUTH_PASSWORD_MISMATCH` | On the current password field: "Current password is incorrect." (Do not refresh or sign out.) |
 | `400 AUTH_PASSWORD_REUSED` | On the new password field: "Must differ from your current password." |
-| `422 VALIDATION_FAILED` (key `Password` / `That`) / `AUTH_PASSWORD_BREACHED` | On the new password field |
+| `422 VALIDATION_FAILED` (key `newPassword`) / `AUTH_PASSWORD_BREACHED` | On the new password field |
 
 **2. Two-step verification**: state from `GET /auth/mfa` (E16).
 
@@ -983,31 +969,31 @@ Conventions for this section:
 | E1 | `POST /auth/register` | public | auth (IP + email) | Sign up |
 | E2 | `POST /auth/login` | public | auth (IP + email) | Sign in |
 | E3 | `POST /auth/mfa/verify` | public | auth (IP) | MFA step |
-| E4 | `POST /auth/refresh` | cookie | auth (IP) | Token manager |
+| E4 | `POST /auth/refresh` | cookie | refresh (session) | Token manager |
 | E5 | `POST /auth/logout` | Bearer + cookie | default | Sign out |
 | E6 | `POST /auth/logout-all` | Bearer | default | Security |
-| E7 | `GET /auth/me` | Bearer | default | Session, shell |
+| E7 | `GET /auth/me` | Bearer (+ optional `X-Organization-Id`) | default | Session, shell, permissions |
 | E8 | `PATCH /auth/me` | Bearer | default | Profile |
 | E9 | `POST /auth/verify-email` | public | auth (IP) | Verify email |
 | E10 | `POST /auth/resend-verification` | public | email (IP + email) | Banner, verify page |
 | E11 | `POST /auth/forgot-password` | public | email (IP + email) | Forgot password |
 | E12 | `POST /auth/reset-password` | public | auth (IP) | Reset password |
-| E13 | `POST /auth/change-password` | Bearer + cookie | auth (IP) | Security |
+| E13 | `POST /auth/change-password` | Bearer + cookie | auth (user) | Security |
 | E14 | `GET /auth/sessions` | Bearer | default | Security |
 | E15 | `DELETE /auth/sessions/{sessionId}` | Bearer | default | Security |
 | E16 | `GET /auth/mfa` | Bearer | default | Security, MFA step |
-| E17 | `POST /auth/mfa/setup` | Bearer | auth (IP) | MFA wizard |
-| E18 | `POST /auth/mfa/enable` | Bearer | auth (IP) | MFA wizard |
-| E19 | `POST /auth/mfa/disable` | Bearer | auth (IP) | Security |
-| E20 | `POST /auth/mfa/recovery-codes` | Bearer | auth (IP) | Security |
-| E21 | `GET /auth/me/export` | Bearer | email (IP) | Privacy |
-| E22 | `DELETE /auth/me` | Bearer | auth (IP) | Privacy |
+| E17 | `POST /auth/mfa/setup` | Bearer | auth (user) | MFA wizard |
+| E18 | `POST /auth/mfa/enable` | Bearer | auth (user) | MFA wizard |
+| E19 | `POST /auth/mfa/disable` | Bearer | auth (user) | Security |
+| E20 | `POST /auth/mfa/recovery-codes` | Bearer | auth (user) | Security |
+| E21 | `GET /auth/me/export` | Bearer | email (user) | Privacy |
+| E22 | `DELETE /auth/me` | Bearer | auth (user) | Privacy |
 | E23 | `GET /organizations` | Bearer | default | Workspaces page |
 | E24 | `POST /organizations` | Bearer | default | Create workspace |
 | E25 | `GET /organizations/{organizationId}` | Bearer + `X-Organization-Id` | default | Home (workspace details) |
-| E26 | `GET /organizations/{organizationId}/members/me` | Bearer + `X-Organization-Id` | default | Workspace gate, permissions |
-| E27 | `GET /organizations/{organizationId}/roles` | Bearer + `X-Organization-Id` | default | Permission fallback only |
-| E28 | `GET /permissions` | Bearer | default | Permission expansion |
+| E26 | `GET /organizations/{organizationId}/members/me` | Bearer + `X-Organization-Id` | default | Your roles and rank |
+| E27 | `GET /organizations/{organizationId}/roles` | Bearer + `X-Organization-Id` | default | Not needed in Phase 1 (roles screen, Phase 2) |
+| E28 | `GET /permissions` | Bearer | default | Not needed in Phase 1 (role editor, Phase 2) |
 | E29 | `GET /health/live` | public | default | Offline banner (optional) |
 
 ---
@@ -1025,7 +1011,7 @@ Signs the user in immediately and sends a verification email.
 | `firstName` | string | non-empty, ≤100, trimmed |
 | `lastName` | string | non-empty, ≤100, trimmed |
 
-No other fields are allowed (`422` with key `property`).
+No other fields are allowed (`422`, keyed by the unknown field's name).
 
 **201**: sets the `daiap_rt` cookie.
 
@@ -1149,7 +1135,8 @@ token of the user stops working immediately.
 
 ### E7. `GET /auth/me`: the signed-in user
 
-Bearer. **200**:
+Bearer. Optional `X-Organization-Id` (UUID or slug) to also get your permissions in
+that workspace. **200** without the header:
 
 ```json
 {
@@ -1161,6 +1148,8 @@ Bearer. **200**:
   "emailVerified": true,
   "isPlatformAdmin": false,
   "status": "ACTIVE",
+  "mfaEnabled": false,
+  "avatarUrl": null,
   "memberships": [
     {
       "organizationId": "79b7a713-eaa2-47c0-b9d5-11e738780fe4",
@@ -1173,14 +1162,24 @@ Bearer. **200**:
 }
 ```
 
+With `X-Organization-Id`, the same object plus:
+
+```json
+{
+  "permissions": ["agent:execute", "agent:read", "clearance:internal", "conversation:delete", "…"],
+  "activeOrganizationId": "79b7a713-eaa2-47c0-b9d5-11e738780fe4"
+}
+```
+
 Notes:
 
 - `displayName` is the chosen display name, else "first last", else the email.
 - `status`: `PENDING` (email not verified yet), `ACTIVE`, `SUSPENDED`, `DEACTIVATED`.
 - `memberships`: active memberships only, newest first, at most 100.
-- **Not returned** despite Swagger: `permissions`, `activeOrganizationId` (BF-1),
-  `mfaEnabled`, `avatarUrl` (BF-5). Treat them as optional in your types. Code
-  written as in §5.2 benefits automatically once the backend returns `permissions`.
+- `permissions`: concrete keys, sorted, wildcards expanded (the owner gets all 64).
+- **Errors, only when a workspace is named:** the workspace access codes of §9.2
+  (`404 ORGANIZATION_NOT_FOUND`, `403 MEMBERSHIP_SUSPENDED`, `IP_NOT_ALLOWED`,
+  `MFA_REQUIRED`, `ACCOUNT_EMAIL_NOT_VERIFIED`, …).
 
 ---
 
@@ -1193,9 +1192,9 @@ Bearer. **Body** (all optional; send only the changed fields):
 | `firstName` | string, 1–100, trimmed |
 | `lastName` | string, 1–100, trimmed |
 | `displayName` | string, ≤255, trimmed. `""` falls back to the full name |
-| `avatarUrl` | string, ≤2048 (not used in Phase 1, see §7.12) |
+| `avatarUrl` | string, ≤2048; `""` removes it (see §7.12) |
 
-`email` cannot be changed (`422` with key `property`).
+`email` cannot be changed (`422` with key `email`).
 **200** `{ "id": "…", "displayName": "Zara K." }`. Refetch E7 afterwards.
 
 ---
@@ -1232,8 +1231,8 @@ Public. **Body** `{ "token": "…", "password": "<new, policy-checked>" }`.
 **200** `{ "reset": true }`. **Every session is revoked** and the cookie cleared; a
 "password changed" email is sent.
 **Errors:** `401 TOKEN_NOT_FOUND` / `TOKEN_EXPIRED` / `TOKEN_ALREADY_USED` · `422
-VALIDATION_FAILED` (key `Password` / `That`) · `422 AUTH_PASSWORD_BREACHED` (the link
-stays usable).
+VALIDATION_FAILED` (key `password`) · `422 AUTH_PASSWORD_BREACHED` (the link stays
+usable).
 
 ---
 
@@ -1243,8 +1242,8 @@ Bearer + `credentials: 'include'`. **Body**
 `{ "currentPassword": "…", "newPassword": "…" }`.
 **200** `{ "changed": true, "revokedSessions": 1 }`. Other devices are signed out,
 this device's session is kept, and **the current access token stops working
-immediately** (`401 AUTH_TOKEN_REVOKED`, verified). Follow §4.7: wait 1.1 s, then
-refresh.
+immediately** (`401 AUTH_TOKEN_REVOKED`, verified). Follow §4.7: refresh right away;
+the new token works at once.
 **Errors** (checked in this order): `422 VALIDATION_FAILED` (new password vs policy)
 · `401 AUTH_PASSWORD_MISMATCH` · `400 AUTH_PASSWORD_REUSED` · `422
 AUTH_PASSWORD_BREACHED`.
@@ -1453,8 +1452,8 @@ description, member count, `settings.requireMfa`). Call it only when
 
 ### E26. `GET /organizations/{organizationId}/members/me`: my membership
 
-Bearer + `X-Organization-Id`. **No permission required**, which makes it the access
-probe of the workspace gate. **200:**
+Bearer + `X-Organization-Id`. **No permission required.** Your roles and rank
+(`highestRolePriority`) in the workspace. **200:**
 
 ```json
 {
@@ -1485,7 +1484,7 @@ workspace-specific name. `status`: `ACTIVE` | `SUSPENDED` | `REMOVED`.
 
 ---
 
-### E27. `GET /organizations/{organizationId}/roles`: roles (permission fallback only)
+### E27. `GET /organizations/{organizationId}/roles`: roles (used from Phase 2)
 
 Bearer + `X-Organization-Id`. **Permission: `role:read`.** **200** (sorted by
 priority, descending):
@@ -1501,7 +1500,7 @@ priority, descending):
 ]
 ```
 
-In Phase 1 this is used only by §5.2 step 4. Phase 2 uses it for the roles screen.
+Phase 1 does not need it; Phase 2 uses it for the roles screen.
 
 ---
 
@@ -1541,7 +1540,7 @@ Public, **no `/api/v1` prefix**. **200** (enveloped):
 |---|---|---|
 | 401 | `AUTH_TOKEN_MISSING`, `AUTH_TOKEN_EXPIRED`, `AUTH_TOKEN_INVALID`, `AUTH_TOKEN_REVOKED` | Token manager: refresh once and retry once (§4.3), then sign out |
 | 401 | `ACCOUNT_SUSPENDED` | Returned for any token of an account that can no longer sign in. Sign out with the message. |
-| 403 | `ACCOUNT_EMAIL_NOT_VERIFIED` | Only when the backend enforces verification: the "Verify your email" screen (§7.6) |
+| 403 | `ACCOUNT_EMAIL_NOT_VERIFIED` | Deployment-wide requirement (no `details`): the "Verify your email" screen (§7.6). With `details.requiredBy: "workspace"`: see §9.2 |
 | 400 | `BAD_REQUEST` | Client bug (for example a malformed UUID in the path). Generic toast. |
 | 404 | `RESOURCE_NOT_FOUND` | Unknown API route: client bug. Generic toast. |
 | 408 | `REQUEST_TIMEOUT` | "The request took too long. Try again." |
@@ -1560,6 +1559,7 @@ Public, **no `/api/v1` prefix**. **200** (enveloped):
 | 403 | `MEMBERSHIP_SUSPENDED` | `{ reason? }` | §7.11 |
 | 403 | `IP_NOT_ALLOWED` | — | §7.11 |
 | 403 | `MFA_REQUIRED` | `{ requiredBy: "workspace" \| "platform" }` | §7.11 |
+| 403 | `ACCOUNT_EMAIL_NOT_VERIFIED` | `{ requiredBy: "workspace" }` | §7.11 |
 | 403 | `PERMISSION_DENIED` | `{ missingPermissions: string[] }` | Toast "You don't have permission ({missing})"; refetch permissions |
 
 ### 9.3 Endpoint-specific codes in Phase 1
@@ -1702,7 +1702,6 @@ Contrast of `--text-muted` on `--surface` must stay ≥4.5:1.
    Seed the demo workspace with `SEED_DEMO_DATA=true npm run seed`.
 2. In the **backend** `.env`, for development only:
    ```ini
-   THROTTLE_AUTH_LIMIT=200      # the default of 10 per 15 min per IP is quickly used up by reloads (§3.6)
    MAIL_TRANSPORT=log           # emails are printed to the backend console instead of sent
    FRONTEND_URL=http://localhost:5173
    ```
@@ -1729,21 +1728,20 @@ Contrast of `--text-muted` on `--surface` must stay ≥4.5:1.
 
 ---
 
-## 14. Known backend issues and the workarounds to build
+## 14. Backend fixes of 2026-09-30 (what changed for the frontend)
 
-All of these were reproduced against a running server. The workarounds are part of
-Phase 1; when a backend fix lands, the workaround either keeps working or can be
-deleted.
+Writing this specification uncovered five backend issues. All were fixed in the backend
+on 2026-09-30 and re-verified against a running server. This document already
+describes the fixed behaviour; the table is for anyone who started from an earlier
+copy.
 
-| # | Issue | Evidence | Frontend workaround (build it) | Backend fix |
-|---|---|---|---|---|
-| **BF-1** | `GET /auth/me` never returns `permissions` or `activeOrganizationId`, even with `X-Organization-Id`. The whole auth controller is marked `@SkipOrganizationContext()`, so the workspace is never resolved. | `me` with header → no `permissions` key | §5.2 fallback (members/me + roles + catalogue + wildcard expansion). It prefers the server's list automatically once present. | Resolve the workspace optionally on `/auth/me` when the header is present. |
-| **BF-2** | Rate limiting runs before authentication, so buckets are per IP. `refresh`, `change-password`, `mfa/*`, `verify-email`, `reset-password` and `DELETE /auth/me` share **one bucket of 10 per 15 min per IP**, and failed calls count. | 10 × `refresh` → next `change-password` returned `429` with `Retry-After: 900` | Tokens shared between tabs, no boot refresh without `av.hasSession`, no timers, `429` never signs out (§4). Dev: `THROTTLE_AUTH_LIMIT=200`. | Key authenticated requests by user (run the limiter after authentication for them) and give `refresh` its own, larger bucket. As is, an office behind one NAT shares 10 refreshes per 15 minutes. |
-| **BF-3** | `change-password` sets `tokensValidFrom = now` (millisecond precision) while JWT `iat` is in whole seconds. A token refreshed within the same second is rejected. | Immediate refresh → token → `401 AUTH_TOKEN_REVOKED`; after 1.1 s → OK | `expireTokenAndDelayRefresh()` holds every tab's next refresh for 1.1 s after a password change (§4.7). | Compare at second precision (truncate `tokensValidFrom` to the second, or compare `iat` with `ceil`). |
-| **BF-4** | Validation error keys come from the first word of the message, so password-policy errors arrive under `"Password"` or `"That"`, and unknown fields under `"property"`. | See §3.3 | The mapping rule in §3.3. | Build `details.fields` from class-validator's `property` path instead of splitting messages. |
-| **BF-5** | `GET /auth/me` omits `mfaEnabled` and `avatarUrl`, although `mfaEnabled` is in the Swagger schema. | See E7 | MFA state from `GET /auth/mfa`; initials instead of avatars. | Add both fields to the response. |
-
----
+| # | Was | Now | Frontend impact |
+|---|---|---|---|
+| BF-1 | `GET /auth/me` never returned `permissions` or `activeOrganizationId` | Returned when `X-Organization-Id` is sent, with the full workspace checks | Load permissions from `/auth/me` (§5.2). The earlier fallback (members/me + roles + catalogue + client-side wildcard expansion) still works but can be deleted |
+| BF-2 | Every rate-limit bucket was per IP; `refresh`, `change-password` and `mfa/*` shared 10 requests / 15 min per IP | Signed-in traffic is counted per user; `refresh` has its own policy, 60 / 15 min per session (§3.6) | None required. `THROTTLE_AUTH_LIMIT=200` is no longer needed in development |
+| BF-3 | A refresh in the same second as a password change returned an already-revoked token | Tokens carry a millisecond issue time; an immediate refresh works | The 1.1 s delay is gone: after a password change, `expireAccessToken()` then `refreshAccessToken()` (§4.7) |
+| BF-4 | Validation errors were keyed by the first word of the message (`Password`, `That`, `property`) | Keyed by property path (`password`, `newPassword`, `settings.defaultChunkSize`); unknown fields under their own name (§3.3) | Map keys to fields directly; the special cases can be deleted |
+| BF-5 | `GET /auth/me` omitted `mfaEnabled` and `avatarUrl` | Both returned | `avatarUrl` can be shown (§7.12); `GET /auth/mfa` is still the source for `sessionVerified` |
 
 ## 15. Definition of done
 
@@ -1762,8 +1760,7 @@ Functional:
       out; sign in → code step → success. Sign in with a recovery code → success;
       the remaining count drops. Disable MFA.
 - [ ] Change password: other devices signed out; this device **stays signed in**
-      and keeps working, including a second tab of the same browser and a query that
-      fires during the 1.1 s wait.
+      and keeps working, including a second tab of the same browser.
 - [ ] Devices list shows the current device and at least one other browser; signing
       the other browser out works and it is signed out at its next refresh.
 - [ ] Sign out everywhere works across two browsers.
@@ -1793,7 +1790,7 @@ Resilience (these catch the expensive bugs):
       refresh or a sign-out.
 - [ ] With the backend stopped: the offline banner shows, the user is not signed out,
       and everything recovers when it comes back.
-- [ ] A forced `429` on refresh (backend `THROTTLE_AUTH_LIMIT=1`): the
+- [ ] A forced `429` on refresh (backend `THROTTLE_REFRESH_LIMIT=1`): the
       "Too many requests" screen shows a countdown and does not sign the user out.
 - [ ] No access or refresh token in localStorage, sessionStorage, the URL or console
       logs.
@@ -1802,9 +1799,8 @@ Resilience (these catch the expensive bugs):
 Quality:
 
 - [ ] TypeScript strict, no `any` in the API layer; lint clean.
-- [ ] Unit tests: `expandPermissions` (same cases as the server: `*:*`, `agent:*`,
-      concrete keys, `pii:policy:read`), the validation-error mapper, the password
-      rule checker, the token manager's single-flight behaviour (MSW).
+- [ ] Unit tests: the validation-error mapper, the password rule checker, the token
+      manager's single-flight behaviour (MSW).
 - [ ] Every screen in §7 has loading, error and empty states.
 - [ ] Keyboard-only walkthrough of sign-in, MFA and the account pages works.
 
@@ -1849,7 +1845,7 @@ export interface AuthUser {
   emailVerified: boolean;
   isPlatformAdmin: boolean;
   status: UserStatus;
-  mfaEnabled?: boolean; // present on login/register/mfa-verify, absent on GET /auth/me
+  mfaEnabled: boolean;
 }
 export interface TokenPair {
   accessToken: string;
@@ -1877,10 +1873,11 @@ export interface MembershipSummary {
   roleSlugs: string[];
   isOwner: boolean;
 }
-export interface CurrentUser extends Omit<AuthUser, 'mfaEnabled'> {
+export interface CurrentUser extends AuthUser {
+  avatarUrl: string | null;
   memberships: MembershipSummary[];
-  permissions?: string[];        // BF-1: not returned today
-  activeOrganizationId?: string; // BF-1: not returned today
+  permissions?: string[];        // present when X-Organization-Id is sent: concrete keys
+  activeOrganizationId?: string; // present when X-Organization-Id is sent
 }
 export interface UpdateProfileRequest {
   firstName?: string;
@@ -2035,18 +2032,15 @@ export class ApiError extends Error {
     super(message);
   }
 
-  /** `details.fields` from a 422, normalised per §3.3. */
-  fieldErrors(passwordField?: string): Record<string, string> {
+  /**
+   * `details.fields` from a 422 (§3.3): one message per property path. Map keys to
+   * form fields by name; show keys that match no field as a form-level error.
+   */
+  fieldErrors(): Record<string, string> {
     const fields = (this.details?.fields ?? {}) as Record<string, string[]>;
-    const out: Record<string, string> = {};
-    for (const [key, messages] of Object.entries(fields)) {
-      const target =
-        passwordField && (key === 'Password' || key === 'That') ? passwordField
-        : key === 'property' ? '_form'
-        : key;
-      out[target] = [out[target], ...messages].filter(Boolean).join(' ');
-    }
-    return out;
+    return Object.fromEntries(
+      Object.entries(fields).map(([path, messages]) => [path, messages.join(' ')]),
+    );
   }
 }
 
@@ -2082,13 +2076,11 @@ const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('
 type Msg =
   | { type: 'token'; accessToken: string; expiresAt: number }
   | { type: 'token-request' }
-  | { type: 'expire'; notBefore: number }
   | { type: 'signed-out'; reason?: string };
 
 let accessToken: string | null = null;
 let expiresAt = 0;
 let generation = 0; // bumps whenever the token changes (here or in another tab)
-let notBefore = 0;  // earliest time the next refresh may be sent (BF-3)
 let inFlight: Promise<string | null> | null = null;
 let onSignedOut: ((reason?: string) => void) | null = null;
 
@@ -2113,14 +2105,11 @@ export function endSession(reason?: string, broadcast = true) {
 }
 
 /**
- * Call right after a successful change-password (§4.7, BF-3). The token in
- * memory is already dead; the next refresh must wait until the next second, in
- * every tab. Requests made meanwhile simply wait for that refresh.
+ * After a successful change-password (§4.7): the token in memory is already dead,
+ * so stop handing it out. Follow with refreshAccessToken().
  */
-export function expireTokenAndDelayRefresh(delayMs = 1100, broadcast = true) {
+export function expireAccessToken() {
   expiresAt = 0;
-  notBefore = Date.now() + delayMs;
-  if (broadcast) channel?.postMessage({ type: 'expire', notBefore } satisfies Msg);
 }
 
 channel?.addEventListener('message', (event: MessageEvent<Msg>) => {
@@ -2129,9 +2118,6 @@ channel?.addEventListener('message', (event: MessageEvent<Msg>) => {
     accessToken = msg.accessToken;
     expiresAt = msg.expiresAt;
     generation += 1;
-  } else if (msg.type === 'expire') {
-    expiresAt = 0;
-    notBefore = msg.notBefore;
   } else if (msg.type === 'signed-out') {
     endSession(msg.reason, false);
   } else if (msg.type === 'token-request' && fresh(60_000)) {
@@ -2151,10 +2137,6 @@ export function refreshAccessToken(): Promise<string | null> {
   inFlight = withCrossTabLock(async () => {
     // Another tab refreshed while this one waited for the lock: reuse its token.
     if (generation !== seen && fresh(30_000)) return accessToken;
-
-    // BF-3: never refresh in the same second as a password change.
-    const wait = notBefore - Date.now();
-    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
 
     let res: Response;
     try {

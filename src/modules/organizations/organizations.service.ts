@@ -10,8 +10,10 @@ import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
+  ValidationError,
 } from '../../common/exceptions/app.exception';
-import { isIpAllowed, isValidCidr } from '../../common/utils/ip.util';
+import { isIpAllowed, isIpInCidr, isValidCidr } from '../../common/utils/ip.util';
+import { mergePatch } from '../../common/utils/object.util';
 import {
   isReservedSlug,
   slugifyOrRandom,
@@ -22,6 +24,7 @@ import {
   type PaginatedResult,
 } from '../../common/utils/pagination.util';
 import { APP_CONFIG_KEY, type AppConfig } from '../../config/app.config';
+import { INGESTION_CONFIG_KEY, type IngestionConfig } from '../../config/ingestion.config';
 import { SECURITY_CONFIG_KEY, type SecurityConfig } from '../../config/security.config';
 import { RedisService } from '../../shared/redis/redis.service';
 import { AuditService } from '../audit/audit.service';
@@ -77,6 +80,7 @@ export class OrganizationsService {
   private readonly logger = new Logger(OrganizationsService.name);
   private readonly appConfig: AppConfig;
   private readonly securityConfig: SecurityConfig;
+  private readonly ingestionConfig: IngestionConfig;
 
   constructor(
     @InjectRepository(Organization)
@@ -94,6 +98,8 @@ export class OrganizationsService {
     this.appConfig = this.configService.getOrThrow<AppConfig>(APP_CONFIG_KEY);
     this.securityConfig =
       this.configService.getOrThrow<SecurityConfig>(SECURITY_CONFIG_KEY);
+    this.ingestionConfig =
+      this.configService.getOrThrow<IngestionConfig>(INGESTION_CONFIG_KEY);
   }
 
   // ── Creation ──────────────────────────────────────────────────────────────
@@ -424,13 +430,37 @@ export class OrganizationsService {
     }
     if (input.logoUrl !== undefined) organization.logoUrl = input.logoUrl || null;
     if (input.settings) {
-      organization.settings = { ...organization.settings, ...input.settings };
+      // A merge of the fields the client sent, never a spread of the DTO: the
+      // DTO instance carries every undeclared field as `undefined`, and
+      // spreading it would silently switch off `requireMfa` and clear the
+      // allowed email domains whenever any other setting was saved.
+      const settings = mergePatch<OrganizationSettings>(
+        organization.settings,
+        input.settings,
+      );
+      this.assertChunkingDefaults(settings);
+      organization.settings = settings;
     }
 
     const saved = await this.organizationRepository.save(organization);
     await this.invalidateCache(saved);
 
     return saved;
+  }
+
+  /** The workspace's chunking defaults must leave room for a chunk (overlap < size). */
+  private assertChunkingDefaults(settings: OrganizationSettings): void {
+    const size = settings.defaultChunkSize ?? this.ingestionConfig.chunkSizeDefault;
+    const overlap =
+      settings.defaultChunkOverlap ?? this.ingestionConfig.chunkOverlapDefault;
+    if (overlap >= size) {
+      throw new ValidationError({
+        message: `Chunk overlap (${overlap}) must be smaller than chunk size (${size}).`,
+        details: {
+          fields: { 'settings.defaultChunkOverlap': [`must be smaller than ${size}`] },
+        },
+      });
+    }
   }
 
   /**
@@ -669,7 +699,11 @@ export class OrganizationsService {
     return rule;
   }
 
-  async removeIpRule(organizationId: string, ruleId: string): Promise<void> {
+  async removeIpRule(
+    organizationId: string,
+    ruleId: string,
+    callerIp: string,
+  ): Promise<void> {
     const rule = await this.ipRuleRepository.findOne({
       where: { id: ruleId, organizationId },
     });
@@ -680,16 +714,17 @@ export class OrganizationsService {
     // Removing the last rule while enforcement is on would lock every member
     // out, with no way back in through the API.
     if (organization.ipAllowlistEnabled) {
-      const remaining = await this.ipRuleRepository.count({
-        where: { organizationId, isActive: true },
-      });
-      if (remaining <= 1) {
+      const remaining = (await this.activeIpRules(organizationId, { fresh: true })).filter(
+        (entry) => entry.id !== ruleId,
+      );
+      if (remaining.length === 0) {
         throw new ConflictError(ErrorCode.RESOURCE_CONFLICT, {
           message:
             'This is the last active rule and enforcement is enabled. ' +
             'Disable IP enforcement first, or add another rule.',
         });
       }
+      this.assertCallerStaysAllowed(remaining, callerIp);
     }
 
     await this.ipRuleRepository.delete({ id: ruleId });
@@ -701,19 +736,22 @@ export class OrganizationsService {
    *
    * Refuses to enable with an empty rule set, for the same lockout reason.
    */
-  async setIpEnforcement(organizationId: string, enabled: boolean): Promise<Organization> {
+  async setIpEnforcement(
+    organizationId: string,
+    enabled: boolean,
+    callerIp: string,
+  ): Promise<Organization> {
     if (enabled) {
-      const activeRules = await this.ipRuleRepository.count({
-        where: { organizationId, isActive: true },
-      });
+      const activeRules = await this.activeIpRules(organizationId, { fresh: true });
 
-      if (activeRules === 0) {
+      if (activeRules.length === 0) {
         throw new BadRequestError(ErrorCode.BAD_REQUEST, {
           message:
             'Add at least one allowed range before enabling IP enforcement, ' +
             'otherwise every member would be locked out.',
         });
       }
+      this.assertCallerStaysAllowed(activeRules, callerIp);
     }
 
     const organization = await this.findByIdOrFail(organizationId);
@@ -746,27 +784,106 @@ export class OrganizationsService {
       const organization = await this.resolveOrganization(organizationId);
       if (!organization?.ipAllowlistEnabled) return true;
 
-      const cacheKey = CacheKeys.organizationIpAllowlist(organizationId);
-      let cidrs = await this.redis.getJson<string[]>(cacheKey);
+      const rules = await this.activeIpRules(organizationId);
+      if (rules.length === 0) return true;
 
-      if (!cidrs) {
-        const rules = await this.ipRuleRepository.find({
-          where: { organizationId, isActive: true },
-          select: { cidr: true },
-        });
-        cidrs = rules.map((rule) => rule.cidr);
-        await this.redis.setJson(cacheKey, cidrs, CACHE_TTL_SECONDS.IP_ALLOWLIST);
-      }
-
-      if (cidrs.length === 0) return true;
-
-      return isIpAllowed(ip, cidrs);
+      const matched = rules.find((rule) => isIpInCidr(ip, rule.cidr));
+      if (matched?.id) void this.recordIpRuleMatch(matched.id);
+      return matched !== undefined;
     } catch (error) {
       this.logger.error(
         `IP allowlist check failed for workspace ${organizationId}: ${(error as Error).message}. ` +
           'Allowing the request; authentication and permission checks still apply.',
       );
       return true;
+    }
+  }
+
+  /**
+   * The workspace's active allowlist entries, cached. `fresh` reads the
+   * database, for decisions that must not act on a stale list.
+   */
+  private async activeIpRules(
+    organizationId: string,
+    options: { fresh?: boolean } = {},
+  ): Promise<Array<{ id?: string; cidr: string }>> {
+    const cacheKey = CacheKeys.organizationIpAllowlist(organizationId);
+    if (!options.fresh) {
+      // Entries cached before rule ids were stored are bare CIDR strings.
+      const cached =
+        await this.redis.getJson<Array<string | { id: string; cidr: string }>>(cacheKey);
+      if (cached) {
+        return cached.map((entry) => (typeof entry === 'string' ? { cidr: entry } : entry));
+      }
+    }
+
+    const rules = await this.ipRuleRepository.find({
+      where: { organizationId, isActive: true },
+      select: { id: true, cidr: true },
+    });
+    const entries = rules.map((rule) => ({ id: rule.id, cidr: rule.cidr }));
+    await this.redis.setJson(cacheKey, entries, CACHE_TTL_SECONDS.IP_ALLOWLIST);
+    return entries;
+  }
+
+  /**
+   * Refuses an allowlist change that would shut out the administrator making
+   * it. Without this, enabling enforcement with rules that do not cover the
+   * caller locks everyone out, including the only people who could undo it:
+   * every workspace request, the undo included, is then refused.
+   */
+  private assertCallerStaysAllowed(
+    rules: ReadonlyArray<{ cidr: string }>,
+    callerIp: string,
+  ): void {
+    if (!this.securityConfig.enforceIpAllowlist) return;
+    const cidrs = rules.map((rule) => rule.cidr);
+    if (cidrs.length > 0 && isIpAllowed(callerIp, cidrs)) return;
+
+    throw new ConflictError(ErrorCode.IP_ALLOWLIST_SELF_LOCKOUT, {
+      message:
+        `This change would block your own network address (${callerIp}) from the workspace. ` +
+        'Add a rule that includes it first.',
+      details: { ip: callerIp },
+    });
+  }
+
+  /** Stamps `last_matched_at`, at most once a minute per rule. Never throws. */
+  private async recordIpRuleMatch(ruleId: string): Promise<void> {
+    try {
+      const first = await this.redis.setIfAbsent(
+        CacheKeys.ipRuleMatched(ruleId),
+        '1',
+        CACHE_TTL_SECONDS.ACTIVITY_DEBOUNCE,
+      );
+      if (first) {
+        await this.ipRuleRepository.update({ id: ruleId }, { lastMatchedAt: new Date() });
+      }
+    } catch (error) {
+      this.logger.debug(`Could not record an IP rule match: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Stamps a member's `last_active_at`, at most once a minute. Called by the
+   * organization guard for every workspace request; never throws, because
+   * bookkeeping must not fail the request it describes.
+   */
+  async recordMemberActivity(membershipId: string): Promise<void> {
+    try {
+      const first = await this.redis.setIfAbsent(
+        CacheKeys.memberActivity(membershipId),
+        '1',
+        CACHE_TTL_SECONDS.ACTIVITY_DEBOUNCE,
+      );
+      if (first) {
+        await this.memberRepository.update(
+          { id: membershipId },
+          { lastActiveAt: new Date() },
+        );
+      }
+    } catch (error) {
+      this.logger.debug(`Could not record member activity: ${(error as Error).message}`);
     }
   }
 

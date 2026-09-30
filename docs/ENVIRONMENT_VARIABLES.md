@@ -1,6 +1,6 @@
 # Complete backend environment-variable reference
 
-Audited against `src/config/env.validation.ts` on 28–29 September 2026. **317 schema variables**. Read [the setup guide](ENVIRONMENT.md) first. Defaults here are the schema defaults, not credentials from your `.env`. An empty default does not mean the corresponding feature will work without provider credentials. “Omit” means no schema default. `*` marks one of the **56 keys missing from `.env.example`**.
+Audited against `src/config/env.validation.ts` on 28–29 September 2026. **319 schema variables**. Read [the setup guide](ENVIRONMENT.md) first. Defaults here are the schema defaults, not credentials from your `.env`. An empty default does not mean the corresponding feature will work without provider credentials. “Omit” means no schema default. `*` marks one of the **56 keys missing from `.env.example`**.
 
 All settings belong on the NestJS API and, when used, its worker, except hosting port/topology differences explained in the guide. Python-side `DAIAP_SIGNING_SECRET` is a separate implementation convention. The tables enumerate accepted knobs; they do not imply every knob is fully wired into runtime behavior.
 
@@ -154,306 +154,308 @@ Types/constraints are taken from Joi. Duration expressions use milliseconds for 
 | [`THROTTLE_LIMIT`](../src/config/env.validation.ts#L320) | 120 | number; integer; min 1 | Maximum general requests per matching THROTTLE_TTL window. |
 | [`THROTTLE_AUTH_TTL`](../src/config/env.validation.ts#L322) | 15m | duration | Deliberately tight bucket for credential-handling endpoints. |
 | [`THROTTLE_AUTH_LIMIT`](../src/config/env.validation.ts#L323) | 10 | number; integer; min 1 | Maximum auth requests per matching THROTTLE_AUTH_TTL window. |
-| [`THROTTLE_EMAIL_TTL`](../src/config/env.validation.ts#L325) | 1h | duration | Bucket for endpoints that send email, to prevent using us as a spam relay. |
-| [`THROTTLE_EMAIL_LIMIT`](../src/config/env.validation.ts#L326) | 5 | number; integer; min 1 | Maximum email requests per matching THROTTLE_EMAIL_TTL window. |
-| [`THROTTLE_UPLOAD_TTL`](../src/config/env.validation.ts#L328) | 1h | duration | Document uploads: each one costs storage, parsing and embedding compute. |
-| [`THROTTLE_UPLOAD_LIMIT`](../src/config/env.validation.ts#L329) | 100 | number; integer; min 1 | Maximum upload requests per matching THROTTLE_UPLOAD_TTL window. |
-| [`THROTTLE_RAG_TTL`](../src/config/env.validation.ts#L331) | 60s | duration | Retrieval queries: each one costs an embedding call and a vector search. |
-| [`THROTTLE_RAG_LIMIT`](../src/config/env.validation.ts#L332) | 60 | number; integer; min 1 | Maximum rag requests per matching THROTTLE_RAG_TTL window. |
-| [`THROTTLE_INFERENCE_TTL`](../src/config/env.validation.ts#L334) | 60s | duration | Agent turns and direct model calls: each holds a GPU slot for seconds. |
-| [`THROTTLE_INFERENCE_LIMIT`](../src/config/env.validation.ts#L335) | 20 | number; integer; min 1 | Maximum inference requests per matching THROTTLE_INFERENCE_TTL window. |
-| [`THROTTLE_PII_TTL`](../src/config/env.validation.ts#L337) | 60s | duration | PII analysis previews and redaction reports. |
-| [`THROTTLE_PII_LIMIT`](../src/config/env.validation.ts#L338) | 30 | number; integer; min 1 | Maximum pii requests per matching THROTTLE_PII_TTL window. |
-| [`THROTTLE_WORKFLOW_TTL`](../src/config/env.validation.ts#L340) | 60s | duration | Workflow run starts: each one can fan out into many model and tool calls. |
-| [`THROTTLE_WORKFLOW_LIMIT`](../src/config/env.validation.ts#L341) | 30 | number; integer; min 1 | Maximum workflow requests per matching THROTTLE_WORKFLOW_TTL window. |
+| [`THROTTLE_REFRESH_TTL`](../src/config/env.validation.ts#L325) | 15m | duration | Window for access token renewal (`POST /auth/refresh`), counted per session. |
+| [`THROTTLE_REFRESH_LIMIT`](../src/config/env.validation.ts#L326) | 60 | number; integer; min 1 | Maximum token renewals per session per THROTTLE_REFRESH_TTL window. The web app renews on every page load. |
+| [`THROTTLE_EMAIL_TTL`](../src/config/env.validation.ts#L328) | 1h | duration | Bucket for endpoints that send email, to prevent using us as a spam relay. |
+| [`THROTTLE_EMAIL_LIMIT`](../src/config/env.validation.ts#L329) | 5 | number; integer; min 1 | Maximum email requests per matching THROTTLE_EMAIL_TTL window. |
+| [`THROTTLE_UPLOAD_TTL`](../src/config/env.validation.ts#L331) | 1h | duration | Document uploads: each one costs storage, parsing and embedding compute. |
+| [`THROTTLE_UPLOAD_LIMIT`](../src/config/env.validation.ts#L332) | 100 | number; integer; min 1 | Maximum upload requests per matching THROTTLE_UPLOAD_TTL window. |
+| [`THROTTLE_RAG_TTL`](../src/config/env.validation.ts#L334) | 60s | duration | Retrieval queries: each one costs an embedding call and a vector search. |
+| [`THROTTLE_RAG_LIMIT`](../src/config/env.validation.ts#L335) | 60 | number; integer; min 1 | Maximum rag requests per matching THROTTLE_RAG_TTL window. |
+| [`THROTTLE_INFERENCE_TTL`](../src/config/env.validation.ts#L337) | 60s | duration | Agent turns and direct model calls: each holds a GPU slot for seconds. |
+| [`THROTTLE_INFERENCE_LIMIT`](../src/config/env.validation.ts#L338) | 20 | number; integer; min 1 | Maximum inference requests per matching THROTTLE_INFERENCE_TTL window. |
+| [`THROTTLE_PII_TTL`](../src/config/env.validation.ts#L340) | 60s | duration | PII analysis previews and redaction reports. |
+| [`THROTTLE_PII_LIMIT`](../src/config/env.validation.ts#L341) | 30 | number; integer; min 1 | Maximum pii requests per matching THROTTLE_PII_TTL window. |
+| [`THROTTLE_WORKFLOW_TTL`](../src/config/env.validation.ts#L343) | 60s | duration | Workflow run starts: each one can fan out into many model and tool calls. |
+| [`THROTTLE_WORKFLOW_LIMIT`](../src/config/env.validation.ts#L344) | 30 | number; integer; min 1 | Maximum workflow requests per matching THROTTLE_WORKFLOW_TTL window. |
 
 ## Object storage and uploads
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`STORAGE_S3_BUCKET`](../src/config/env.validation.ts#L347) | empty | string | Name of an existing private S3 bucket; setting this enables the storage client. |
-| [`STORAGE_S3_ENDPOINT`](../src/config/env.validation.ts#L349) | empty | string; uri | S3 API endpoint (not a public bucket/download URL). Empty uses AWS resolution. |
-| [`STORAGE_S3_REGION`](../src/config/env.validation.ts#L350) | auto | string | Provider region; auto for R2. |
-| [`STORAGE_S3_ACCESS_KEY_ID`](../src/config/env.validation.ts#L351) | empty | string | S3 access key from storage provider; when omitted SDK default credentials may apply. |
-| [`STORAGE_S3_SECRET_ACCESS_KEY`](../src/config/env.validation.ts#L352) | empty | string | S3 secret access key; pair with access key ID. |
-| [`STORAGE_S3_FORCE_PATH_STYLE`](../src/config/env.validation.ts#L354) | false | boolean | Path-style addressing. Required by MinIO and some B2 setups. |
-| [`STORAGE_S3_SERVER_SIDE_ENCRYPTION`](../src/config/env.validation.ts#L356) | empty | string: empty, AES256, aws:kms | Provider-side encryption on top of the application-level encryption. |
-| [`STORAGE_KEY_PREFIX`](../src/config/env.validation.ts#L360) | daiap/ | string | Prefix for every object key, so one bucket can serve several deployments. |
-| [`UPLOAD_MAX_FILE_SIZE`](../src/config/env.validation.ts#L364) | 50mb | byte size | Maximum file bytes per upload, held in memory by this upload implementation. |
-| [`UPLOAD_ALLOWED_TYPES`](../src/config/env.validation.ts#L366) | pdf,docx,txt,md | string | Comma-separated subset of: pdf, docx, txt, md. |
-| [`UPLOAD_REQUEST_TIMEOUT`](../src/config/env.validation.ts#L370) | 120s | duration | Upload requests stream up to UPLOAD_MAX_FILE_SIZE, so they get a longer budget. |
-| [`STORAGE_QUOTA_PER_ORGANIZATION`](../src/config/env.validation.ts#L372) | 1gb | byte size | Total document bytes one workspace may store. Zero means unlimited. |
+| [`STORAGE_S3_BUCKET`](../src/config/env.validation.ts#L350) | empty | string | Name of an existing private S3 bucket; setting this enables the storage client. |
+| [`STORAGE_S3_ENDPOINT`](../src/config/env.validation.ts#L352) | empty | string; uri | S3 API endpoint (not a public bucket/download URL). Empty uses AWS resolution. |
+| [`STORAGE_S3_REGION`](../src/config/env.validation.ts#L353) | auto | string | Provider region; auto for R2. |
+| [`STORAGE_S3_ACCESS_KEY_ID`](../src/config/env.validation.ts#L354) | empty | string | S3 access key from storage provider; when omitted SDK default credentials may apply. |
+| [`STORAGE_S3_SECRET_ACCESS_KEY`](../src/config/env.validation.ts#L355) | empty | string | S3 secret access key; pair with access key ID. |
+| [`STORAGE_S3_FORCE_PATH_STYLE`](../src/config/env.validation.ts#L357) | false | boolean | Path-style addressing. Required by MinIO and some B2 setups. |
+| [`STORAGE_S3_SERVER_SIDE_ENCRYPTION`](../src/config/env.validation.ts#L359) | empty | string: empty, AES256, aws:kms | Provider-side encryption on top of the application-level encryption. |
+| [`STORAGE_KEY_PREFIX`](../src/config/env.validation.ts#L363) | daiap/ | string | Prefix for every object key, so one bucket can serve several deployments. |
+| [`UPLOAD_MAX_FILE_SIZE`](../src/config/env.validation.ts#L367) | 50mb | byte size | Maximum file bytes per upload, held in memory by this upload implementation. |
+| [`UPLOAD_ALLOWED_TYPES`](../src/config/env.validation.ts#L369) | pdf,docx,txt,md | string | Comma-separated subset of: pdf, docx, txt, md. |
+| [`UPLOAD_REQUEST_TIMEOUT`](../src/config/env.validation.ts#L373) | 120s | duration | Upload requests stream up to UPLOAD_MAX_FILE_SIZE, so they get a longer budget. |
+| [`STORAGE_QUOTA_PER_ORGANIZATION`](../src/config/env.validation.ts#L375) | 1gb | byte size | Total document bytes one workspace may store. Zero means unlimited. |
 
 ## AI service and its TLS client
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`AI_SERVICE_URL`](../src/config/env.validation.ts#L377) | empty | string; uri | Root URL of the custom contract-compatible AI service; client appends /v1 routes. |
-| [`AI_SERVICE_SIGNING_SECRET`](../src/config/env.validation.ts#L382) | empty | string | Generate and share with the AI implementation. Set explicitly when AI_SERVICE_URL is configured; use >=32 characters. |
-| [`AI_SERVICE_KEY_ID`](../src/config/env.validation.ts#L400) | v1 | string | Identifies which secret signed a request, so the secret can be rotated. |
-| [`AI_SERVICE_TLS_CERT`](../src/config/env.validation.ts#L409) * | empty | string | Phase 5 — mutual TLS to the AI service. The client certificate and key this backend presents (both or neither), the CA that signed the AI service's server certificate (when it is a private CA), and the name to verify on it when that differs from the URL's host. |
-| [`AI_SERVICE_TLS_KEY`](../src/config/env.validation.ts#L410) * | empty | string | Client private-key PEM contents paired with the client certificate; keep secret. |
-| [`AI_SERVICE_TLS_KEY_PASSPHRASE`](../src/config/env.validation.ts#L411) * | empty | string | Passphrase only when the client private key is encrypted. |
-| [`AI_SERVICE_TLS_CA`](../src/config/env.validation.ts#L412) * | empty | string | Trusted server CA PEM for a private certificate authority; supports the client PEM decoder. |
-| [`AI_SERVICE_TLS_SERVERNAME`](../src/config/env.validation.ts#L413) * | empty | string; hostname | Server certificate name to verify when it differs from the URL hostname. |
-| [`AI_SERVICE_TIMEOUT`](../src/config/env.validation.ts#L414) | 30s | duration | Default AI call timeout; document parsing uses its separate longer budget. |
-| [`AI_SERVICE_PARSE_TIMEOUT`](../src/config/env.validation.ts#L416) | 300s | duration | Parsing a long scanned PDF can legitimately take minutes. |
-| [`AI_SERVICE_MAX_RETRIES`](../src/config/env.validation.ts#L417) | 2 | number; integer; min 0; max 5 | Retry count for retryable AI service failures. |
-| [`AI_SERVICE_MAX_RESPONSE_SIZE`](../src/config/env.validation.ts#L418) | 64mb | byte size | Maximum accepted AI-service response bytes, including parse/embedding results. |
-| [`AI_SERVICE_CIRCUIT_THRESHOLD`](../src/config/env.validation.ts#L419) | 5 | number; integer; min 1; max 100 | Consecutive dependency failures before the AI_SERVICE circuit opens. |
-| [`AI_SERVICE_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L420) | 30s | duration | Pause before probing recovery after the AI_SERVICE dependency circuit opens. |
+| [`AI_SERVICE_URL`](../src/config/env.validation.ts#L380) | empty | string; uri | Root URL of the custom contract-compatible AI service; client appends /v1 routes. |
+| [`AI_SERVICE_SIGNING_SECRET`](../src/config/env.validation.ts#L385) | empty | string | Generate and share with the AI implementation. Set explicitly when AI_SERVICE_URL is configured; use >=32 characters. |
+| [`AI_SERVICE_KEY_ID`](../src/config/env.validation.ts#L403) | v1 | string | Identifies which secret signed a request, so the secret can be rotated. |
+| [`AI_SERVICE_TLS_CERT`](../src/config/env.validation.ts#L412) * | empty | string | Phase 5 — mutual TLS to the AI service. The client certificate and key this backend presents (both or neither), the CA that signed the AI service's server certificate (when it is a private CA), and the name to verify on it when that differs from the URL's host. |
+| [`AI_SERVICE_TLS_KEY`](../src/config/env.validation.ts#L413) * | empty | string | Client private-key PEM contents paired with the client certificate; keep secret. |
+| [`AI_SERVICE_TLS_KEY_PASSPHRASE`](../src/config/env.validation.ts#L414) * | empty | string | Passphrase only when the client private key is encrypted. |
+| [`AI_SERVICE_TLS_CA`](../src/config/env.validation.ts#L415) * | empty | string | Trusted server CA PEM for a private certificate authority; supports the client PEM decoder. |
+| [`AI_SERVICE_TLS_SERVERNAME`](../src/config/env.validation.ts#L416) * | empty | string; hostname | Server certificate name to verify when it differs from the URL hostname. |
+| [`AI_SERVICE_TIMEOUT`](../src/config/env.validation.ts#L417) | 30s | duration | Default AI call timeout; document parsing uses its separate longer budget. |
+| [`AI_SERVICE_PARSE_TIMEOUT`](../src/config/env.validation.ts#L419) | 300s | duration | Parsing a long scanned PDF can legitimately take minutes. |
+| [`AI_SERVICE_MAX_RETRIES`](../src/config/env.validation.ts#L420) | 2 | number; integer; min 0; max 5 | Retry count for retryable AI service failures. |
+| [`AI_SERVICE_MAX_RESPONSE_SIZE`](../src/config/env.validation.ts#L421) | 64mb | byte size | Maximum accepted AI-service response bytes, including parse/embedding results. |
+| [`AI_SERVICE_CIRCUIT_THRESHOLD`](../src/config/env.validation.ts#L422) | 5 | number; integer; min 1; max 100 | Consecutive dependency failures before the AI_SERVICE circuit opens. |
+| [`AI_SERVICE_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L423) | 30s | duration | Pause before probing recovery after the AI_SERVICE dependency circuit opens. |
 
 ## Qdrant and embeddings
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`QDRANT_URL`](../src/config/env.validation.ts#L425) | empty | string; uri | Cluster REST URL. Empty disables vector-store capability. |
-| [`QDRANT_API_KEY`](../src/config/env.validation.ts#L426) | empty | string | Database API key from Qdrant, not its cloud-management key. |
-| [`QDRANT_COLLECTION_PREFIX`](../src/config/env.validation.ts#L427) | daiap_ | string | Collection namespace; use separate dev/test/prod prefixes and do not change against existing data casually. |
-| [`QDRANT_TENANCY`](../src/config/env.validation.ts#L437) | collection | string: collection, shared | `collection` — one collection per workspace: physical isolation at the vector layer. `shared` — one collection, partitioned by a tenant-indexed payload field: Qdrant's recommendation once workspaces number in the hundreds. The mandatory tenant filter applies in both modes. |
-| [`QDRANT_TIMEOUT`](../src/config/env.validation.ts#L438) | 15s | duration | Qdrant request time budget. |
-| [`QDRANT_QUANTIZATION`](../src/config/env.validation.ts#L440) | scalar | string: scalar, none | int8 scalar quantisation: ~4x less vector memory, with rescoring. |
-| [`QDRANT_CIRCUIT_THRESHOLD`](../src/config/env.validation.ts#L441) | 5 | number; integer; min 1; max 100 | Consecutive dependency failures before the QDRANT circuit opens. |
-| [`QDRANT_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L442) | 20s | duration | Pause before probing recovery after the QDRANT dependency circuit opens. |
-| [`EMBEDDING_MODEL`](../src/config/env.validation.ts#L443) | nomic-embed-text | string; max 128 | Exact model label sent to and expected back from the custom AI service. |
-| [`EMBEDDING_DIMENSIONS`](../src/config/env.validation.ts#L444) | 768 | number; integer; min 8; max 8192 | Exact vector length returned by that model; must match collection configuration. |
-| [`EMBEDDING_BATCH_SIZE`](../src/config/env.validation.ts#L445) | 32 | number; integer; min 1; max 512 | Number of texts per embedding batch; align with AI-service capacity. |
+| [`QDRANT_URL`](../src/config/env.validation.ts#L428) | empty | string; uri | Cluster REST URL. Empty disables vector-store capability. |
+| [`QDRANT_API_KEY`](../src/config/env.validation.ts#L429) | empty | string | Database API key from Qdrant, not its cloud-management key. |
+| [`QDRANT_COLLECTION_PREFIX`](../src/config/env.validation.ts#L430) | daiap_ | string | Collection namespace; use separate dev/test/prod prefixes and do not change against existing data casually. |
+| [`QDRANT_TENANCY`](../src/config/env.validation.ts#L440) | collection | string: collection, shared | `collection` — one collection per workspace: physical isolation at the vector layer. `shared` — one collection, partitioned by a tenant-indexed payload field: Qdrant's recommendation once workspaces number in the hundreds. The mandatory tenant filter applies in both modes. |
+| [`QDRANT_TIMEOUT`](../src/config/env.validation.ts#L441) | 15s | duration | Qdrant request time budget. |
+| [`QDRANT_QUANTIZATION`](../src/config/env.validation.ts#L443) | scalar | string: scalar, none | int8 scalar quantisation: ~4x less vector memory, with rescoring. |
+| [`QDRANT_CIRCUIT_THRESHOLD`](../src/config/env.validation.ts#L444) | 5 | number; integer; min 1; max 100 | Consecutive dependency failures before the QDRANT circuit opens. |
+| [`QDRANT_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L445) | 20s | duration | Pause before probing recovery after the QDRANT dependency circuit opens. |
+| [`EMBEDDING_MODEL`](../src/config/env.validation.ts#L446) | nomic-embed-text | string; max 128 | Exact model label sent to and expected back from the custom AI service. |
+| [`EMBEDDING_DIMENSIONS`](../src/config/env.validation.ts#L447) | 768 | number; integer; min 8; max 8192 | Exact vector length returned by that model; must match collection configuration. |
+| [`EMBEDDING_BATCH_SIZE`](../src/config/env.validation.ts#L448) | 32 | number; integer; min 1; max 512 | Number of texts per embedding batch; align with AI-service capacity. |
 
 ## Queues and ingestion
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`QUEUE_PREFIX`](../src/config/env.validation.ts#L451) | empty | string | Defaults to `${REDIS_KEY_PREFIX}bull`. |
-| [`QUEUE_WORKERS_ENABLED`](../src/config/env.validation.ts#L460) | true | boolean | Whether this process consumes jobs. `true` suits a single-service deployment; set `false` on the API and run `npm run start:worker` separately to scale ingestion independently. |
-| [`QUEUE_DRAIN_DELAY`](../src/config/env.validation.ts#L468) | 5s | duration; 1s to 5m | How long an idle worker waits on Redis before polling again. A new job wakes it at once, so this only sets idle traffic: measured ~600 commands/minute at 5s/30s and ~350 at 60s/120s. BullMQ still polls a queue holding a scheduled job at least every 10 seconds, so a per-command free tier (Upstash) cannot carry an always-on deployment. |
-| [`QUEUE_STALLED_INTERVAL`](../src/config/env.validation.ts#L473) | 30s | duration; 5s to 10m | How often each worker checks for jobs whose worker died. The engines also sweep for stalled work in PostgreSQL. `120s` pairs with a `60s` drain delay. |
-| [`INGESTION_CONCURRENCY`](../src/config/env.validation.ts#L474) | 2 | number; integer; min 1; max 32 | Concurrent document jobs per worker process. |
-| [`INGESTION_MAX_ATTEMPTS`](../src/config/env.validation.ts#L475) | 5 | number; integer; min 1; max 20 | Maximum attempts for retryable document ingestion jobs. |
-| [`INGESTION_BACKOFF_DELAY`](../src/config/env.validation.ts#L476) | 15s | duration | Initial delay between ingestion retries. |
-| [`INGESTION_JOB_TIMEOUT`](../src/config/env.validation.ts#L477) | 30m | duration | Overall ingestion job time budget. |
-| [`INGESTION_MAX_CHUNKS`](../src/config/env.validation.ts#L478) | 20000 | number; integer; min 1; max 200000 | Maximum chunks permitted for a single document. |
-| [`CHUNK_SIZE_DEFAULT`](../src/config/env.validation.ts#L479) | 512 | number; integer; min 64; max 4096 | Default parser chunk length in embedding-model tokens. |
-| [`CHUNK_OVERLAP_DEFAULT`](../src/config/env.validation.ts#L480) | 64 | number; integer; min 0; max 1024 | Default token overlap between chunks; keep below the selected chunk size. |
-| [`MAINTENANCE_SWEEP_INTERVAL`](../src/config/env.validation.ts#L481) | 5m | duration | Interval for knowledge ingestion/cleanup maintenance sweeps. |
-| [`INGESTION_STALL_THRESHOLD`](../src/config/env.validation.ts#L483) | 45m | duration | A document in-flight this long without progress is considered stalled. |
-| [`ORGANIZATION_PURGE_GRACE`](../src/config/env.validation.ts#L485) | 7d | duration | Grace period before a deleted workspace's documents are destroyed. |
+| [`QUEUE_PREFIX`](../src/config/env.validation.ts#L454) | empty | string | Defaults to `${REDIS_KEY_PREFIX}bull`. |
+| [`QUEUE_WORKERS_ENABLED`](../src/config/env.validation.ts#L463) | true | boolean | Whether this process consumes jobs. `true` suits a single-service deployment; set `false` on the API and run `npm run start:worker` separately to scale ingestion independently. |
+| [`QUEUE_DRAIN_DELAY`](../src/config/env.validation.ts#L471) | 5s | duration; 1s to 5m | How long an idle worker waits on Redis before polling again. A new job wakes it at once, so this only sets idle traffic: measured ~600 commands/minute at 5s/30s and ~350 at 60s/120s. BullMQ still polls a queue holding a scheduled job at least every 10 seconds, so a per-command free tier (Upstash) cannot carry an always-on deployment. |
+| [`QUEUE_STALLED_INTERVAL`](../src/config/env.validation.ts#L476) | 30s | duration; 5s to 10m | How often each worker checks for jobs whose worker died. The engines also sweep for stalled work in PostgreSQL. `120s` pairs with a `60s` drain delay. |
+| [`INGESTION_CONCURRENCY`](../src/config/env.validation.ts#L477) | 2 | number; integer; min 1; max 32 | Concurrent document jobs per worker process. |
+| [`INGESTION_MAX_ATTEMPTS`](../src/config/env.validation.ts#L478) | 5 | number; integer; min 1; max 20 | Maximum attempts for retryable document ingestion jobs. |
+| [`INGESTION_BACKOFF_DELAY`](../src/config/env.validation.ts#L479) | 15s | duration | Initial delay between ingestion retries. |
+| [`INGESTION_JOB_TIMEOUT`](../src/config/env.validation.ts#L480) | 30m | duration | Overall ingestion job time budget. |
+| [`INGESTION_MAX_CHUNKS`](../src/config/env.validation.ts#L481) | 20000 | number; integer; min 1; max 200000 | Maximum chunks permitted for a single document. |
+| [`CHUNK_SIZE_DEFAULT`](../src/config/env.validation.ts#L482) | 512 | number; integer; min 64; max 4096 | Default parser chunk length in embedding-model tokens. |
+| [`CHUNK_OVERLAP_DEFAULT`](../src/config/env.validation.ts#L483) | 64 | number; integer; min 0; max 1024 | Default token overlap between chunks; keep below the selected chunk size. |
+| [`MAINTENANCE_SWEEP_INTERVAL`](../src/config/env.validation.ts#L484) | 5m | duration | Interval for knowledge ingestion/cleanup maintenance sweeps. |
+| [`INGESTION_STALL_THRESHOLD`](../src/config/env.validation.ts#L486) | 45m | duration | A document in-flight this long without progress is considered stalled. |
+| [`ORGANIZATION_PURGE_GRACE`](../src/config/env.validation.ts#L488) | 7d | duration | Grace period before a deleted workspace's documents are destroyed. |
 
 ## Retrieval
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`RAG_DEFAULT_TOP_K`](../src/config/env.validation.ts#L490) | 8 | number; integer; min 1; max 100 | Default number of final retrieved passages. |
-| [`RAG_MAX_TOP_K`](../src/config/env.validation.ts#L491) | 50 | number; integer; min 1; max 200 | Maximum allowed requested passage count. |
-| [`RAG_SEARCH_MODE`](../src/config/env.validation.ts#L493) | hybrid | string: hybrid, dense | `hybrid` fuses dense and lexical (BM25) results; `dense` is vectors only. |
-| [`RAG_CANDIDATE_MULTIPLIER`](../src/config/env.validation.ts#L495) | 4 | number; integer; min 1; max 20 | Candidates fetched per final result when reranking. |
-| [`RAG_RERANK_ENABLED`](../src/config/env.validation.ts#L496) | false | boolean | Enable AI-service /v1/rerank; only enable when implemented and tested. |
-| [`RAG_MAX_QUERY_LENGTH`](../src/config/env.validation.ts#L497) | 2000 | number; integer; min 16; max 16384 | Maximum retrieval query characters. |
-| [`RAG_AUDIT_WITHHELD`](../src/config/env.validation.ts#L502) | true | boolean | Also record *what the access policy withheld* from each query — document ids only, never content — so an auditor can see the policy working. |
-| [`RAG_WITHHELD_SCORE_THRESHOLD`](../src/config/env.validation.ts#L503) | 0.35 | number; min 0; max 1 | Relevance threshold used for withheld-result audit reporting. |
-| [`RAG_REQUEST_TIMEOUT`](../src/config/env.validation.ts#L504) | 60s | duration | HTTP time budget for retrieval endpoints. |
+| [`RAG_DEFAULT_TOP_K`](../src/config/env.validation.ts#L493) | 8 | number; integer; min 1; max 100 | Default number of final retrieved passages. |
+| [`RAG_MAX_TOP_K`](../src/config/env.validation.ts#L494) | 50 | number; integer; min 1; max 200 | Maximum allowed requested passage count. |
+| [`RAG_SEARCH_MODE`](../src/config/env.validation.ts#L496) | hybrid | string: hybrid, dense | `hybrid` fuses dense and lexical (BM25) results; `dense` is vectors only. |
+| [`RAG_CANDIDATE_MULTIPLIER`](../src/config/env.validation.ts#L498) | 4 | number; integer; min 1; max 20 | Candidates fetched per final result when reranking. |
+| [`RAG_RERANK_ENABLED`](../src/config/env.validation.ts#L499) | false | boolean | Enable AI-service /v1/rerank; only enable when implemented and tested. |
+| [`RAG_MAX_QUERY_LENGTH`](../src/config/env.validation.ts#L500) | 2000 | number; integer; min 16; max 16384 | Maximum retrieval query characters. |
+| [`RAG_AUDIT_WITHHELD`](../src/config/env.validation.ts#L505) | true | boolean | Also record *what the access policy withheld* from each query — document ids only, never content — so an auditor can see the policy working. |
+| [`RAG_WITHHELD_SCORE_THRESHOLD`](../src/config/env.validation.ts#L506) | 0.35 | number; min 0; max 1 | Relevance threshold used for withheld-result audit reporting. |
+| [`RAG_REQUEST_TIMEOUT`](../src/config/env.validation.ts#L507) | 60s | duration | HTTP time budget for retrieval endpoints. |
 
 ## LLM gateway and its TLS client
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`LLM_PROVIDER`](../src/config/env.validation.ts#L511) | ollama | string: ollama, openai | `ollama`: Ollama's native API. `openai`: any OpenAI-compatible server. |
-| [`LLM_BASE_URL`](../src/config/env.validation.ts#L512) | empty | string; uri | Ollama server root or compatible API base including its /v1 path. Empty disables inference. |
-| [`LLM_API_KEY`](../src/config/env.validation.ts#L514) | empty | string | Bearer token for an authenticating proxy, Ollama Cloud or a hosted API. |
-| [`LLM_DEFAULT_MODEL`](../src/config/env.validation.ts#L515) | llama3.1:8b | string; max 200 | Exact installed/provider model ID used absent narrower workspace/agent choice. |
-| [`LLM_ALLOWED_MODELS`](../src/config/env.validation.ts#L517) | empty | string | Comma-separated platform allowlist. Empty: whatever the endpoint serves. |
-| [`LLM_DEFAULT_CONTEXT_WINDOW`](../src/config/env.validation.ts#L518) | 8192 | number; integer; min 512; max 1048576 | Fallback model context capacity in tokens; coordinate with model and agent turn quota. |
-| [`LLM_MAX_CONTEXT_WINDOW`](../src/config/env.validation.ts#L520) | 32768 | number; integer; min 512; max 1048576 | Ceiling on the context window requested from the model (bounds GPU memory). |
-| [`LLM_DEFAULT_MAX_OUTPUT_TOKENS`](../src/config/env.validation.ts#L521) | 1024 | number; integer; min 16; max 65536 | Default requested generation length in tokens. |
-| [`LLM_MAX_OUTPUT_TOKENS`](../src/config/env.validation.ts#L522) | 4096 | number; integer; min 16; max 65536 | Platform ceiling on generated tokens per call. |
-| [`LLM_DEFAULT_TEMPERATURE`](../src/config/env.validation.ts#L523) | 0.3 | number; min 0; max 2 | Default generation randomness parameter; provider/model must support it. |
-| [`LLM_FIRST_TOKEN_TIMEOUT`](../src/config/env.validation.ts#L525) | 120s | duration | Until the first token: generous, because it includes loading the model. |
-| [`LLM_IDLE_TIMEOUT`](../src/config/env.validation.ts#L526) | 30s | duration | Maximum gap while waiting for more streamed model output. |
-| [`LLM_MAX_DURATION`](../src/config/env.validation.ts#L527) | 240s | duration | Maximum generation duration; coordinate HTTP, workflow and quota reservation budgets. |
-| [`LLM_REQUEST_TIMEOUT`](../src/config/env.validation.ts#L529) | 300s | duration | HTTP budget of the inference routes. Must exceed LLM_MAX_DURATION. |
-| [`LLM_MAX_CONCURRENCY`](../src/config/env.validation.ts#L531) | 4 | number; integer; min 1; max 256 | Concurrent generations per process. One GPU serves only a few at once. |
-| [`LLM_QUEUE_TIMEOUT`](../src/config/env.validation.ts#L532) | 30s | duration | Time a model request may wait for local concurrency capacity. |
-| [`LLM_MAX_RETRIES`](../src/config/env.validation.ts#L533) | 1 | number; integer; min 0; max 5 | Retry count for retryable provider failures. |
-| [`LLM_MAX_RESPONSE_SIZE`](../src/config/env.validation.ts#L534) | 4mb | byte size | Maximum model response bytes accepted by the gateway. |
-| [`LLM_CIRCUIT_THRESHOLD`](../src/config/env.validation.ts#L535) | 5 | number; integer; min 1; max 100 | Consecutive dependency failures before the LLM circuit opens. |
-| [`LLM_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L536) | 30s | duration | Pause before probing recovery after the LLM dependency circuit opens. |
-| [`LLM_KEEP_ALIVE`](../src/config/env.validation.ts#L538) | 30m | string | Ollama only: how long a model stays loaded after a request. |
-| [`LLM_MAX_CLASSIFICATION`](../src/config/env.validation.ts#L545) | RESTRICTED | string: PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED | The most sensitive classification whose masked content may be sent to this endpoint. RESTRICTED for a model you host; lower for a third party. |
-| [`LLM_MODEL_CACHE_TTL`](../src/config/env.validation.ts#L548) | 60s | duration | Lifetime of cached provider model catalogue data. |
-| [`LLM_TLS_CERT`](../src/config/env.validation.ts#L550) * | empty | string | Phase 5 — mutual TLS to a self-hosted model endpoint (a proxy that checks client certificates). |
-| [`LLM_TLS_KEY`](../src/config/env.validation.ts#L551) * | empty | string | Client private-key PEM contents paired with the client certificate; keep secret. |
-| [`LLM_TLS_KEY_PASSPHRASE`](../src/config/env.validation.ts#L552) * | empty | string | Passphrase only when the client private key is encrypted. |
-| [`LLM_TLS_CA`](../src/config/env.validation.ts#L553) * | empty | string | Trusted server CA PEM for a private certificate authority; supports the client PEM decoder. |
+| [`LLM_PROVIDER`](../src/config/env.validation.ts#L514) | ollama | string: ollama, openai | `ollama`: Ollama's native API. `openai`: any OpenAI-compatible server. |
+| [`LLM_BASE_URL`](../src/config/env.validation.ts#L515) | empty | string; uri | Ollama server root or compatible API base including its /v1 path. Empty disables inference. |
+| [`LLM_API_KEY`](../src/config/env.validation.ts#L517) | empty | string | Bearer token for an authenticating proxy, Ollama Cloud or a hosted API. |
+| [`LLM_DEFAULT_MODEL`](../src/config/env.validation.ts#L518) | llama3.1:8b | string; max 200 | Exact installed/provider model ID used absent narrower workspace/agent choice. |
+| [`LLM_ALLOWED_MODELS`](../src/config/env.validation.ts#L520) | empty | string | Comma-separated platform allowlist. Empty: whatever the endpoint serves. |
+| [`LLM_DEFAULT_CONTEXT_WINDOW`](../src/config/env.validation.ts#L521) | 8192 | number; integer; min 512; max 1048576 | Fallback model context capacity in tokens; coordinate with model and agent turn quota. |
+| [`LLM_MAX_CONTEXT_WINDOW`](../src/config/env.validation.ts#L523) | 32768 | number; integer; min 512; max 1048576 | Ceiling on the context window requested from the model (bounds GPU memory). |
+| [`LLM_DEFAULT_MAX_OUTPUT_TOKENS`](../src/config/env.validation.ts#L524) | 1024 | number; integer; min 16; max 65536 | Default requested generation length in tokens. |
+| [`LLM_MAX_OUTPUT_TOKENS`](../src/config/env.validation.ts#L525) | 4096 | number; integer; min 16; max 65536 | Platform ceiling on generated tokens per call. |
+| [`LLM_DEFAULT_TEMPERATURE`](../src/config/env.validation.ts#L526) | 0.3 | number; min 0; max 2 | Default generation randomness parameter; provider/model must support it. |
+| [`LLM_FIRST_TOKEN_TIMEOUT`](../src/config/env.validation.ts#L528) | 120s | duration | Until the first token: generous, because it includes loading the model. |
+| [`LLM_IDLE_TIMEOUT`](../src/config/env.validation.ts#L529) | 30s | duration | Maximum gap while waiting for more streamed model output. |
+| [`LLM_MAX_DURATION`](../src/config/env.validation.ts#L530) | 240s | duration | Maximum generation duration; coordinate HTTP, workflow and quota reservation budgets. |
+| [`LLM_REQUEST_TIMEOUT`](../src/config/env.validation.ts#L532) | 300s | duration | HTTP budget of the inference routes. Must exceed LLM_MAX_DURATION. |
+| [`LLM_MAX_CONCURRENCY`](../src/config/env.validation.ts#L534) | 4 | number; integer; min 1; max 256 | Concurrent generations per process. One GPU serves only a few at once. |
+| [`LLM_QUEUE_TIMEOUT`](../src/config/env.validation.ts#L535) | 30s | duration | Time a model request may wait for local concurrency capacity. |
+| [`LLM_MAX_RETRIES`](../src/config/env.validation.ts#L536) | 1 | number; integer; min 0; max 5 | Retry count for retryable provider failures. |
+| [`LLM_MAX_RESPONSE_SIZE`](../src/config/env.validation.ts#L537) | 4mb | byte size | Maximum model response bytes accepted by the gateway. |
+| [`LLM_CIRCUIT_THRESHOLD`](../src/config/env.validation.ts#L538) | 5 | number; integer; min 1; max 100 | Consecutive dependency failures before the LLM circuit opens. |
+| [`LLM_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L539) | 30s | duration | Pause before probing recovery after the LLM dependency circuit opens. |
+| [`LLM_KEEP_ALIVE`](../src/config/env.validation.ts#L541) | 30m | string | Ollama only: how long a model stays loaded after a request. |
+| [`LLM_MAX_CLASSIFICATION`](../src/config/env.validation.ts#L548) | RESTRICTED | string: PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED | The most sensitive classification whose masked content may be sent to this endpoint. RESTRICTED for a model you host; lower for a third party. |
+| [`LLM_MODEL_CACHE_TTL`](../src/config/env.validation.ts#L551) | 60s | duration | Lifetime of cached provider model catalogue data. |
+| [`LLM_TLS_CERT`](../src/config/env.validation.ts#L553) * | empty | string | Phase 5 — mutual TLS to a self-hosted model endpoint (a proxy that checks client certificates). |
+| [`LLM_TLS_KEY`](../src/config/env.validation.ts#L554) * | empty | string | Client private-key PEM contents paired with the client certificate; keep secret. |
+| [`LLM_TLS_KEY_PASSPHRASE`](../src/config/env.validation.ts#L555) * | empty | string | Passphrase only when the client private key is encrypted. |
+| [`LLM_TLS_CA`](../src/config/env.validation.ts#L556) * | empty | string | Trusted server CA PEM for a private certificate authority; supports the client PEM decoder. |
 
 ## PII detection
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`PII_NER_PROVIDER`](../src/config/env.validation.ts#L563) | ai-service | string: ai-service, presidio, none | Where names and other free-text entities are detected. `ai-service`: the Python AI service's /v1/pii/analyze (HMAC-signed). `presidio`: a stock Presidio analyzer. `none`: validated pattern recognizers only. |
-| [`PRESIDIO_ANALYZER_URL`](../src/config/env.validation.ts#L566) | empty | string; uri | Analyzer server root, required when PII_NER_PROVIDER=presidio; usually private infrastructure. |
-| [`PRESIDIO_API_KEY`](../src/config/env.validation.ts#L567) | empty | string | Bearer credential for an authenticating analyzer proxy, if one is used. |
-| [`PRESIDIO_CONCURRENCY`](../src/config/env.validation.ts#L568) | 4 | number; integer; min 1; max 32 | Maximum parallel analyzer requests. |
-| [`PII_TIMEOUT`](../src/config/env.validation.ts#L569) | 10s | duration | Time budget for name/entity detection calls. |
-| [`PII_DEFAULT_ENTITIES`](../src/config/env.validation.ts#L570) | PERSON,EMAIL_ADDRESS,PHONE_NUMBER,CREDIT_CARD,IBAN_CODE,US_SSN,PK_CNIC,IP_ADDRESS,SALARY,CREDENTIAL | string | Comma-separated default entity types to detect; saved workspace policies can differ. |
-| [`PII_DEFAULT_ON_FAILURE`](../src/config/env.validation.ts#L576) | REFUSE | string: REFUSE, DEGRADE_TO_PATTERNS | REFUSE: fail closed. DEGRADE_TO_PATTERNS: continue with pattern recognizers only. |
-| [`PII_SCORE_THRESHOLD`](../src/config/env.validation.ts#L579) | 0.5 | number; min 0; max 1 | Minimum accepted detector confidence score. |
-| [`PII_LANGUAGE`](../src/config/env.validation.ts#L580) | en | string | Language code supplied to the NER detector; the selected model must support it. |
-| [`PII_DETECTION_CACHE_TTL`](../src/config/env.validation.ts#L584) | 1h | duration | NER results cached by keyed fingerprint (never text). 0 disables. |
-| [`PII_CIRCUIT_THRESHOLD`](../src/config/env.validation.ts#L585) | 5 | number; integer; min 1; max 100 | Consecutive dependency failures before the PII circuit opens. |
-| [`PII_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L586) | 30s | duration | Pause before probing recovery after the PII dependency circuit opens. |
-| [`PII_MAX_ANALYZE_LENGTH`](../src/config/env.validation.ts#L587) | 20000 | number; integer; min 100; max 200000 | Maximum text characters for a PII analysis request. |
+| [`PII_NER_PROVIDER`](../src/config/env.validation.ts#L566) | ai-service | string: ai-service, presidio, none | Where names and other free-text entities are detected. `ai-service`: the Python AI service's /v1/pii/analyze (HMAC-signed). `presidio`: a stock Presidio analyzer. `none`: validated pattern recognizers only. |
+| [`PRESIDIO_ANALYZER_URL`](../src/config/env.validation.ts#L569) | empty | string; uri | Analyzer server root, required when PII_NER_PROVIDER=presidio; usually private infrastructure. |
+| [`PRESIDIO_API_KEY`](../src/config/env.validation.ts#L570) | empty | string | Bearer credential for an authenticating analyzer proxy, if one is used. |
+| [`PRESIDIO_CONCURRENCY`](../src/config/env.validation.ts#L571) | 4 | number; integer; min 1; max 32 | Maximum parallel analyzer requests. |
+| [`PII_TIMEOUT`](../src/config/env.validation.ts#L572) | 10s | duration | Time budget for name/entity detection calls. |
+| [`PII_DEFAULT_ENTITIES`](../src/config/env.validation.ts#L573) | PERSON,EMAIL_ADDRESS,PHONE_NUMBER,CREDIT_CARD,IBAN_CODE,US_SSN,PK_CNIC,IP_ADDRESS,SALARY,CREDENTIAL | string | Comma-separated default entity types to detect; saved workspace policies can differ. |
+| [`PII_DEFAULT_ON_FAILURE`](../src/config/env.validation.ts#L579) | REFUSE | string: REFUSE, DEGRADE_TO_PATTERNS | REFUSE: fail closed. DEGRADE_TO_PATTERNS: continue with pattern recognizers only. |
+| [`PII_SCORE_THRESHOLD`](../src/config/env.validation.ts#L582) | 0.5 | number; min 0; max 1 | Minimum accepted detector confidence score. |
+| [`PII_LANGUAGE`](../src/config/env.validation.ts#L583) | en | string | Language code supplied to the NER detector; the selected model must support it. |
+| [`PII_DETECTION_CACHE_TTL`](../src/config/env.validation.ts#L587) | 1h | duration | NER results cached by keyed fingerprint (never text). 0 disables. |
+| [`PII_CIRCUIT_THRESHOLD`](../src/config/env.validation.ts#L588) | 5 | number; integer; min 1; max 100 | Consecutive dependency failures before the PII circuit opens. |
+| [`PII_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L589) | 30s | duration | Pause before probing recovery after the PII dependency circuit opens. |
+| [`PII_MAX_ANALYZE_LENGTH`](../src/config/env.validation.ts#L590) | 20000 | number; integer; min 100; max 200000 | Maximum text characters for a PII analysis request. |
 
 ## Agent memory
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`AGENT_MEMORY_MAX_MESSAGES`](../src/config/env.validation.ts#L592) | 20 | number; integer; min 0; max 500 | Default number of historical messages available to a turn. |
-| [`AGENT_MEMORY_MAX_MESSAGES_CEILING`](../src/config/env.validation.ts#L593) | 100 | number; integer; min 0; max 500 | Platform maximum for configurable agent message history. |
-| [`AGENT_MEMORY_MAX_TOKENS`](../src/config/env.validation.ts#L594) | 3000 | number; integer; min 0; max 262144 | Token budget for conversation history supplied to a model. |
-| [`AGENT_CONTEXT_MAX_TOKENS`](../src/config/env.validation.ts#L595) | 3000 | number; integer; min 0; max 262144 | Token budget for retrieved reference passages in an agent prompt. |
-| [`AGENT_MAX_MESSAGE_LENGTH`](../src/config/env.validation.ts#L596) | 16000 | number; integer; min 100; max 100000 | Maximum user-message characters accepted by agent runtime. |
+| [`AGENT_MEMORY_MAX_MESSAGES`](../src/config/env.validation.ts#L595) | 20 | number; integer; min 0; max 500 | Default number of historical messages available to a turn. |
+| [`AGENT_MEMORY_MAX_MESSAGES_CEILING`](../src/config/env.validation.ts#L596) | 100 | number; integer; min 0; max 500 | Platform maximum for configurable agent message history. |
+| [`AGENT_MEMORY_MAX_TOKENS`](../src/config/env.validation.ts#L597) | 3000 | number; integer; min 0; max 262144 | Token budget for conversation history supplied to a model. |
+| [`AGENT_CONTEXT_MAX_TOKENS`](../src/config/env.validation.ts#L598) | 3000 | number; integer; min 0; max 262144 | Token budget for retrieved reference passages in an agent prompt. |
+| [`AGENT_MAX_MESSAGE_LENGTH`](../src/config/env.validation.ts#L599) | 16000 | number; integer; min 100; max 100000 | Maximum user-message characters accepted by agent runtime. |
 
 ## Workflow engine
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`WORKFLOW_MAX_NODES`](../src/config/env.validation.ts#L602) | 50 | number; integer; min 2; max 500 | Maximum nodes in a workflow definition. |
-| [`WORKFLOW_MAX_EDGES`](../src/config/env.validation.ts#L603) | 150 | number; integer; min 1; max 2000 | Maximum edges in a workflow definition. |
-| [`WORKFLOW_MAX_STEPS`](../src/config/env.validation.ts#L605) | 100 | number; integer; min 2; max 10000 | Steps one run may schedule, loops included. The runaway-loop stop. |
-| [`WORKFLOW_MAX_LOOP_ITERATIONS`](../src/config/env.validation.ts#L606) | 10 | number; integer; min 1; max 1000 | Maximum allowed workflow loop iterations. |
-| [`WORKFLOW_MAX_SUPERVISOR_ROUNDS`](../src/config/env.validation.ts#L607) | 12 | number; integer; min 1; max 200 | Maximum supervisor-team rounds in a run. |
-| [`WORKFLOW_MAX_INPUT_SIZE`](../src/config/env.validation.ts#L608) | 64kb | byte size | Maximum serialized run input bytes. |
-| [`WORKFLOW_MAX_STEP_OUTPUT_SIZE`](../src/config/env.validation.ts#L609) | 256kb | byte size | Maximum serialized output bytes for a workflow step. |
-| [`WORKFLOW_RUN_TIMEOUT`](../src/config/env.validation.ts#L610) | 30m | duration | Overall workflow run time budget. |
-| [`WORKFLOW_STEP_TIMEOUT`](../src/config/env.validation.ts#L612) | 10m | duration | One step may make several model calls (tool use), so this exceeds LLM_MAX_DURATION. |
-| [`WORKFLOW_STEP_MAX_ATTEMPTS`](../src/config/env.validation.ts#L613) | 3 | number; integer; min 1; max 10 | Maximum attempts for a retryable workflow step. |
-| [`WORKFLOW_STEP_BACKOFF`](../src/config/env.validation.ts#L614) | 10s | duration | Initial retry delay for a workflow step. |
-| [`WORKFLOW_STEP_BACKOFF_MAX`](../src/config/env.validation.ts#L615) | 5m | duration | Maximum retry backoff delay. |
-| [`WORKFLOW_CONCURRENCY`](../src/config/env.validation.ts#L616) | 4 | number; integer; min 1; max 64 | Concurrent workflow steps per worker process. |
-| [`WORKFLOW_MAX_ACTIVE_RUNS_PER_ORG`](../src/config/env.validation.ts#L617) | 20 | number; integer; min 1; max 10000 | Maximum concurrent active runs per workspace. |
-| [`WORKFLOW_MAX_TOKENS_PER_RUN`](../src/config/env.validation.ts#L618) | 200000 | number; integer; min 1000; max 100000000 | Generation token ceiling per workflow run. |
-| [`WORKFLOW_HEARTBEAT_INTERVAL`](../src/config/env.validation.ts#L623) | 15s | duration | How often running workflow work records liveness. |
-| [`WORKFLOW_STALL_THRESHOLD`](../src/config/env.validation.ts#L624) | 2m | duration | Time without progress/heartbeat before work is considered stalled. |
-| [`WORKFLOW_SWEEP_INTERVAL`](../src/config/env.validation.ts#L625) | 1m | duration | Interval for workflow recovery/maintenance sweeps. |
-| [`WORKFLOW_APPROVAL_TIMEOUT`](../src/config/env.validation.ts#L626) | 24h | duration | Default approval-node waiting budget, also bounded by applicable run behavior. |
-| [`WORKFLOW_RUN_RETENTION`](../src/config/env.validation.ts#L628) | 90d | duration | 0 keeps finished runs forever. |
+| [`WORKFLOW_MAX_NODES`](../src/config/env.validation.ts#L605) | 50 | number; integer; min 2; max 500 | Maximum nodes in a workflow definition. |
+| [`WORKFLOW_MAX_EDGES`](../src/config/env.validation.ts#L606) | 150 | number; integer; min 1; max 2000 | Maximum edges in a workflow definition. |
+| [`WORKFLOW_MAX_STEPS`](../src/config/env.validation.ts#L608) | 100 | number; integer; min 2; max 10000 | Steps one run may schedule, loops included. The runaway-loop stop. |
+| [`WORKFLOW_MAX_LOOP_ITERATIONS`](../src/config/env.validation.ts#L609) | 10 | number; integer; min 1; max 1000 | Maximum allowed workflow loop iterations. |
+| [`WORKFLOW_MAX_SUPERVISOR_ROUNDS`](../src/config/env.validation.ts#L610) | 12 | number; integer; min 1; max 200 | Maximum supervisor-team rounds in a run. |
+| [`WORKFLOW_MAX_INPUT_SIZE`](../src/config/env.validation.ts#L611) | 64kb | byte size | Maximum serialized run input bytes. |
+| [`WORKFLOW_MAX_STEP_OUTPUT_SIZE`](../src/config/env.validation.ts#L612) | 256kb | byte size | Maximum serialized output bytes for a workflow step. |
+| [`WORKFLOW_RUN_TIMEOUT`](../src/config/env.validation.ts#L613) | 30m | duration | Overall workflow run time budget. |
+| [`WORKFLOW_STEP_TIMEOUT`](../src/config/env.validation.ts#L615) | 10m | duration | One step may make several model calls (tool use), so this exceeds LLM_MAX_DURATION. |
+| [`WORKFLOW_STEP_MAX_ATTEMPTS`](../src/config/env.validation.ts#L616) | 3 | number; integer; min 1; max 10 | Maximum attempts for a retryable workflow step. |
+| [`WORKFLOW_STEP_BACKOFF`](../src/config/env.validation.ts#L617) | 10s | duration | Initial retry delay for a workflow step. |
+| [`WORKFLOW_STEP_BACKOFF_MAX`](../src/config/env.validation.ts#L618) | 5m | duration | Maximum retry backoff delay. |
+| [`WORKFLOW_CONCURRENCY`](../src/config/env.validation.ts#L619) | 4 | number; integer; min 1; max 64 | Concurrent workflow steps per worker process. |
+| [`WORKFLOW_MAX_ACTIVE_RUNS_PER_ORG`](../src/config/env.validation.ts#L620) | 20 | number; integer; min 1; max 10000 | Maximum concurrent active runs per workspace. |
+| [`WORKFLOW_MAX_TOKENS_PER_RUN`](../src/config/env.validation.ts#L621) | 200000 | number; integer; min 1000; max 100000000 | Generation token ceiling per workflow run. |
+| [`WORKFLOW_HEARTBEAT_INTERVAL`](../src/config/env.validation.ts#L626) | 15s | duration | How often running workflow work records liveness. |
+| [`WORKFLOW_STALL_THRESHOLD`](../src/config/env.validation.ts#L627) | 2m | duration | Time without progress/heartbeat before work is considered stalled. |
+| [`WORKFLOW_SWEEP_INTERVAL`](../src/config/env.validation.ts#L628) | 1m | duration | Interval for workflow recovery/maintenance sweeps. |
+| [`WORKFLOW_APPROVAL_TIMEOUT`](../src/config/env.validation.ts#L629) | 24h | duration | Default approval-node waiting budget, also bounded by applicable run behavior. |
+| [`WORKFLOW_RUN_RETENTION`](../src/config/env.validation.ts#L631) | 90d | duration | 0 keeps finished runs forever. |
 
 ## Tools and outbound HTTP
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`TOOLS_ENABLED`](../src/config/env.validation.ts#L633) | true | boolean | Platform-wide tool-execution switch. |
-| [`TOOLS_DISABLED_BUILTINS`](../src/config/env.validation.ts#L635) | empty | string | Comma-separated built-in tool names to switch off platform-wide. |
-| [`TOOL_MAX_ITERATIONS`](../src/config/env.validation.ts#L639) | 8 | number; integer; min 1; max 32 | Maximum model/tool loop iterations. |
-| [`TOOL_DEFAULT_ITERATIONS`](../src/config/env.validation.ts#L640) | 4 | number; integer; min 1; max 32 | Default model/tool loop iteration budget. |
-| [`TOOL_DEFAULT_TIMEOUT`](../src/config/env.validation.ts#L641) | 15s | duration | Default tool call time budget. |
-| [`TOOL_MAX_TIMEOUT`](../src/config/env.validation.ts#L642) | 60s | duration | Maximum tool timeout, which must fit inside workflow step timeout. |
-| [`TOOL_MAX_RESULT_SIZE`](../src/config/env.validation.ts#L643) | 32kb | byte size | Maximum stored/accepted tool result bytes. |
-| [`TOOL_RESULT_MAX_TOKENS`](../src/config/env.validation.ts#L644) | 1500 | number; integer; min 64; max 32768 | Token budget for tool results supplied back to the model. |
-| [`TOOL_MAX_CALLS_PER_RUN`](../src/config/env.validation.ts#L645) | 50 | number; integer; min 1; max 10000 | Maximum tool calls in one workflow run. |
-| [`TOOL_HTTP_ALLOWED_HOSTS`](../src/config/env.validation.ts#L650) | empty | string | Hosts HTTP tools may call: `api.example.com` or `*.example.com`, comma separated. Empty disables outbound HTTP tools altogether. |
-| [`TOOL_HTTP_ALLOW_PRIVATE_NETWORKS`](../src/config/env.validation.ts#L655) | false | boolean | Never in production: lets HTTP tools reach private and loopback addresses. |
-| [`TOOL_HTTP_ALLOW_INSECURE`](../src/config/env.validation.ts#L657) | false | boolean | Never in production: lets HTTP tools use plain http://. |
-| [`TOOL_HTTP_MAX_RESPONSE_SIZE`](../src/config/env.validation.ts#L658) | 256kb | byte size | Maximum accepted response bytes from an HTTP tool. |
-| [`TOOL_EMAIL_ENABLED`](../src/config/env.validation.ts#L659) | true | boolean | Enable the email tool; real delivery still requires working SMTP and appropriate tool authorization. |
-| [`TOOL_EMAIL_MAX_PER_RUN`](../src/config/env.validation.ts#L660) | 5 | number; integer; min 0; max 100 | Maximum email tool sends per run. |
+| [`TOOLS_ENABLED`](../src/config/env.validation.ts#L636) | true | boolean | Platform-wide tool-execution switch. |
+| [`TOOLS_DISABLED_BUILTINS`](../src/config/env.validation.ts#L638) | empty | string | Comma-separated built-in tool names to switch off platform-wide. |
+| [`TOOL_MAX_ITERATIONS`](../src/config/env.validation.ts#L642) | 8 | number; integer; min 1; max 32 | Maximum model/tool loop iterations. |
+| [`TOOL_DEFAULT_ITERATIONS`](../src/config/env.validation.ts#L643) | 4 | number; integer; min 1; max 32 | Default model/tool loop iteration budget. |
+| [`TOOL_DEFAULT_TIMEOUT`](../src/config/env.validation.ts#L644) | 15s | duration | Default tool call time budget. |
+| [`TOOL_MAX_TIMEOUT`](../src/config/env.validation.ts#L645) | 60s | duration | Maximum tool timeout, which must fit inside workflow step timeout. |
+| [`TOOL_MAX_RESULT_SIZE`](../src/config/env.validation.ts#L646) | 32kb | byte size | Maximum stored/accepted tool result bytes. |
+| [`TOOL_RESULT_MAX_TOKENS`](../src/config/env.validation.ts#L647) | 1500 | number; integer; min 64; max 32768 | Token budget for tool results supplied back to the model. |
+| [`TOOL_MAX_CALLS_PER_RUN`](../src/config/env.validation.ts#L648) | 50 | number; integer; min 1; max 10000 | Maximum tool calls in one workflow run. |
+| [`TOOL_HTTP_ALLOWED_HOSTS`](../src/config/env.validation.ts#L653) | empty | string | Hosts HTTP tools may call: `api.example.com` or `*.example.com`, comma separated. Empty disables outbound HTTP tools altogether. |
+| [`TOOL_HTTP_ALLOW_PRIVATE_NETWORKS`](../src/config/env.validation.ts#L658) | false | boolean | Never in production: lets HTTP tools reach private and loopback addresses. |
+| [`TOOL_HTTP_ALLOW_INSECURE`](../src/config/env.validation.ts#L660) | false | boolean | Never in production: lets HTTP tools use plain http://. |
+| [`TOOL_HTTP_MAX_RESPONSE_SIZE`](../src/config/env.validation.ts#L661) | 256kb | byte size | Maximum accepted response bytes from an HTTP tool. |
+| [`TOOL_EMAIL_ENABLED`](../src/config/env.validation.ts#L662) | true | boolean | Enable the email tool; real delivery still requires working SMTP and appropriate tool authorization. |
+| [`TOOL_EMAIL_MAX_PER_RUN`](../src/config/env.validation.ts#L663) | 5 | number; integer; min 0; max 100 | Maximum email tool sends per run. |
 
 ## Socket.IO
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`REALTIME_ENABLED`](../src/config/env.validation.ts#L665) | true | boolean | Enable the Socket.IO gateway. |
-| [`REALTIME_PATH`](../src/config/env.validation.ts#L666) | /realtime | string | Socket.IO handshake/transport path, normally /realtime, outside REST API prefix. |
-| [`REALTIME_TRANSPORTS`](../src/config/env.validation.ts#L670) | websocket | string | `websocket` (no sticky sessions needed) or `websocket,polling`. |
-| [`REALTIME_MAX_CONNECTIONS_PER_USER`](../src/config/env.validation.ts#L673) | 10 | number; integer; min 1; max 1000 | Concurrent socket ceiling per user. |
-| [`REALTIME_MAX_HANDSHAKES_PER_MINUTE`](../src/config/env.validation.ts#L674) | 60 | number; integer; min 1; max 10000 | Rate limit for connection handshakes. |
-| [`REALTIME_REVALIDATE_INTERVAL`](../src/config/env.validation.ts#L675) | 60s | duration | Interval for rechecking live socket authorization/membership. |
-| [`REALTIME_REPLAY_MAX`](../src/config/env.validation.ts#L676) | 200 | number; integer; min 0; max 5000 | Maximum events replayed on a permitted subscription/reconnection. |
-| [`REALTIME_STREAM_MAXLEN`](../src/config/env.validation.ts#L677) | 1000 | number; integer; min 10; max 100000 | Maximum retained entries in a realtime Redis stream. |
-| [`REALTIME_STREAM_TTL`](../src/config/env.validation.ts#L678) | 24h | duration | Expiry for retained realtime event streams. |
-| [`REALTIME_PING_INTERVAL`](../src/config/env.validation.ts#L679) | 25s | duration | Socket.IO ping interval. |
-| [`REALTIME_PING_TIMEOUT`](../src/config/env.validation.ts#L680) | 20s | duration | Socket.IO pong/connection timeout. |
-| [`REALTIME_MAX_MESSAGE_SIZE`](../src/config/env.validation.ts#L681) | 4kb | byte size | Maximum incoming Socket.IO message bytes. |
+| [`REALTIME_ENABLED`](../src/config/env.validation.ts#L668) | true | boolean | Enable the Socket.IO gateway. |
+| [`REALTIME_PATH`](../src/config/env.validation.ts#L669) | /realtime | string | Socket.IO handshake/transport path, normally /realtime, outside REST API prefix. |
+| [`REALTIME_TRANSPORTS`](../src/config/env.validation.ts#L673) | websocket | string | `websocket` (no sticky sessions needed) or `websocket,polling`. |
+| [`REALTIME_MAX_CONNECTIONS_PER_USER`](../src/config/env.validation.ts#L676) | 10 | number; integer; min 1; max 1000 | Concurrent socket ceiling per user. |
+| [`REALTIME_MAX_HANDSHAKES_PER_MINUTE`](../src/config/env.validation.ts#L677) | 60 | number; integer; min 1; max 10000 | Rate limit for connection handshakes. |
+| [`REALTIME_REVALIDATE_INTERVAL`](../src/config/env.validation.ts#L678) | 60s | duration | Interval for rechecking live socket authorization/membership. |
+| [`REALTIME_REPLAY_MAX`](../src/config/env.validation.ts#L679) | 200 | number; integer; min 0; max 5000 | Maximum events replayed on a permitted subscription/reconnection. |
+| [`REALTIME_STREAM_MAXLEN`](../src/config/env.validation.ts#L680) | 1000 | number; integer; min 10; max 100000 | Maximum retained entries in a realtime Redis stream. |
+| [`REALTIME_STREAM_TTL`](../src/config/env.validation.ts#L681) | 24h | duration | Expiry for retained realtime event streams. |
+| [`REALTIME_PING_INTERVAL`](../src/config/env.validation.ts#L682) | 25s | duration | Socket.IO ping interval. |
+| [`REALTIME_PING_TIMEOUT`](../src/config/env.validation.ts#L683) | 20s | duration | Socket.IO pong/connection timeout. |
+| [`REALTIME_MAX_MESSAGE_SIZE`](../src/config/env.validation.ts#L684) | 4kb | byte size | Maximum incoming Socket.IO message bytes. |
 
 ## Token quotas
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`QUOTA_ENFORCEMENT_ENABLED`](../src/config/env.validation.ts#L688) * | true | boolean | Enforce workspace/agent token budgets at the generation gateway. |
-| [`QUOTA_FREE_MONTHLY_TOKENS`](../src/config/env.validation.ts#L693) * | 2000000 | number; integer; min 0 | The platform's monthly token allowance per workspace, by plan. 0 means unlimited. Workspaces may set stricter budgets of their own, never looser. |
-| [`QUOTA_PRO_MONTHLY_TOKENS`](../src/config/env.validation.ts#L694) * | 20000000 | number; integer; min 0 | Default monthly token allowance for Pro workspaces; zero means unlimited. |
-| [`QUOTA_ENTERPRISE_MONTHLY_TOKENS`](../src/config/env.validation.ts#L695) * | 0 | number; integer; min 0 | Default monthly token allowance for Enterprise workspaces; zero means unlimited. |
-| [`QUOTA_TOKENS_PER_MINUTE`](../src/config/env.validation.ts#L697) * | 100000 | number; integer; min 0 | Tokens per minute one workspace may spend (a token bucket). 0 disables the rate. |
-| [`QUOTA_ALERT_THRESHOLD`](../src/config/env.validation.ts#L699) * | 80 | number; integer; min 1; max 100 | Percentage of a budget at which administrators are alerted, once per period. |
-| [`QUOTA_RESERVATION_TTL`](../src/config/env.validation.ts#L701) * | 10m | duration | How long a reservation outlives a crashed call before the sweep releases it. |
-| [`QUOTA_CACHE_TTL`](../src/config/env.validation.ts#L703) * | 30s | duration | How long a workspace's quota definitions are cached per process. |
+| [`QUOTA_ENFORCEMENT_ENABLED`](../src/config/env.validation.ts#L691) * | true | boolean | Enforce workspace/agent token budgets at the generation gateway. |
+| [`QUOTA_FREE_MONTHLY_TOKENS`](../src/config/env.validation.ts#L696) * | 2000000 | number; integer; min 0 | The platform's monthly token allowance per workspace, by plan. 0 means unlimited. Workspaces may set stricter budgets of their own, never looser. |
+| [`QUOTA_PRO_MONTHLY_TOKENS`](../src/config/env.validation.ts#L697) * | 20000000 | number; integer; min 0 | Default monthly token allowance for Pro workspaces; zero means unlimited. |
+| [`QUOTA_ENTERPRISE_MONTHLY_TOKENS`](../src/config/env.validation.ts#L698) * | 0 | number; integer; min 0 | Default monthly token allowance for Enterprise workspaces; zero means unlimited. |
+| [`QUOTA_TOKENS_PER_MINUTE`](../src/config/env.validation.ts#L700) * | 100000 | number; integer; min 0 | Tokens per minute one workspace may spend (a token bucket). 0 disables the rate. |
+| [`QUOTA_ALERT_THRESHOLD`](../src/config/env.validation.ts#L702) * | 80 | number; integer; min 1; max 100 | Percentage of a budget at which administrators are alerted, once per period. |
+| [`QUOTA_RESERVATION_TTL`](../src/config/env.validation.ts#L704) * | 10m | duration | How long a reservation outlives a crashed call before the sweep releases it. |
+| [`QUOTA_CACHE_TTL`](../src/config/env.validation.ts#L706) * | 30s | duration | How long a workspace's quota definitions are cached per process. |
 
 ## Agent spending and circuit breakers
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`AGENT_MAX_TOKENS_PER_TURN`](../src/config/env.validation.ts#L707) * | 60000 | number; integer; min 0; max 100000000 | Tokens one conversation turn may spend across its tool-loop iterations. 0 = no limit. |
-| [`AGENT_MAX_TOKENS_PER_CONVERSATION`](../src/config/env.validation.ts#L709) * | 1000000 | number; integer; min 0; max 1000000000 | Tokens one conversation may spend over its lifetime. 0 = no limit. |
-| [`AGENT_CIRCUIT_ENABLED`](../src/config/env.validation.ts#L715) * | true | boolean | The per-agent breaker: opens on runaway spend or repeated agent-caused failures. |
-| [`AGENT_CIRCUIT_WINDOW`](../src/config/env.validation.ts#L716) * | 60s | duration | Rolling interval for agent spend/failure circuit evaluation. |
-| [`AGENT_CIRCUIT_MAX_TOKENS`](../src/config/env.validation.ts#L718) * | 250000 | number; integer; min 0 | Tokens one agent may spend within the window before its circuit opens. 0 = off. |
-| [`AGENT_CIRCUIT_FAILURE_THRESHOLD`](../src/config/env.validation.ts#L720) * | 5 | number; integer; min 0; max 1000 | Consecutive agent-caused failures that open the circuit. 0 = off. |
-| [`AGENT_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L721) * | 5m | duration | Delay before an opened agent circuit can recover. |
+| [`AGENT_MAX_TOKENS_PER_TURN`](../src/config/env.validation.ts#L710) * | 60000 | number; integer; min 0; max 100000000 | Tokens one conversation turn may spend across its tool-loop iterations. 0 = no limit. |
+| [`AGENT_MAX_TOKENS_PER_CONVERSATION`](../src/config/env.validation.ts#L712) * | 1000000 | number; integer; min 0; max 1000000000 | Tokens one conversation may spend over its lifetime. 0 = no limit. |
+| [`AGENT_CIRCUIT_ENABLED`](../src/config/env.validation.ts#L718) * | true | boolean | The per-agent breaker: opens on runaway spend or repeated agent-caused failures. |
+| [`AGENT_CIRCUIT_WINDOW`](../src/config/env.validation.ts#L719) * | 60s | duration | Rolling interval for agent spend/failure circuit evaluation. |
+| [`AGENT_CIRCUIT_MAX_TOKENS`](../src/config/env.validation.ts#L721) * | 250000 | number; integer; min 0 | Tokens one agent may spend within the window before its circuit opens. 0 = off. |
+| [`AGENT_CIRCUIT_FAILURE_THRESHOLD`](../src/config/env.validation.ts#L723) * | 5 | number; integer; min 0; max 1000 | Consecutive agent-caused failures that open the circuit. 0 = off. |
+| [`AGENT_CIRCUIT_COOLDOWN`](../src/config/env.validation.ts#L724) * | 5m | duration | Delay before an opened agent circuit can recover. |
 
 ## Metrics, worker probes and tracing
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`METRICS_ENABLED`](../src/config/env.validation.ts#L726) * | true | boolean | Expose the Prometheus metrics handler. |
-| [`METRICS_PATH`](../src/config/env.validation.ts#L727) * | /metrics | string | Raw metrics HTTP route, independent of REST prefix/version. |
-| [`METRICS_TOKEN`](../src/config/env.validation.ts#L734) * | empty | string; min 24 | Bearer token a scraper must present. Required to scrape outside development: without it the endpoint answers 401 in production. |
-| [`WORKER_HTTP_PORT`](../src/config/env.validation.ts#L740) * | 0 | number; port | The dedicated worker has no API port. Set this to serve /health/live, /health/ready and /metrics from it (for a platform health check or a scraper). 0 disables. |
-| [`OTEL_EXPORTER_OTLP_ENDPOINT`](../src/config/env.validation.ts#L746) * | omit | string; uri | Standard OpenTelemetry variables, read by the SDK before the application starts (see src/observability/tracing.ts). Validated here so a typo fails the boot instead of silently disabling tracing. |
-| [`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`](../src/config/env.validation.ts#L747) * | omit | string; uri | Full OTLP HTTP trace-ingestion endpoint; takes precedence over the generic endpoint. |
-| [`OTEL_EXPORTER_OTLP_HEADERS`](../src/config/env.validation.ts#L748) * | omit | string | Collector authentication headers in the SDK-required format; keep credentials secret. |
-| [`OTEL_SERVICE_NAME`](../src/config/env.validation.ts#L749) * | omit | string | Service label reported to the tracing collector. |
-| [`OTEL_SDK_DISABLED`](../src/config/env.validation.ts#L750) * | omit | boolean | Explicitly disable OpenTelemetry even if an endpoint is configured. |
-| [`OTEL_TRACES_SAMPLER`](../src/config/env.validation.ts#L751) * | omit | string: always_on, always_off, traceidratio, parentbased_always_on, parentbased_always_off, parentbased_traceidratio | SDK trace-sampling strategy from the allowed values. |
-| [`OTEL_TRACES_SAMPLER_ARG`](../src/config/env.validation.ts#L761) * | omit | number; min 0; max 1 | Sampling ratio from 0 to 1 for compatible ratio-based samplers. |
+| [`METRICS_ENABLED`](../src/config/env.validation.ts#L729) * | true | boolean | Expose the Prometheus metrics handler. |
+| [`METRICS_PATH`](../src/config/env.validation.ts#L730) * | /metrics | string | Raw metrics HTTP route, independent of REST prefix/version. |
+| [`METRICS_TOKEN`](../src/config/env.validation.ts#L737) * | empty | string; min 24 | Bearer token a scraper must present. Required to scrape outside development: without it the endpoint answers 401 in production. |
+| [`WORKER_HTTP_PORT`](../src/config/env.validation.ts#L743) * | 0 | number; port | The dedicated worker has no API port. Set this to serve /health/live, /health/ready and /metrics from it (for a platform health check or a scraper). 0 disables. |
+| [`OTEL_EXPORTER_OTLP_ENDPOINT`](../src/config/env.validation.ts#L749) * | omit | string; uri | Standard OpenTelemetry variables, read by the SDK before the application starts (see src/observability/tracing.ts). Validated here so a typo fails the boot instead of silently disabling tracing. |
+| [`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`](../src/config/env.validation.ts#L750) * | omit | string; uri | Full OTLP HTTP trace-ingestion endpoint; takes precedence over the generic endpoint. |
+| [`OTEL_EXPORTER_OTLP_HEADERS`](../src/config/env.validation.ts#L751) * | omit | string | Collector authentication headers in the SDK-required format; keep credentials secret. |
+| [`OTEL_SERVICE_NAME`](../src/config/env.validation.ts#L752) * | omit | string | Service label reported to the tracing collector. |
+| [`OTEL_SDK_DISABLED`](../src/config/env.validation.ts#L753) * | omit | boolean | Explicitly disable OpenTelemetry even if an endpoint is configured. |
+| [`OTEL_TRACES_SAMPLER`](../src/config/env.validation.ts#L754) * | omit | string: always_on, always_off, traceidratio, parentbased_always_on, parentbased_always_off, parentbased_traceidratio | SDK trace-sampling strategy from the allowed values. |
+| [`OTEL_TRACES_SAMPLER_ARG`](../src/config/env.validation.ts#L764) * | omit | number; min 0; max 1 | Sampling ratio from 0 to 1 for compatible ratio-based samplers. |
 
 ## Retention and data lifecycle
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`LIFECYCLE_SWEEP_INTERVAL`](../src/config/env.validation.ts#L767) * | 6h | duration | How often the lifecycle sweep runs (one sweep at a time, cluster-wide). |
-| [`AUDIT_RETENTION`](../src/config/env.validation.ts#L774) * | 0 | duration | Audit records older than this are archived (encrypted, to object storage) and pruned, leaving a signed anchor so the remaining chain still verifies. 0 keeps the audit log forever. A workspace may choose its own period (settings.auditRetentionDays), never below AUDIT_RETENTION_MIN. |
-| [`AUDIT_RETENTION_MIN`](../src/config/env.validation.ts#L775) * | 30d | duration | Minimum permitted nonzero audit retention, including workspace overrides. |
-| [`AUDIT_ARCHIVE_BEFORE_PRUNE`](../src/config/env.validation.ts#L777) * | true | boolean | Refuse to prune what could not first be archived. |
-| [`SESSION_RETENTION`](../src/config/env.validation.ts#L779) * | 30d | duration | Expired or revoked sessions are deleted this long after they ended. |
-| [`USAGE_RETENTION`](../src/config/env.validation.ts#L781) * | 0 | duration | The usage and tool ledgers (content-free). 0 keeps them forever. |
-| [`CONVERSATION_RETENTION`](../src/config/env.validation.ts#L783) * | 0 | duration | Conversations idle this long are crypto-shredded and deleted. 0 keeps them. |
-| [`ACCOUNT_ERASURE_ENABLED`](../src/config/env.validation.ts#L785) * | true | boolean | Self-service account erasure (the right to be forgotten). |
-| [`DATA_EXPORT_MAX_ITEMS`](../src/config/env.validation.ts#L787) * | 20000 | number; integer; min 100; max 1000000 | Most messages, runs and records one personal-data export includes per kind. |
+| [`LIFECYCLE_SWEEP_INTERVAL`](../src/config/env.validation.ts#L770) * | 6h | duration | How often the lifecycle sweep runs (one sweep at a time, cluster-wide). |
+| [`AUDIT_RETENTION`](../src/config/env.validation.ts#L777) * | 0 | duration | Audit records older than this are archived (encrypted, to object storage) and pruned, leaving a signed anchor so the remaining chain still verifies. 0 keeps the audit log forever. A workspace may choose its own period (settings.auditRetentionDays), never below AUDIT_RETENTION_MIN. |
+| [`AUDIT_RETENTION_MIN`](../src/config/env.validation.ts#L778) * | 30d | duration | Minimum permitted nonzero audit retention, including workspace overrides. |
+| [`AUDIT_ARCHIVE_BEFORE_PRUNE`](../src/config/env.validation.ts#L780) * | true | boolean | Refuse to prune what could not first be archived. |
+| [`SESSION_RETENTION`](../src/config/env.validation.ts#L782) * | 30d | duration | Expired or revoked sessions are deleted this long after they ended. |
+| [`USAGE_RETENTION`](../src/config/env.validation.ts#L784) * | 0 | duration | The usage and tool ledgers (content-free). 0 keeps them forever. |
+| [`CONVERSATION_RETENTION`](../src/config/env.validation.ts#L786) * | 0 | duration | Conversations idle this long are crypto-shredded and deleted. 0 keeps them. |
+| [`ACCOUNT_ERASURE_ENABLED`](../src/config/env.validation.ts#L788) * | true | boolean | Self-service account erasure (the right to be forgotten). |
+| [`DATA_EXPORT_MAX_ITEMS`](../src/config/env.validation.ts#L790) * | 20000 | number; integer; min 100; max 1000000 | Most messages, runs and records one personal-data export includes per kind. |
 
 ## Email
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`MAIL_TRANSPORT`](../src/config/env.validation.ts#L793) | log | string: log, smtp | `log` prints messages to the console; nothing is sent. Ideal for development. |
-| [`MAIL_FROM_NAME`](../src/config/env.validation.ts#L794) | AI Agent Platform | string | Display name in outgoing messages. |
-| [`MAIL_FROM_ADDRESS`](../src/config/env.validation.ts#L799) | no-reply@localhost | string; email | Sender email address; use a provider-verified sender/domain for production SMTP. |
-| [`MAIL_REPLY_TO`](../src/config/env.validation.ts#L802) | empty | string | Optional reply-to email address. |
-| [`SMTP_HOST`](../src/config/env.validation.ts#L803) | empty | string | SMTP server hostname from the chosen provider, not an HTTPS API URL. |
-| [`SMTP_PORT`](../src/config/env.validation.ts#L810) | 587 | number; port | Provider SMTP TCP port; coordinate with implicit TLS versus STARTTLS. |
-| [`SMTP_SECURE`](../src/config/env.validation.ts#L812) | false | boolean | True for implicit TLS on port 465; false for STARTTLS on 587. |
-| [`SMTP_USERNAME`](../src/config/env.validation.ts#L813) | empty | string | SMTP login supplied by provider; may differ from account email/API credential. |
-| [`SMTP_PASSWORD`](../src/config/env.validation.ts#L814) | empty | string | Provider SMTP password/credential, not the app user's password. |
-| [`SMTP_REJECT_UNAUTHORIZED`](../src/config/env.validation.ts#L815) | true | boolean | Verify SMTP server certificate; keep true. |
+| [`MAIL_TRANSPORT`](../src/config/env.validation.ts#L796) | log | string: log, smtp | `log` prints messages to the console; nothing is sent. Ideal for development. |
+| [`MAIL_FROM_NAME`](../src/config/env.validation.ts#L797) | AI Agent Platform | string | Display name in outgoing messages. |
+| [`MAIL_FROM_ADDRESS`](../src/config/env.validation.ts#L802) | no-reply@localhost | string; email | Sender email address; use a provider-verified sender/domain for production SMTP. |
+| [`MAIL_REPLY_TO`](../src/config/env.validation.ts#L805) | empty | string | Optional reply-to email address. |
+| [`SMTP_HOST`](../src/config/env.validation.ts#L806) | empty | string | SMTP server hostname from the chosen provider, not an HTTPS API URL. |
+| [`SMTP_PORT`](../src/config/env.validation.ts#L813) | 587 | number; port | Provider SMTP TCP port; coordinate with implicit TLS versus STARTTLS. |
+| [`SMTP_SECURE`](../src/config/env.validation.ts#L815) | false | boolean | True for implicit TLS on port 465; false for STARTTLS on 587. |
+| [`SMTP_USERNAME`](../src/config/env.validation.ts#L816) | empty | string | SMTP login supplied by provider; may differ from account email/API credential. |
+| [`SMTP_PASSWORD`](../src/config/env.validation.ts#L817) | empty | string | Provider SMTP password/credential, not the app user's password. |
+| [`SMTP_REJECT_UNAUTHORIZED`](../src/config/env.validation.ts#L818) | true | boolean | Verify SMTP server certificate; keep true. |
 
 ## Seeding and workspace limits
 
 | Variable | Default | Type / allowed values | Purpose / setup note |
 |---|---|---|---|
-| [`PLATFORM_ADMIN_EMAIL`](../src/config/env.validation.ts#L821) | empty | string; email | When both are set, `npm run seed` provisions a platform administrator. |
-| [`PLATFORM_ADMIN_PASSWORD`](../src/config/env.validation.ts#L822) | empty | string | One-time bootstrap password meeting the app policy; does not reset existing accounts on reseed. |
-| [`PLATFORM_ADMIN_NAME`](../src/config/env.validation.ts#L823) | Platform Administrator | string | Display name for a newly created bootstrap administrator. |
-| [`SEED_DEMO_DATA`](../src/config/env.validation.ts#L825) | false | boolean | Seeds a demo workspace with sample members and roles. Never in production. |
-| [`MAX_OWNED_ORGANIZATIONS`](../src/config/env.validation.ts#L827) | 5 | number; integer; min 1; max 100 | Ceiling on workspaces a single non-admin user may own. |
-| [`MAX_MEMBERS_PER_ORGANIZATION`](../src/config/env.validation.ts#L829) | 0 | number; integer; min 0 | Ceiling on members per workspace. Zero means unlimited. |
+| [`PLATFORM_ADMIN_EMAIL`](../src/config/env.validation.ts#L824) | empty | string; email | When both are set, `npm run seed` provisions a platform administrator. |
+| [`PLATFORM_ADMIN_PASSWORD`](../src/config/env.validation.ts#L825) | empty | string | One-time bootstrap password meeting the app policy; does not reset existing accounts on reseed. |
+| [`PLATFORM_ADMIN_NAME`](../src/config/env.validation.ts#L826) | Platform Administrator | string | Display name for a newly created bootstrap administrator. |
+| [`SEED_DEMO_DATA`](../src/config/env.validation.ts#L828) | false | boolean | Seeds a demo workspace with sample members and roles. Never in production. |
+| [`MAX_OWNED_ORGANIZATIONS`](../src/config/env.validation.ts#L830) | 5 | number; integer; min 1; max 100 | Ceiling on workspaces a single non-admin user may own. |
+| [`MAX_MEMBERS_PER_ORGANIZATION`](../src/config/env.validation.ts#L832) | 0 | number; integer; min 0 | Ceiling on members per workspace. Zero means unlimited. |
 
 ## Additional non-schema variables
 

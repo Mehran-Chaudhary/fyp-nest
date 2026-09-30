@@ -180,7 +180,7 @@ export class DocumentsService {
             organizationId: principal.organizationId,
             knowledgeBaseId,
             title: input.title ?? stripExtension(filename).slice(0, 255),
-            description: input.description ?? null,
+            description: input.description || null,
             tags: input.tags ?? [],
             originalFilename: filename,
             fileType: inspection.fileType,
@@ -358,7 +358,7 @@ export class DocumentsService {
       page: number;
       limit: number;
       knowledgeBaseId?: string;
-      status?: DocumentStatus;
+      status?: DocumentStatus[];
       classification?: Classification;
       search?: string;
       sortBy?: string;
@@ -403,8 +403,9 @@ export class DocumentsService {
       })
       .andWhere('document.classification IN (:...classifications)', { classifications });
 
-    if (query.status)
-      builder.andWhere('document.status = :status', { status: query.status });
+    if (query.status?.length) {
+      builder.andWhere('document.status IN (:...statuses)', { statuses: query.status });
+    }
     if (query.search) {
       builder.andWhere('document.title ILIKE :search', {
         search: `%${escapeLike(query.search)}%`,
@@ -568,9 +569,11 @@ export class DocumentsService {
       changes.title = { from: document.title, to: input.title };
       document.title = input.title;
     }
-    if (input.description !== undefined && input.description !== document.description) {
-      changes.description = { from: document.description, to: input.description };
-      document.description = input.description;
+    // An empty description is no description.
+    const description = input.description === '' ? null : input.description;
+    if (description !== undefined && description !== document.description) {
+      changes.description = { from: document.description, to: description };
+      document.description = description;
     }
     if (input.tags !== undefined) {
       changes.tags = { from: document.tags, to: input.tags };

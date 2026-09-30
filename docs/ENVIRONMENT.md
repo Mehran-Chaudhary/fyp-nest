@@ -2,7 +2,7 @@
 
 Code audit: 28–29 September 2026. Commands below use **Windows PowerShell**, from `D:\fyp_backend_nest`, unless marked otherwise. Provider dashboards change; their official instructions are linked where used. No existing credentials are reproduced here.
 
-Read this guide in order. Use [the complete variable reference](ENVIRONMENT_VARIABLES.md) when you need a particular setting. You do **not** need to manually fill 317 settings: most are validated tuning defaults. You do need real connection details and secrets for the features you intend to run.
+Read this guide in order. Use [the complete variable reference](ENVIRONMENT_VARIABLES.md) when you need a particular setting. You do **not** need to manually fill 319 settings: most are validated tuning defaults. You do need real connection details and secrets for the features you intend to run.
 
 ## 1. What the repository actually contains
 
@@ -52,7 +52,7 @@ These are a snapshot, not proof that credentials work:
 - Redis points to local port 6379; `REDIS_URL` is empty, so discrete Redis settings apply.
 - S3 settings, Qdrant URL/key, AI URL/signing secret, LLM URL/key, SMTP credentials and bootstrap administrator credentials are absent/empty.
 - `MAIL_TRANSPORT=log`, `NODE_ENV=development`, `SEED_DEMO_DATA=false`. No `.env.local` was present.
-- The schema declares **317 variables**; `.env.example` lists **261**. The missing 56 mostly cover governance, MFA, RLS, mTLS and observability. The complete reference includes all 317.
+- The schema declares **319 variables**; `.env.example` lists **263**. The missing 56 mostly cover governance, MFA, RLS, mTLS and observability. The complete reference includes all 319.
 - Copying `.env.example` by itself does **not** produce a valid environment: its four empty required secret fields must be populated. Omitting a key and setting `KEY=` are different to Joi.
 - `npm run test:e2e` references `test/jest-e2e.config.mjs`, which is absent in this checkout. Use the three named E2E scripts described below.
 - `docs/CLOUD_SETUP.md` contains a dated database-password failure from an earlier session. Treat it as historical, not a fresh diagnosis of your current password.

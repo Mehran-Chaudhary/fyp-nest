@@ -71,14 +71,19 @@ export class ApiErrorResponseDto {
   meta: ResponseMeta & { path?: string };
 }
 
-/** Field-level validation failure, as returned in `error.details.fields`. */
-export class ValidationFieldError {
-  @ApiProperty({ example: 'email' })
-  field: string;
-
+/** `error.details` of a `VALIDATION_FAILED` (422) response. */
+export class ValidationErrorDetails {
   @ApiProperty({
-    type: [String],
-    example: ['email must be a valid email address'],
+    description:
+      'Messages per field, keyed by the property path in the request: `email`, nested ' +
+      'fields as `settings.defaultChunkSize`, array items as `items.0.name`. An unknown ' +
+      'field is reported under its own name.',
+    type: 'object',
+    additionalProperties: { type: 'array', items: { type: 'string' } },
+    example: {
+      email: ['email must be a valid email address'],
+      'settings.defaultChunkSize': ['settings.defaultChunkSize must not be less than 64'],
+    },
   })
-  errors: string[];
+  fields: Record<string, string[]>;
 }
