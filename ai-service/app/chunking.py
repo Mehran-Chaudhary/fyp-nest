@@ -11,9 +11,10 @@ Design, in the order decisions are made:
    row groups (each repeating the header row) for tables, lines for code, and
    word-aligned token windows only as a last resort.
 3. **Packing.** Units fill a chunk in order. A chunk closes when the next unit
-   would overflow it, or at a section boundary, except that small sibling
-   sections under the same parent share a chunk (each keeps its heading
-   inline) rather than producing a run of tiny fragments.
+   would overflow it, or at a section boundary, except that a section still
+   under a quarter of a chunk takes in its next sibling under the same parent
+   (each keeps its heading inline), rather than leaving a run of tiny
+   fragments.
 4. **Overlap.** When a chunk closes for size inside a section, the next one
    opens with the closing sentences of the last, up to `overlap` tokens,
    never half a word. No overlap is carried across a section boundary.
@@ -114,6 +115,10 @@ class Chunker:
         self.overlap = max(0, min(overlap, chunk_size // 2))
         self.context_headers = context_headers
         self.max_characters = max_characters
+        # A section this small (with its header) takes its next sibling in;
+        # anything larger stays a chunk of its own, so unrelated topics are not
+        # blended into one vector.
+        self.merge_below = max(64, chunk_size // 4)
         self._header_tokens: dict[tuple[str, ...], int] = {}
 
     # ── public ──────────────────────────────────────────────────────────────
@@ -303,7 +308,7 @@ class Chunker:
                 mergeable = (
                     self.context_headers
                     and _common_prefix([segments[0].section, unit.section])
-                    and used + header_cost() < self.size // 2
+                    and used + header_cost() < self.merge_below
                     and estimate_with(unit) <= self.size
                 )
                 if not mergeable:
@@ -368,10 +373,7 @@ class Chunker:
             if rest and len(segments) > 1:
                 parts.append(("\n\n" if parts else "") + HEADER_SEPARATOR.join(rest))
             for unit in segment.units:
-                joiner = unit.joiner if parts else ""
-                if unit.overlap and parts:
-                    joiner = "\n\n"
-                parts.append(joiner + unit.text)
+                parts.append((unit.joiner if parts else "") + unit.text)
                 units.append(unit)
         body = "".join(parts).strip()
         if not body:
@@ -393,7 +395,9 @@ class Chunker:
 
 
 def _carry(unit: _Unit, text: str, tokens: int) -> _Unit:
-    return _Unit(text, tokens, unit.section, unit.page_end, unit.page_end, "\n\n", overlap=True)
+    """A unit repeated as overlap. It keeps its joiner, so carried sentences of
+    one paragraph still read as one paragraph."""
+    return _Unit(text, tokens, unit.section, unit.page_end, unit.page_end, unit.joiner, overlap=True)
 
 
 def _common_prefix(sections: Sequence[tuple[str, ...]]) -> tuple[str, ...]:

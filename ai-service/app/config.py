@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     # 0 means the model's native dimension. A smaller value truncates and
     # re-normalises (Matryoshka models only). Must match the backend's.
     EMBEDDING_DIMENSIONS: int = Field(default=0, ge=0, le=8192)
-    RERANK_MODEL: str = "bge-reranker-base"  # "none" disables /v1/rerank
+    RERANK_MODEL: str = "jina-reranker-v1-turbo-en"  # "none" disables /v1/rerank
     PII_ENABLED: bool = True
     PII_SPACY_MODEL: str = "en_core_web_md"
     # Transformer NER run beside spaCy ("none" for spaCy alone).

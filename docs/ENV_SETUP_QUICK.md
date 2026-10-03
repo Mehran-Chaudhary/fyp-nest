@@ -79,21 +79,40 @@ Upstash's free tier runs out after about one day of uptime. Aiven is free and ne
 
 ## 5. AI service (uploads, RAG search, name masking)
 
-**This service is not in the repository. It must be built first** (spec: `docs/contracts/ai-service-v1.md`). Once it is running, set:
+The service lives in `ai-service/`; its full guide is `ai-service/README.md`.
 
-```dotenv
-AI_SERVICE_URL=https://your-ai-service-url
-EMBEDDING_MODEL=nomic-embed-text
-EMBEDDING_DIMENSIONS=768
-PII_NER_PROVIDER=ai-service
-PII_DEFAULT_ON_FAILURE=REFUSE
+**Run it on your PC:**
+
+```powershell
+cd ai-service
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python -m app.models.download --spacy-wheel-dir .models\wheels
+.venv\Scripts\python -m pip install --no-deps (Get-ChildItem .models\wheels\en_core_web_md-*.whl)
+Copy-Item .env.example .env
+.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Give the AI service the **same** `AI_SERVICE_SIGNING_SECRET` that is already in your `.env`.
+In `ai-service\.env`, set `AI_SERVICE_SIGNING_SECRET` to the **same** value as the backend's `.env`.
 
-Where to host it for free:
-- **Google Cloud Run** (https://console.cloud.google.com): has a free tier but needs a card. Set a $1 budget alert.
-- **Your PC plus Cloudflare tunnel**, for testing: run `cloudflared tunnel --url http://localhost:8000` and use the `https://….trycloudflare.com` URL it prints.
+**Then in the backend's `.env`:**
+
+```dotenv
+AI_SERVICE_URL=http://127.0.0.1:8000
+EMBEDDING_MODEL=embeddinggemma-300m-int8
+EMBEDDING_DIMENSIONS=768
+EMBEDDING_BATCH_SIZE=8
+AI_SERVICE_TIMEOUT=90s
+PII_NER_PROVIDER=ai-service
+PII_DEFAULT_ON_FAILURE=REFUSE
+PII_TIMEOUT=20s
+RAG_RERANK_ENABLED=true
+```
+
+**When you deploy it** (details in `ai-service/README.md`):
+
+- **Google Cloud Run** (https://console.cloud.google.com): free tier, but needs a card. Set a $1 budget alert. Use 4 CPU / 4 GiB.
+- **Your PC plus Cloudflare tunnel**, for demos: run `cloudflared tunnel --url http://localhost:8000` and put the printed `https://….trycloudflare.com` URL in `AI_SERVICE_URL`.
 
 Hugging Face Spaces is **not** free for this any more.
 

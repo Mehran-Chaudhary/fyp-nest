@@ -203,8 +203,9 @@ def _edge_lines(lines: list[Line], height: float) -> list[Line]:
         return []
     k = 2 if len(lines) >= 6 else 1
     top_band, bottom_band = height * 0.85, height * 0.15
-    head = [line for line in lines[:k] if line.top >= top_band]
-    foot = [line for line in lines[-k:] if line.bottom <= bottom_band]
+    # Running headers and footers are short; a full line of prose is body text.
+    head = [line for line in lines[:k] if line.top >= top_band and len(line.text) <= 100]
+    foot = [line for line in lines[-k:] if line.bottom <= bottom_band and len(line.text) <= 100]
     return head + [line for line in foot if line not in head]
 
 
@@ -213,8 +214,10 @@ def _strip_running_lines(pages: list[list[Line]], heights: list[float]) -> list[
     edges = [_edge_lines(lines, height) for lines, height in zip(pages, heights)]
     counts = Counter(signature for edge in edges for signature in {_signature(line.text) for line in edge})
     real_pages = sum(1 for lines in pages if lines)
-    threshold = max(3, (real_pages + 1) // 2)
-    running = {sig for sig, n in counts.items() if n >= threshold} if real_pages >= 3 else set()
+    # On most pages; on both pages of a two-page document. Only margin lines
+    # are candidates (see _edge_lines), which keeps this safe at two.
+    threshold = 2 if real_pages == 2 else max(3, (real_pages + 1) // 2)
+    running = {sig for sig, n in counts.items() if n >= threshold} if real_pages >= 2 else set()
 
     cleaned: list[list[Line]] = []
     for lines, edge in zip(pages, edges):

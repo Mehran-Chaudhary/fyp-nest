@@ -69,7 +69,11 @@ class Component(Generic[T]):
         if self.state == "ready" and self.value is not None:
             return self.value
         if self.state == "disabled":
-            raise errors.model_not_available(f"{self.name} is disabled on this service.")
+            # 404, not 503: a capability this deployment does not offer is not
+            # a transient fault. The backend then degrades at once (rerank falls
+            # back to the fused order; PII applies its policy) instead of
+            # retrying and tripping its circuit breaker.
+            raise errors.ServiceError(404, "NOT_ENABLED", f"{self.name} is not enabled on this service.")
         if self.state == "failed":
             raise errors.model_not_available(f"{self.name} failed to load; see the service logs.")
         deadline = time.monotonic() + wait_seconds

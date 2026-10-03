@@ -52,6 +52,9 @@ class RerankSpec:
     source: OnnxSource
     max_tokens: int
     license: str = ""
+    # English-only cross-encoders score other scripts as noise and would undo
+    # the multilingual embedding's correct order; the service then declines.
+    multilingual: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,7 +162,8 @@ EMBEDDING_MODELS: dict[str, EmbeddingSpec] = {
 }
 
 RERANK_MODELS: dict[str, RerankSpec] = {
-    # BAAI bge-reranker-base: strong cross-encoder for its size, MIT.
+    # BAAI bge-reranker-base: the strongest of these, MIT, but ~10x the CPU of
+    # the turbo model (15 s for 32 passages on a 4-core laptop). For GPU hosts.
     "bge-reranker-base": RerankSpec(
         label="bge-reranker-base",
         source=OnnxSource(

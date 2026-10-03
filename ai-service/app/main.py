@@ -38,6 +38,28 @@ from .security import SignatureMiddleware, build_nonce_store
 CONTRACT_VERSION = 1
 log = logging.getLogger("daiap.api")
 
+# Below this best score a cross-encoder has no opinion worth acting on.
+RERANK_MIN_CONFIDENCE = 0.05
+
+
+def _mostly_latin(texts: list[str]) -> bool:
+    """True when at least half the texts are written mainly in Latin script."""
+
+    def latin(text: str) -> bool:
+        letters = [c for c in text if c.isalpha()]
+        if not letters:
+            return True
+        return sum(1 for c in letters if c < "ɐ") >= len(letters) / 2
+
+    return sum(1 for text in texts if latin(text)) * 2 >= len(texts)
+
+
+def _rerank_declined(reason: str) -> errors.ServiceError:
+    # 422: permanent for this input, so the backend neither retries nor counts
+    # it against the circuit breaker; it keeps the fused (dense + BM25) order,
+    # which the multilingual embedding already got right.
+    return errors.ServiceError(422, "RERANK_NOT_APPLICABLE", f"Reranking skipped: {reason}.")
+
 
 def json_response(payload: Any, status: int = 200) -> Response:
     return Response(
@@ -250,7 +272,13 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
         if len(body.documents) > settings.MAX_RERANK_DOCUMENTS:
             raise errors.invalid_request(f"At most {settings.MAX_RERANK_DOCUMENTS} documents per request.")
         model = await runtime.rerank.get(wait)
+        if not model.spec.multilingual and not _mostly_latin([body.query]):
+            raise _rerank_declined("the query is not in a language this reranker reads")
+        if not model.spec.multilingual and not _mostly_latin(body.documents):
+            raise _rerank_declined("most passages are not in a language this reranker reads")
         scores = await run_in(runtime.lanes.rerank, model.score, body.query, body.documents)
+        if float(scores.max()) < RERANK_MIN_CONFIDENCE:
+            raise _rerank_declined("the reranker found no passage clearly relevant")
         order = np.argsort(-scores, kind="stable")[: min(body.top_n, len(body.documents))]
         return json_response(
             {

@@ -69,7 +69,7 @@ def _matches(path: Path, spec: SpacySpec) -> bool:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--embedding", default=os.environ.get("EMBEDDING_MODEL", "embeddinggemma-300m-int8"))
-    parser.add_argument("--rerank", default=os.environ.get("RERANK_MODEL", "bge-reranker-base"))
+    parser.add_argument("--rerank", default=os.environ.get("RERANK_MODEL", "jina-reranker-v1-turbo-en"))
     parser.add_argument("--ner", default=os.environ.get("PII_TRANSFORMER_MODEL", "bert-base-NER"))
     parser.add_argument("--spacy", default=os.environ.get("PII_SPACY_MODEL", "en_core_web_md"))
     parser.add_argument("--spacy-wheel-dir", default="", help="download the spaCy pipeline wheel here")

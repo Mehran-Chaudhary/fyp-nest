@@ -158,3 +158,11 @@ def test_sentence_splitter_respects_abbreviations_and_initials() -> None:
 
 def test_sentence_splitter_handles_urdu_full_stop() -> None:
     assert len(split_sentences("یہ پہلا جملہ ہے۔ یہ دوسرا جملہ ہے۔")) == 2
+
+
+def test_sections_of_reasonable_size_are_not_blended() -> None:
+    blocks = [Block("heading", "Handbook", level=1)]
+    for name in ("Leave", "Travel", "Security"):
+        blocks += [Block("heading", name, level=2), Block("paragraph", sentences(8, prefix=name[0]))]  # 72 words each
+    chunks = chunker(200, 0).chunk(blocks)  # merge only below max(64, 200 // 4) = 64: each section stands alone
+    assert [c.text.split("\n\n", 1)[0] for c in chunks] == ["Handbook > Leave", "Handbook > Travel", "Handbook > Security"]

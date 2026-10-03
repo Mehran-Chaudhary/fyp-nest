@@ -68,14 +68,11 @@ provision.
 
 ### Outstanding
 
-- **The database credentials in the local `.env` are rejected** by the server
-  (`password authentication failed for user "postgres"`). Fix them before running
-  migrations against your cloud database.
 - Real document ingestion needs object storage, Qdrant and the Python AI service
-  (implementing [the v1 contract](docs/contracts/ai-service-v1.md)). Until they
-  are configured, upload and retrieval return `503
-  KNOWLEDGE_LAYER_NOT_CONFIGURED` and name the missing variables; everything else
-  works.
+  in [`ai-service/`](ai-service/README.md) (it implements
+  [the v1 contract](docs/contracts/ai-service-v1.md)). Until they are configured,
+  upload and retrieval return `503 KNOWLEDGE_LAYER_NOT_CONFIGURED` and name the
+  missing variables; everything else works.
 - Agents and chat need a model endpoint (`LLM_BASE_URL`; `503 LLM_NOT_CONFIGURED`
   until set), and name detection needs the AI service to implement
   `POST /v1/pii/analyze` (or a Presidio analyzer). See the phase 3 section of
@@ -96,7 +93,7 @@ provision.
 | Redis | ≥ 6 | `maxmemory-policy noeviction` (it holds BullMQ jobs); streams, pub/sub and Lua (phase 4 events) |
 | S3-compatible storage | any | phase 2: Cloudflare R2 recommended |
 | Qdrant | ≥ 1.10 | phase 2: Qdrant Cloud; needs the Query API for hybrid search |
-| Python AI service | contract v1 | phase 2: see `docs/contracts/ai-service-v1.md`; phase 3 adds `/v1/pii/analyze` |
+| Python AI service | contract v1 | [`ai-service/`](ai-service/README.md): FastAPI on ONNX Runtime (EmbeddingGemma, a cross-encoder reranker, Presidio + transformer NER); spec in `docs/contracts/ai-service-v1.md` |
 | LLM endpoint | Ollama ≥ 0.5, or OpenAI-compatible | phase 3: a GPU host behind an authenticating proxy, or a hosted API |
 
 All of these run as managed cloud services. [`docs/CLOUD_SETUP.md`](docs/CLOUD_SETUP.md)

@@ -2,7 +2,8 @@
 
 The interface between this backend and the Python AI service. The backend is
 the only client. This document is the specification; the TypeScript side lives
-in `src/shared/ai-service/`.
+in `src/shared/ai-service/`, and the Python implementation in
+[`ai-service/`](../../ai-service/README.md).
 
 **Division of labour.** The AI service does stateless computation: it turns
 bytes into chunks, text into vectors and text into entity spans. It stores

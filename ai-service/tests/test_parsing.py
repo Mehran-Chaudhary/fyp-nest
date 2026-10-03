@@ -226,3 +226,37 @@ def test_unsupported_type_is_415() -> None:
     with pytest.raises(errors.ServiceError) as caught:
         extract(b"x", "xlsx")
     assert caught.value.status == 415
+
+
+def test_two_page_document_footer_is_removed() -> None:
+    bodies = ["Annual leave is twenty days per year.", "Travel claims are paid within thirty days."]
+    pages = [flow([(body, BODY, False)]) + [TextRun("Acme Handbook 2026", 56, 30, 9)] for body in bodies]
+    text = extract(build_pdf(pages), "pdf").text
+    assert "Acme Handbook 2026" not in text
+    assert all(body in text for body in bodies)
+
+
+def test_body_lines_outside_the_margins_are_never_treated_as_running() -> None:
+    pages = [flow([("Definitions apply throughout this policy.", BODY, False)], top=500) for _ in range(4)]
+    assert extract(build_pdf(pages), "pdf").text.count("Definitions apply") == 4
+
+
+def test_scanned_pages_go_through_the_ocr_hook() -> None:
+    from app.parsing.pdf import Line
+
+    class FakeOcr:
+        name = "fake"
+        calls = 0
+
+        def recognise_page(self, page, page_number):  # type: ignore[no-untyped-def]
+            FakeOcr.calls += 1
+            height = page.get_height()
+            return [
+                Line("Scanned Policy", 18.0, True, 56, 300, height - 60, height - 78, page_number),
+                Line("Leave is twenty days per year.", 11.0, False, 56, 400, height - 100, height - 111, page_number),
+            ]
+
+    document = extract(build_pdf([[], [], []]), "pdf", ocr=FakeOcr(), max_ocr_pages=2)
+    assert FakeOcr.calls == 2  # capped by max_ocr_pages
+    assert document.ocr_pages == 2 and document.empty_pages == 1
+    assert ("paragraph", "Leave is twenty days per year.") in kinds(document)

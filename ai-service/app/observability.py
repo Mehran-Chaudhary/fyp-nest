@@ -76,8 +76,11 @@ def configure_logging(level: str, fmt: str) -> None:
         logging.getLogger(name).propagate = True
     logging.getLogger("uvicorn.access").disabled = True
     # Libraries that log at INFO about every model file they touch.
-    for noisy in ("httpx", "huggingface_hub", "presidio-analyzer", "fastembed"):
+    for noisy in ("httpx", "huggingface_hub"):
         logging.getLogger(noisy).setLevel(max(logging.WARNING, logging.getLevelName(level)))
+    # Presidio warns at startup about every recognizer for a language we did
+    # not configure (Spanish NIF, Italian fiscal code, ...): pure noise.
+    logging.getLogger("presidio-analyzer").setLevel(logging.ERROR)
 
 
 access_log = logging.getLogger("daiap.access")

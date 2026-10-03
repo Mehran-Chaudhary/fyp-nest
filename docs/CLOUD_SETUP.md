@@ -159,39 +159,38 @@ by hand. The vector store holds vectors and ids only, never document text.
 
 ### Step 3: the Python AI service
 
-The service implements [the v1 contract](contracts/ai-service-v1.md): four
-endpoints, all HMAC-signed.
+The service lives in [`ai-service/`](../ai-service/README.md). It implements
+[the v1 contract](contracts/ai-service-v1.md): five endpoints, all
+HMAC-signed, running ONNX models on CPU.
 
-1. Generate the shared signing secret (or take the one `generate:secrets` wrote):
-
-   ```bash
-   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-   ```
-
-2. Deploy the AI service with **the same secret** in its environment
-   (`DAIAP_SIGNING_SECRET` or whatever name it reads; the contract shows how it
-   verifies). Hugging Face Spaces (free CPU, 16 GB RAM) runs
-   sentence-transformers embedding models comfortably. Avoid hosts that sleep
-   on idle for the AI service: a 30-second cold start will blow the embedding
-   timeout.
+1. Take the shared signing secret from the backend's `.env`
+   (`AI_SERVICE_SIGNING_SECRET`, written by `npm run generate:secrets`).
+2. Deploy the AI service with **the same secret** and key id in its environment
+   (`AI_SERVICE_SIGNING_SECRET`, `AI_SERVICE_KEY_ID`; the names match the
+   backend's). Google Cloud Run with 4 CPU / 4 GiB is the documented target; see
+   [the service's deploy section](../ai-service/README.md#deploy-google-cloud-run).
+   Hugging Face Spaces is no longer free for Docker apps.
 3. Decide the embedding model **once**, and make both sides agree:
 
    | `EMBEDDING_MODEL` (label) | `EMBEDDING_DIMENSIONS` | Notes |
    |---|---|---|
-   | `nomic-embed-text` | 768 | default here; uses `search_document:` / `search_query:` prefixes, see contract |
-   | `bge-small-en-v1.5` | 384 | lighter, fast on CPU |
-   | `bge-m3` | 1024 | multilingual (Urdu included), heavier |
+   | `embeddinggemma-300m-int8` | 768 | default: best quality, 100+ languages including Urdu; ~280 tokens/s on a 4-core laptop |
+   | `multilingual-e5-small` | 384 | ~8x faster on CPU, lower quality; for small hosts |
+   | `nomic-embed-text` | 768 | English only |
 
    The AI service must report exactly this model name and dimension count; the
    backend rejects vectors from any other model.
-4. Set on **API and worker**:
+4. Set on **API and worker** (the timeouts and batch size are sized for CPU
+   inference):
 
    ```ini
    AI_SERVICE_URL=https://<your-ai-service>
    AI_SERVICE_SIGNING_SECRET=<the shared secret>
    AI_SERVICE_KEY_ID=v1
-   EMBEDDING_MODEL=nomic-embed-text
+   EMBEDDING_MODEL=embeddinggemma-300m-int8
    EMBEDDING_DIMENSIONS=768
+   EMBEDDING_BATCH_SIZE=8
+   AI_SERVICE_TIMEOUT=90s
    ```
 
 At boot the backend calls `GET /v1/health` and logs an error if the model or

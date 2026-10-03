@@ -16,7 +16,7 @@ ARG PYTHON_VERSION=3.13
 FROM python:${PYTHON_VERSION}-slim AS build
 
 ARG EMBEDDING_MODEL=embeddinggemma-300m-int8
-ARG RERANK_MODEL=bge-reranker-base
+ARG RERANK_MODEL=jina-reranker-v1-turbo-en
 ARG PII_TRANSFORMER_MODEL=bert-base-NER
 ARG PII_SPACY_MODEL=en_core_web_md
 
@@ -45,7 +45,7 @@ RUN /opt/venv/bin/python -m app.models.download \
 FROM python:${PYTHON_VERSION}-slim
 
 ARG EMBEDDING_MODEL=embeddinggemma-300m-int8
-ARG RERANK_MODEL=bge-reranker-base
+ARG RERANK_MODEL=jina-reranker-v1-turbo-en
 ARG PII_TRANSFORMER_MODEL=bert-base-NER
 ARG PII_SPACY_MODEL=en_core_web_md
 

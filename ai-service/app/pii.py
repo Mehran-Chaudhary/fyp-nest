@@ -136,7 +136,38 @@ class PiiEngine:
                     if s.entity_type in ner_entities and s.score >= threshold
                 )
 
-        return [_merge_same_type(spans, len(texts[i])) for i, spans in enumerate(results)]
+        cleaned = [[c for c in (_clean(span, texts[i]) for span in spans) if c] for i, spans in enumerate(results)]
+        return [_merge_same_type(spans, len(texts[i])) for i, spans in enumerate(cleaned)]
+
+
+# Form labels, acronyms and greetings that NER models mistake for names in
+# HR and support text ("Email: ...", "CNIC: ...", "Dear Team").
+_NOT_NAMES = frozenset(
+    """email e-mail mail cnic nic ntn id phone mobile cell tel telephone fax name address subject re fw fwd
+    dear regards thanks thank hi hello team sir madam iban swift pkr usd hr it ceo cfo cto coo vp ssn dob
+    vpn api aws sql pdf url ip password username user admin salary ticket invoice order account customer
+    client employee department date note notes""".split()
+)
+_EDGE = frozenset(" \t\n.,;:!?()[]{}\"'`*_|-–—")
+
+
+def _clean(span: Span, text: str) -> Span | None:
+    """Trims punctuation from a span's edges; drops PERSON spans that cannot be names."""
+    start, end = span.start, span.end
+    while start < end and text[start] in _EDGE:
+        start += 1
+    while end > start and text[end - 1] in _EDGE:
+        end -= 1
+    if start >= end:
+        return None
+    value = text[start:end]
+    if span.entity_type == "PERSON":
+        # Hashes, invoice numbers, ids and passwords carry digits; names do not.
+        if any(c.isdigit() for c in value) or not any(c.isalpha() for c in value):
+            return None
+        if value.lower() in _NOT_NAMES:
+            return None
+    return Span(span.entity_type, start, end, span.score)
 
 
 def _merge_same_type(spans: list[Span], length: int) -> list[Span]:

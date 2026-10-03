@@ -31,6 +31,7 @@ class FakeEmbedding:
 class FakeRerank:
     class spec:  # noqa: N801
         label = "fake-reranker"
+        multilingual = False
 
     def score(self, query: str, documents: Sequence[str]) -> np.ndarray:
         words = set(query.lower().split())
@@ -177,9 +178,11 @@ def test_rerank_orders_best_first_and_honours_top_n(client: TestClient) -> None:
     assert body["results"][0]["score"] >= body["results"][1]["score"]
 
 
-def test_rerank_disabled_is_503() -> None:
-    response = call(make_client(RERANK_MODEL="none"), "POST", "/v1/rerank", {"query": "q", "documents": ["d"], "top_n": 1})
-    assert response.status_code == 503
+def test_disabled_capabilities_answer_404_so_the_backend_degrades_at_once() -> None:
+    client = make_client(RERANK_MODEL="none")
+    response = call(client, "POST", "/v1/rerank", {"query": "q", "documents": ["d"], "top_n": 1})
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "NOT_ENABLED"
 
 
 def test_pii_analyze(client: TestClient) -> None:
@@ -212,3 +215,18 @@ def test_responses_carry_the_request_id(client: TestClient) -> None:
 
 def test_livez_is_open(client: TestClient) -> None:
     assert client.get("/livez").json() == {"status": "alive"}
+
+
+@pytest.mark.parametrize(
+    ("query", "documents", "reason"),
+    [
+        ("سالانہ چھٹیاں کتنی ہیں؟", ["annual leave is twenty days"], "query"),
+        ("annual leave", ["سالانہ چھٹی بیس دن", "دفتر نو بجے کھلتا ہے"], "passages"),
+        ("annual leave", ["parking rules", "canteen hours"], "clearly relevant"),
+    ],
+)
+def test_rerank_declines_when_it_cannot_help(client: TestClient, query: str, documents: list[str], reason: str) -> None:
+    response = call(client, "POST", "/v1/rerank", {"query": query, "documents": documents, "top_n": 1})
+    assert response.status_code == 422  # the backend keeps its fused order, no retry
+    assert response.json()["error"]["code"] == "RERANK_NOT_APPLICABLE"
+    assert reason in response.json()["error"]["message"]
