@@ -1,8 +1,8 @@
 # Complete backend environment-variable reference
 
-Audited against `src/config/env.validation.ts` on 28–29 September 2026. **319 schema variables**. Read [the setup guide](ENVIRONMENT.md) first. Defaults here are the schema defaults, not credentials from your `.env`. An empty default does not mean the corresponding feature will work without provider credentials. “Omit” means no schema default. `*` marks one of the **56 keys missing from `.env.example`**.
+Key coverage rechecked against `src/config/env.validation.ts` on 4 October 2026: **321 schema variables**, all represented below. Read [the current local NestJS / cloud dependencies handoff](DEPLOYMENT_READINESS.md) first. Defaults here are the schema defaults, not credentials from your `.env`. An empty default does not mean the corresponding feature will work without provider credentials. “Omit” means no schema default. `*` marks one of the **56 keys missing from `.env.example`**.
 
-All settings belong on the NestJS API and, when used, its worker, except hosting port/topology differences explained in the guide. Python-side `DAIAP_SIGNING_SECRET` is a separate implementation convention. The tables enumerate accepted knobs; they do not imply every knob is fully wired into runtime behavior.
+All settings belong on the NestJS API and, when used, its worker, except hosting port/topology differences explained in the guide. The implemented Python service uses `AI_SERVICE_SIGNING_SECRET`, matching NestJS; see [its complete environment reference](PYTHON_ENVIRONMENT_VARIABLES.md). The tables enumerate accepted knobs; they do not imply every knob is fully wired into runtime behavior.
 
 Types/constraints are taken from Joi. Duration expressions use milliseconds for bare numbers; prefer explicit units. The full source link for each row contains conditional validation and comments. Secret values are deliberately not shown.
 
@@ -466,7 +466,7 @@ Types/constraints are taken from Joi. Duration expressions use milliseconds for 
 | `WORKFLOWS_E2E` | Set `true` for the named workflows suite. |
 | `DAIAP_PROCESS_ROLE` | Internal: worker bootstrap sets `worker`; do not manually relabel the API. |
 | `OTEL_RESOURCE_ATTRIBUTES` | Standard OpenTelemetry SDK setting; mentioned by tracing bootstrap, not declared in the application schema. Optional SDK-level configuration. |
-| `DAIAP_SIGNING_SECRET` | Python contract example only: same value as backend AI_SERVICE_SIGNING_SECRET. Actual Python implementation determines its environment variable name. |
+| `DAIAP_SIGNING_SECRET` | Legacy illustrative name, not read by the implemented Python service. Use `AI_SERVICE_SIGNING_SECRET` on both services. |
 
 `process.env.SECRET` occurs in a test fixture, not as a deployment credential. `DATABASE_URL` is not read by the database builders. Unknown environment keys are allowed, so misspelled names may be silently ignored: use these exact names.
 
