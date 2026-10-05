@@ -1,0 +1,186 @@
+{
+  "run": "p2-1791211909221",
+  "completedAt": "2026-10-05T14:52:27.607Z",
+  "results": [
+    {
+      "label": "liveness",
+      "method": "GET",
+      "path": "/health/live",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 254,
+      "requestId": "55e972ec-56af-4b80-a9b6-e456fccb726c"
+    },
+    {
+      "label": "readiness",
+      "method": "GET",
+      "path": "/health/ready",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 302,
+      "requestId": "c2b61f1c-533f-46ec-80f1-4e912eb05a81"
+    },
+    {
+      "label": "register fixture 0",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 7281,
+      "requestId": "f1ee779b-2d6a-48a2-b9e7-eaf6ebf43e0d"
+    },
+    {
+      "label": "register fixture 1",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 5120,
+      "requestId": "91d37f8a-64db-4a17-9692-5a65e6b0d03e"
+    },
+    {
+      "label": "register fixture 2",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 5002,
+      "requestId": "5bc448b2-4db5-4123-86e4-1cf4c2dd2458"
+    },
+    {
+      "label": "create disposable workspace",
+      "method": "POST",
+      "path": "/api/v1/organizations",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 3009,
+      "requestId": "8536594d-38b7-4316-9523-a0c228664bf6"
+    },
+    {
+      "label": "create second tenant",
+      "method": "POST",
+      "path": "/api/v1/organizations",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 2805,
+      "requestId": "04b4df13-773a-4474-b556-ed3ce5a0075f"
+    },
+    {
+      "label": "API20 catalogue",
+      "method": "GET",
+      "path": "/api/v1/permissions",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 576,
+      "requestId": "ac8027f8-bf2b-415d-a201-8c4a0bf63fc9"
+    },
+    {
+      "label": "catalogue requires auth",
+      "method": "GET",
+      "path": "/api/v1/permissions",
+      "status": 401,
+      "expected": 401,
+      "code": "AUTH_TOKEN_MISSING",
+      "pass": true,
+      "ms": 174,
+      "requestId": "277ced34-11ce-4c7a-a107-6f19dd19c4b3"
+    },
+    {
+      "label": "API21 roles",
+      "method": "GET",
+      "path": "/api/v1/organizations/bac73bec-0c87-4c95-8e09-e4d43af33930/roles",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2094,
+      "requestId": "d1bab5ec-35bc-4ccd-8719-d0a4c09a727d"
+    },
+    {
+      "label": "API22 role detail",
+      "method": "GET",
+      "path": "/api/v1/organizations/bac73bec-0c87-4c95-8e09-e4d43af33930/roles/66201518-0b50-4790-988e-b8f3121e144a",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1527,
+      "requestId": "d01fe846-fdf0-4f89-b99a-d305bc8c73c4"
+    },
+    {
+      "label": "run completed",
+      "pass": false,
+      "error": "self-signed certificate in certificate chain"
+    },
+    {
+      "label": "API02 cleanup disposable workspace",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/bac73bec-0c87-4c95-8e09-e4d43af33930",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2527,
+      "requestId": "09759adb-ed71-4937-a412-f81acc8165b0"
+    },
+    {
+      "label": "API02 cleanup disposable workspace",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/a4fcdc4f-5891-44be-8a63-7d96a036da3d",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3218,
+      "requestId": "9f8589f1-c392-4b69-ba1e-eda111391013"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1322,
+      "requestId": "fc1737fc-1091-4dba-8d5b-a611e3932871"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1589,
+      "requestId": "167789b4-550b-45f2-8361-e6ff715b8ed1"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1171,
+      "requestId": "56cc690a-b73a-4084-a18b-1c3696b73838"
+    }
+  ],
+  "fixtureUsers": [
+    "66e68a9d-4d51-493a-96eb-50c47e8e8c63",
+    "d051535f-8916-4598-a063-43e940a4d82e",
+    "1b9f6255-192f-46a8-86a8-0c9ac14427f1"
+  ],
+  "fixtureWorkspaces": [
+    "bac73bec-0c87-4c95-8e09-e4d43af33930",
+    "a4fcdc4f-5891-44be-8a63-7d96a036da3d"
+  ],
+  "limitations": [
+    "Membership fixtures inserted directly; mail delivery and invitation acceptance not verified.",
+    "Fixture accounts retained; sessions revoked. Workspaces soft-deleted through API.",
+    "No browser/frontend tests."
+  ]
+}

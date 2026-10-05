@@ -1,0 +1,682 @@
+{
+  "run": "p2-1791211983951",
+  "completedAt": "2026-10-05T14:55:30.108Z",
+  "results": [
+    {
+      "label": "liveness",
+      "method": "GET",
+      "path": "/health/live",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 393,
+      "requestId": "ae15c411-094d-48a0-a906-1458b86e7133"
+    },
+    {
+      "label": "readiness",
+      "method": "GET",
+      "path": "/health/ready",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 840,
+      "requestId": "ae83180a-19af-4902-9a34-29b43d2dba2b"
+    },
+    {
+      "label": "register fixture 0",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 5259,
+      "requestId": "4b411cb5-783d-4c07-b6f0-7ebc5ce12b84"
+    },
+    {
+      "label": "register fixture 1",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 5345,
+      "requestId": "25dc2095-7692-4951-b68d-ee94bdd7a56c"
+    },
+    {
+      "label": "register fixture 2",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 5187,
+      "requestId": "6bab56db-7ba0-46df-b0f6-ca850099823e"
+    },
+    {
+      "label": "create disposable workspace",
+      "method": "POST",
+      "path": "/api/v1/organizations",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 3120,
+      "requestId": "81b919ae-c7a4-4cf1-a024-8b01220a27e9"
+    },
+    {
+      "label": "create second tenant",
+      "method": "POST",
+      "path": "/api/v1/organizations",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 3157,
+      "requestId": "56408ffb-2c38-4625-8ac2-227b72be3969"
+    },
+    {
+      "label": "API20 catalogue",
+      "method": "GET",
+      "path": "/api/v1/permissions",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 584,
+      "requestId": "441b6617-428b-45d8-a7e6-44a973d3f6a1"
+    },
+    {
+      "label": "catalogue requires auth",
+      "method": "GET",
+      "path": "/api/v1/permissions",
+      "status": 401,
+      "expected": 401,
+      "code": "AUTH_TOKEN_MISSING",
+      "pass": true,
+      "ms": 167,
+      "requestId": "627ba800-f74b-4064-a4ff-a6fb42d97b15"
+    },
+    {
+      "label": "API21 roles",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/roles",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2052,
+      "requestId": "e7cfd182-17f0-4b07-a9ce-ab36fff8b1c5"
+    },
+    {
+      "label": "API22 role detail",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/roles/c4522740-c067-4c25-9965-a1abd03589ff",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1464,
+      "requestId": "8593db7f-35d1-4528-a602-136cb24753b2"
+    },
+    {
+      "label": "API26 recompute fixture memberships",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/roles/recompute",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3318,
+      "requestId": "1576795d-39a6-42ea-84af-9f52ca343cd2"
+    },
+    {
+      "label": "API01 workspace patch",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2350,
+      "requestId": "48cbc963-c476-4960-860c-1b27eb6cfdf1"
+    },
+    {
+      "label": "invalid overlap",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1723,
+      "requestId": "74dd4fd7-ea27-4f45-979b-a7ed97bc764e"
+    },
+    {
+      "label": "unknown workspace field",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1300,
+      "requestId": "e6933a6d-0f1e-4596-bd9b-3908dc6f96cf"
+    },
+    {
+      "label": "member cannot update workspace",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 2883,
+      "requestId": "def17be7-98dc-4166-bfe7-ed5f0195335e"
+    },
+    {
+      "label": "API08 members",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members?page=1&limit=2",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1724,
+      "requestId": "190cdc7e-f152-4039-890c-53e21f2b4202"
+    },
+    {
+      "label": "API09 member detail",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/3e26f546-e799-4b48-b5b8-c4607b90ed7c",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1623,
+      "requestId": "758eec61-8649-4d35-a58a-b4070d458f58"
+    },
+    {
+      "label": "API11 member profile",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/3e26f546-e799-4b48-b5b8-c4607b90ed7c",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2624,
+      "requestId": "83a1804b-3297-4b98-b3b8-0032b6d901bc"
+    },
+    {
+      "label": "self profile",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/3e26f546-e799-4b48-b5b8-c4607b90ed7c",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2748,
+      "requestId": "f0f8a34c-04b7-4d92-a577-2a68bbe589d7"
+    },
+    {
+      "label": "API23 create role",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/roles",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 1962,
+      "requestId": "d4c6126b-5a16-42d5-a8b2-e05b0a405b01"
+    },
+    {
+      "label": "API24 edit role",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/roles/84994871-636b-4d70-838a-6954c90ea4f1",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2195,
+      "requestId": "ca5163ae-378a-4392-8fbf-ced6bf5eb49c"
+    },
+    {
+      "label": "system role immutable",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/roles/c4522740-c067-4c25-9965-a1abd03589ff",
+      "status": 403,
+      "expected": 403,
+      "code": "ROLE_IMMUTABLE",
+      "pass": true,
+      "ms": 1991,
+      "requestId": "d9a99f2f-7db5-4044-83ab-da0cab5466e7"
+    },
+    {
+      "label": "API10 replace roles",
+      "method": "PUT",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/3e26f546-e799-4b48-b5b8-c4607b90ed7c/roles",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3720,
+      "requestId": "1f89219a-488f-46e1-925e-c845122d1faa"
+    },
+    {
+      "label": "role in use",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/roles/84994871-636b-4d70-838a-6954c90ea4f1",
+      "status": 409,
+      "expected": 409,
+      "code": "ROLE_IN_USE",
+      "pass": true,
+      "ms": 1552,
+      "requestId": "06c3e507-8d4d-44d7-94fa-3db0d1c605c5"
+    },
+    {
+      "label": "restore member role",
+      "method": "PUT",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/3e26f546-e799-4b48-b5b8-c4607b90ed7c/roles",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3767,
+      "requestId": "62df8f76-f6ba-40ec-ad5f-96fe563efd83"
+    },
+    {
+      "label": "API25 delete role",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/roles/84994871-636b-4d70-838a-6954c90ea4f1",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1613,
+      "requestId": "fb50c94b-2f27-4fd1-9605-e8d98cb102bd"
+    },
+    {
+      "label": "API27 scopes",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/api-keys/scopes",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1288,
+      "requestId": "87aeddc3-dbf0-413e-bb6e-4ccd4c3a8e56"
+    },
+    {
+      "label": "API29 create key",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/api-keys",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 1967,
+      "requestId": "1c0ac805-672a-489d-bc7a-b5bd4bc228d1"
+    },
+    {
+      "label": "one-time key response shape",
+      "pass": true
+    },
+    {
+      "label": "API28 key metadata",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/api-keys",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1477,
+      "requestId": "148fc5f8-c866-4a4d-b003-00da52f65fb0"
+    },
+    {
+      "label": "key list has no plaintext and usageCount is string",
+      "pass": true
+    },
+    {
+      "label": "unsupported key scope",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/api-keys",
+      "status": 400,
+      "expected": 400,
+      "code": "BAD_REQUEST",
+      "pass": true,
+      "ms": 1304,
+      "requestId": "9862c368-8531-4904-8e15-43613ad9308d"
+    },
+    {
+      "label": "API30 revoke key with DELETE body",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/api-keys/ee103b26-7c65-47f5-ade3-fdc1517835de",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2520,
+      "requestId": "9f78d37d-316f-4610-ab90-3f9cb27276e1"
+    },
+    {
+      "label": "repeat key revoke",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/api-keys/ee103b26-7c65-47f5-ade3-fdc1517835de",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1515,
+      "requestId": "1cc3654e-027e-4f16-98a0-ef23e014c1fd"
+    },
+    {
+      "label": "API12 suspend",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/3e26f546-e799-4b48-b5b8-c4607b90ed7c/suspend",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3041,
+      "requestId": "462c5d50-327e-498f-91f1-81c8ed0f9999"
+    },
+    {
+      "label": "suspended membership denied",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39",
+      "status": 403,
+      "expected": 403,
+      "code": "MEMBERSHIP_SUSPENDED",
+      "pass": true,
+      "ms": 988,
+      "requestId": "fec7af88-3ffb-45ab-93f6-019c3958ff81"
+    },
+    {
+      "label": "API13 reactivate",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/3e26f546-e799-4b48-b5b8-c4607b90ed7c/reactivate",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3477,
+      "requestId": "3a0d447a-ba5b-4616-aefe-565f8937e843"
+    },
+    {
+      "label": "reactivated access",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1726,
+      "requestId": "67a5a9c5-618c-4ad7-a171-60f9f578859c"
+    },
+    {
+      "label": "cross tenant role rejected",
+      "method": "GET",
+      "path": "/api/v1/organizations/9180550f-e9a0-4a80-806a-c854415a4428/roles/c4522740-c067-4c25-9965-a1abd03589ff",
+      "status": 404,
+      "expected": 404,
+      "code": "ROLE_NOT_FOUND",
+      "pass": true,
+      "ms": 1924,
+      "requestId": "b6276582-3118-4d65-a311-503356be3bfd"
+    },
+    {
+      "label": "API16 invitations",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/invitations",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1391,
+      "requestId": "65439687-ec89-4280-9f37-82d8238af10a"
+    },
+    {
+      "label": "API17 create invitation",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/invitations",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 4719,
+      "requestId": "60510b5b-c095-458e-bc59-7f0c6181ca87"
+    },
+    {
+      "label": "API18 resend invitation",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/invitations/f8d7d9a2-bef8-4d51-8b43-b4f092261e7b/resend",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 4675,
+      "requestId": "c59e77da-7489-4959-9a90-5feb823d24f3"
+    },
+    {
+      "label": "API19 revoke invitation",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/invitations/f8d7d9a2-bef8-4d51-8b43-b4f092261e7b",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2075,
+      "requestId": "45b8f1af-1e0c-45d3-ac27-743f1ed14dd3"
+    },
+    {
+      "label": "revoked invitation resend rejected",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/invitations/f8d7d9a2-bef8-4d51-8b43-b4f092261e7b/resend",
+      "status": 409,
+      "expected": 409,
+      "code": "INVITATION_REVOKED",
+      "pass": true,
+      "ms": 1455,
+      "requestId": "4e79f835-3723-4080-96cd-b8cf5527eb54"
+    },
+    {
+      "label": "API04 IP rules",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-rules",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1390,
+      "requestId": "fd5acf3c-c16d-46ba-8687-8bb7fde0c8e8"
+    },
+    {
+      "label": "enable without rules",
+      "method": "PUT",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-enforcement",
+      "status": 400,
+      "expected": 400,
+      "code": "BAD_REQUEST",
+      "pass": true,
+      "ms": 1921,
+      "requestId": "5e503b7c-edba-4c7a-b2e2-0470e656471a"
+    },
+    {
+      "label": "invalid IP rule",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-rules",
+      "status": 400,
+      "expected": 400,
+      "code": "BAD_REQUEST",
+      "pass": true,
+      "ms": 1278,
+      "requestId": "8cd07bfd-efdb-45f6-b4d6-a25d39365387"
+    },
+    {
+      "label": "API05 add IP rule",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-rules",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 1819,
+      "requestId": "6f93efec-a684-4dd9-81e1-e881d902c132"
+    },
+    {
+      "label": "duplicate IP rule",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-rules",
+      "status": 409,
+      "expected": 409,
+      "code": "RESOURCE_CONFLICT",
+      "pass": true,
+      "ms": 1460,
+      "requestId": "de95a377-e300-4960-a1d7-90661b90d10c"
+    },
+    {
+      "label": "add IPv6 loopback",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-rules",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 1744,
+      "requestId": "30e57bce-5f65-41c2-beb1-06d2d6b3141c"
+    },
+    {
+      "label": "API07 enable enforcement",
+      "method": "PUT",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-enforcement",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2204,
+      "requestId": "a86c4352-af8d-4f52-a9b4-70106e8a7c54"
+    },
+    {
+      "label": "disable enforcement",
+      "method": "PUT",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-enforcement",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2649,
+      "requestId": "c210e003-0dd0-4b1e-bbdd-e532d92f9334"
+    },
+    {
+      "label": "API06 remove IP rule",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-rules/a95ceaea-914b-4eb6-9e2c-73f3d1520c8b",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1880,
+      "requestId": "18d3e5a3-1ce1-4d45-a82b-42d538468136"
+    },
+    {
+      "label": "remove IPv6 rule",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/ip-rules/3bf7defe-1d83-4717-96c2-ad3cea656022",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1789,
+      "requestId": "d20a2ad9-abc9-488e-8a08-dba968b307a7"
+    },
+    {
+      "label": "owner cannot leave",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/leave",
+      "status": 409,
+      "expected": 409,
+      "code": "CANNOT_REMOVE_LAST_OWNER",
+      "pass": true,
+      "ms": 1688,
+      "requestId": "59d93005-1885-4332-824a-0198abc75a2e"
+    },
+    {
+      "label": "API15 member leaves",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/leave",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3179,
+      "requestId": "1cefa287-7a8c-43dd-b61b-f1764803b711"
+    },
+    {
+      "label": "API14 remove member",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/3e26f546-e799-4b48-b5b8-c4607b90ed7c",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2756,
+      "requestId": "f2566fd1-a933-4053-a579-3b18048430a2"
+    },
+    {
+      "label": "removed detail remains readable",
+      "method": "GET",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/members/3e26f546-e799-4b48-b5b8-c4607b90ed7c",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1634,
+      "requestId": "bc52e67e-8d09-469a-af42-66851e590e9f"
+    },
+    {
+      "label": "recompute successor",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/roles/recompute",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2671,
+      "requestId": "0079347b-d826-48d4-9f78-1f84e5902a31"
+    },
+    {
+      "label": "API03 transfer ownership",
+      "method": "POST",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39/transfer-ownership",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 5070,
+      "requestId": "5e3c24d1-de09-4e59-9e25-274c6786ec99"
+    },
+    {
+      "label": "API02 cleanup disposable workspace",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/539a63f8-f249-4409-bfcb-6e761fbbbf39",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3160,
+      "requestId": "52edd5ca-dd87-4681-878d-16609dcb6da0"
+    },
+    {
+      "label": "API02 cleanup disposable workspace",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/9180550f-e9a0-4a80-806a-c854415a4428",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2584,
+      "requestId": "b45cfbe5-ceaf-40b3-a945-406c18101843"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1439,
+      "requestId": "8592a4b9-56c0-49df-9356-1e90cadaf365"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1136,
+      "requestId": "dde2586e-9905-448b-9a08-d6adf252cdf6"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1373,
+      "requestId": "91b9a51c-7d76-46e1-97e6-17ecf444479f"
+    }
+  ],
+  "fixtureUsers": [
+    "333a3787-2fb8-4a63-8bd7-3ae2f0be8a26",
+    "a9200307-ecb4-4f36-b904-f2227fa756b5",
+    "3e9bb158-57db-4203-9198-856ab263d95b"
+  ],
+  "fixtureWorkspaces": [
+    "539a63f8-f249-4409-bfcb-6e761fbbbf39",
+    "9180550f-e9a0-4a80-806a-c854415a4428"
+  ],
+  "limitations": [
+    "Membership fixtures inserted directly; mail delivery and invitation acceptance not verified.",
+    "Fixture accounts retained; sessions revoked. Workspaces soft-deleted through API.",
+    "No browser/frontend tests."
+  ]
+}

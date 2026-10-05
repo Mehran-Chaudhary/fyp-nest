@@ -1,16 +1,16 @@
 # Frontend Delivery — Five Phases & Master Checklist
 
-**Revision 2 · 5 October 2026 · backend baseline `877de76`**
+**Revision 4 · 5 October 2026 · backend baseline `5b4efb7`**
 **Product:** AgentVault / Distributed AI Agent Management Platform
-**Active handoff:** [Phase 1 — Identity, Secure Sessions & Workspace Entry](PHASE_1_FOUNDATION_AUTH_WORKSPACE.md)
+**Active handoff:** [Phase 2 — Workspace Administration & Access Control](PHASE_2_WORKSPACE_ADMINISTRATION.md)
 
-> This is the authoritative frontend delivery plan. It replaces the old nine-phase roadmap. Deliver exactly five sequential phases. Write a detailed handoff for a later phase only after the preceding implementation is reviewed and accepted. Historical backend phase numbers do not control frontend delivery order.
+> This is the authoritative frontend delivery plan. It replaces the old nine-phase roadmap. Deliver exactly five sequential phases. Advance after review and acceptance, or an explicit owner request to prepare the next handoff. Owner-requested progression does not establish unverified implementation acceptance. Historical backend phase numbers do not control frontend delivery order.
 
 ## How to use this document
 
-The roadmap defines scope, dependencies and acceptance; the Phase 1 document defines implementation contracts. Check a task only when evidence exists. A finished specification is not a finished frontend. Do not infer implementation progress from the presence of old documents.
+The roadmap defines scope, dependencies and acceptance; the Phase 1 and Phase 2 documents define implementation contracts. Check a task only when evidence exists. A finished specification is not a finished frontend. Do not infer implementation progress from the presence of old documents.
 
-The existing `PHASE_2_WORKSPACE_ADMINISTRATION.md`, `PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md` and `LOCAL_CONNECTION_GUIDE.md` are historical reference material. They are not approved implementation handoffs under this revised plan; revalidate them against source before reuse. The revised Phase 1 document is self-contained for current work.
+The obsolete frontend handoffs and connection guide have been removed. This directory contains only the current five-phase roadmap, Phase 1 and Phase 2 handoffs, and Phase 2 live verification evidence created in this session. Prepare Phase 3–5 handoffs when commissioned. The owner requested Phase 2 progression; Phase 1 browser acceptance evidence remains unverified.
 
 Status vocabulary: **Not started**, **In progress**, **Ready for review**, **Accepted**, **Blocked**. Record blockers separately from ordinary unfinished work. The owner accepts each phase after the frontend engineer supplies evidence and a demo. No automatic advancement.
 
@@ -76,7 +76,7 @@ This orders identity before administration, grants before restricted knowledge, 
 
 ## Phase 2 checklist — Workspace Administration & Access Control
 
-**Detailed handoff:** prepare after Phase 1 acceptance. Old Phase 2 document is reference only.
+**Detailed handoff:** [Phase 2 contract](PHASE_2_WORKSPACE_ADMINISTRATION.md), revision 3: all 30 operations, 68 acceptance checks (P2-T01–P2-T68), and 12 constraint/decision records (P2-G01–P2-G12). Source verification and a live API run are complete: [66 passing checks across all 30 operations](PHASE_2_LIVE_VERIFICATION.md). Client implementation and browser acceptance remain unverified.
 
 - [ ] P2.01 Revalidate all Phase 2 endpoints, DTOs, permissions, role-priority rules and owner-only rules.
 - [ ] P2.02 Workspace profile/settings, ingestion defaults, audit retention, email-domain restrictions.
@@ -97,7 +97,7 @@ This orders identity before administration, grants before restricted knowledge, 
 
 ## Phase 3 checklist — Knowledge, Document Vault & Privacy
 
-**Detailed handoff:** prepare after Phase 2 acceptance. Old Phase 3 document is reference only; revised scope includes privacy.
+**Detailed handoff:** prepare after Phase 2 acceptance or explicit owner request. Scope includes privacy; no current Phase 3 handoff has been commissioned.
 
 - [ ] P3.01 Specify all knowledge/document/retrieval/privacy payloads, grants and content visibility rules.
 - [ ] P3.02 Knowledge-base list/create/read/update/delete and grant management.
@@ -182,7 +182,7 @@ Do not check implementation as complete because this specification was written.
 | Phase | Specification | Implementation status | Frontend commit/PR | Backend baseline | Evidence | Owner acceptance/date |
 |---|---|---|---|---|---|---|
 | 1 | Ready, revision 2 | Not verified | Pending | 877de76 | Pending P1-T01–48 | Pending |
-| 2 | Draft after P1 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
+| 2 | Ready, revision 3; owner requested progression | Not verified | Pending | 5b4efb7 | Live API 66/66; browser P2-T01–68 pending; see P2-G02–12 | Pending |
 | 3 | Draft after P2 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
 | 4 | Draft after P3 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
 | 5 | Draft after P4 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
@@ -191,7 +191,7 @@ For each review, attach: running frontend URL, commit/PR, tested backend baselin
 
 | Issue ID | Finding | Owner | Status | Closure evidence |
 |---|---|---|---|---|
-| INT-01 | Readiness 503 during 5 Oct inspection; liveness 200 | Backend/environment owner | Open observation; recheck | Successful readiness + real auth/workspace journey |
+| INT-01 | Earlier readiness/connection failures; later live checks succeeded | Backend/environment owner | Availability observation resolved for this run | Readiness 200, database/Redis up, real auth/workspace/admin checks in [live report](PHASE_2_LIVE_VERIFICATION.md) |
 | INT-02 | MFA disable clears session-row assurance but existing JWTs retain claims until renewed/expired | Backend/security owner | Review if immediate assurance revocation is required | Agreed behavior and cross-client test |
 | INT-03 | Frontend repository/framework/browser matrix not supplied in this workspace | Frontend engineer | Implementation choice pending | Version lockfile + browser/refresh coordination evidence |
 
