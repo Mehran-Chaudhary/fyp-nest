@@ -1,355 +1,388 @@
-# Frontend Roadmap: Phases and Checklist
+# Frontend Delivery — Five Phases & Master Checklist
 
-**Product:** AgentVault, the Distributed AI Agent Management Platform (FYP, Air University)
-**Frontend:** React + TypeScript, a separate repository from this backend
-**Backend contract:** this repository (NestJS). Base URL `/api/v1`, Swagger at `/docs`.
-**Design reference:** the six mockup screens in `doc/Updated_FYP_Proposal_Distributed_AI_Agents (2).docx`, section 13 (dark "AgentVault" theme).
+**Revision 2 · 5 October 2026 · backend baseline `877de76`**
+**Product:** AgentVault / Distributed AI Agent Management Platform
+**Active handoff:** [Phase 1 — Identity, Secure Sessions & Workspace Entry](PHASE_1_FOUNDATION_AUTH_WORKSPACE.md)
 
-This file is the plan. Each phase gets its own detailed specification (endpoints,
-request and response shapes, screens, flows, acceptance criteria) before work on it
-starts. **Phase 1:** [`PHASE_1_FOUNDATION_AUTH_WORKSPACE.md`](PHASE_1_FOUNDATION_AUTH_WORKSPACE.md).
-**Phase 2:** [`PHASE_2_WORKSPACE_ADMINISTRATION.md`](PHASE_2_WORKSPACE_ADMINISTRATION.md).
-**Phase 3:** [`PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md`](PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md).
+> This is the authoritative frontend delivery plan. It replaces the old nine-phase roadmap. Deliver exactly five sequential phases. Write a detailed handoff for a later phase only after the preceding implementation is reviewed and accepted. Historical backend phase numbers do not control frontend delivery order.
 
-The backend is complete. The phases are ordered by what depends on what: nothing in a
-phase needs a later phase, and every phase ends with something demonstrable.
+## How to use this document
 
----
+The roadmap defines scope, dependencies and acceptance; the Phase 1 document defines implementation contracts. Check a task only when evidence exists. A finished specification is not a finished frontend. Do not infer implementation progress from the presence of old documents.
 
-## Summary
+The existing `PHASE_2_WORKSPACE_ADMINISTRATION.md`, `PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md` and `LOCAL_CONNECTION_GUIDE.md` are historical reference material. They are not approved implementation handoffs under this revised plan; revalidate them against source before reuse. The revised Phase 1 document is self-contained for current work.
 
-| # | Phase | Main screens | Backend endpoints | Needs these backend services configured |
-|---|-------|-------------|------------------|---------------------------------------|
-| 1 | Foundation, Authentication & Workspace Shell | Sign in / Sign up, MFA, password recovery, email verification, workspace picker / creation, app shell, account settings | 29 | PostgreSQL, Redis |
-| 2 | Workspace Administration: Team, Roles & Security | Team, invitations (+ accept page), roles editor, API keys, workspace settings, IP allowlist | 30 | Mail (for invitations) |
-| 3 | Knowledge Bases & Document Vault | Document Vault (mockup 5), knowledge bases, access grants, retrieval playground | 19 | Object storage, Qdrant, Python AI service |
-| 4 | Agent Builder, Models & Privacy Controls | AI Agents list, Agent Builder (mockup 3), versions, model policy, PII policy + "what the model sees" playground | 21 | LLM endpoint, PII detector |
-| 5 | Agent Chat: Conversations & Streaming | Chat with an agent, conversation history, citations and sensitivity labels | 10 | LLM endpoint |
-| 6 | Tools & Workflow Canvas (design time) | Tools registry, HTTP tool editor, Workflow list, React Flow canvas (mockup 4), versions and publish | 20 | none new |
-| 7 | Workflow Runs, Approvals & Real-Time | Run workflow, run history and detail, live canvas status, approvals inbox, dead letters, trace, notification tray | 12 + WebSocket | Redis (BullMQ workers), realtime enabled |
-| 8 | Command Centre, Audit & Governance | Dashboard (mockup 2), Audit & Security Logs (mockup 6), quotas and usage, agent circuit breakers, system health | 21 | none new |
-| 9 | Production Readiness & FYP Demo Polish | No new screens: deployment, end-to-end tests, accessibility, performance, demo script | 0 | Everything, deployed |
+Status vocabulary: **Not started**, **In progress**, **Ready for review**, **Accepted**, **Blocked**. Record blockers separately from ordinary unfinished work. The owner accepts each phase after the frontend engineer supplies evidence and a demo. No automatic advancement.
 
-Endpoint counts are approximate: a few endpoints are reused across phases. The
-per-phase specifications list them exactly.
+## Delivery map
 
----
+| Phase | Name | User-visible outcome | Dependency |
+|---|---|---|---|
+| 1 | Identity, Secure Sessions & Workspace Entry | Register/sign in/MFA/recover, join/create/select workspaces, manage account/devices, permission-aware shell | API, database, cookie/CORS configuration, mail delivery |
+| 2 | Workspace Administration & Access Control | Administer members/invitations/roles, workspace policies, API keys, ownership and network restrictions | Accepted Phase 1; role-aware fixtures and mail |
+| 3 | Knowledge, Document Vault & Privacy | Manage knowledge collections, upload/process/download documents, control grants, inspect retrieval and PII policy/results | Accepted Phase 2; storage, queues/workers, vector store, AI/PII service |
+| 4 | Agents, Models & Conversational AI | Configure/publish/version agents, model policy, prompt preview, conversations and streaming answers with citations | Accepted Phase 3; inference provider, retrieval/privacy dependencies |
+| 5 | Tools, Workflow Orchestration, Governance & Release | Build/run/approve workflows and tools, realtime status, audit/analytics/quotas/circuits, personal data, complete release/demo | Accepted Phase 4; workflow workers, realtime, full deployment dependencies |
 
-## Cross-cutting rules (apply to every phase)
+This orders identity before administration, grants before restricted knowledge, knowledge/privacy before RAG agents, and agents/tools before orchestration. Phase 5 is deliberately the largest milestone and is divided into internal work packages below; these are not extra phases.
 
-These are set up once in Phase 1 and every later phase depends on them.
+### Scope choices that avoid dependency gaps
 
-- **One envelope.** Every JSON response is either `{ success: true, data, meta }` or
-  `{ success: false, error: { code, message, details? }, meta }`. Branch on
-  `error.code`, never on `message`. Paginated lists put the pagination in
-  `meta.pagination`.
-- **Workspace context.** Every workspace-scoped call sends
-  `X-Organization-Id: <workspace uuid>`, and the same id goes in the URL path. The
-  header wins over the path on the server, so the two must never disagree.
-- **Permissions drive the UI.** Hide or disable controls the member cannot use, and
-  still handle `403 PERMISSION_DENIED` gracefully. The server is the authority.
-- **Tokens.** Keep the access token in memory. The refresh token is an httpOnly
-  cookie. Refreshes are single-flight across all tabs, because two concurrent
-  refreshes sign the user out everywhere (reuse detection).
-- **Hidden means 404.** Resources the user cannot see come back as 404, not 403.
-  Render these as "not found", never "access denied".
-- **Show `meta.requestId`** (the `X-Request-Id` header) on every error message, so a
-  bug report can be traced to the server log.
+- MFA is fully in Phase 1, because existing users and workspaces may require it immediately.
+- Invitation preview/acceptance is in Phase 1; creating/managing invitations is Phase 2. Use backend-created test invitations until that UI exists.
+- Own membership and contextual permissions are Phase 1. Team directory, permission catalogue and role editor are Phase 2.
+- Privacy policy/analysis/reporting is Phase 3 alongside knowledge. Phase 4 reuses it for agent/model UX.
+- Personal-data export/erasure is Phase 5 after ownership transfer, conversations and workflow content exist. Do not advertise an unfinished privacy-action button in Phase 1.
+- Health probes are integrated once in Phase 1 diagnostics and reused later. An operator health dashboard can be Phase 5; users should not see infrastructure dumps by default.
+- Socket.IO integration belongs to Phase 5. Phase 3 document status can use bounded, visibility-aware polling until realtime is delivered; REST remains the recovery source of truth.
+- HTTP tool integrations are Phase 5. Do not imply tool execution is available from a Phase 4 agent UI before its supported backend contract is documented.
 
----
+## Cross-phase engineering requirements
 
-## Phase 1: Foundation, Authentication & Workspace Shell
+- One shared HTTP adapter preserves envelope metadata, validation details, request IDs and response type. Raw files and SSE in later phases need explicit response modes rather than forcing JSON parsing.
+- Cookie refresh has same-tab and cross-tab coordination. Access tokens stay in memory; no secrets in analytics, logs, committed fixtures or public environment variables.
+- One explicit workspace source builds path and header; tenant IDs belong in cache keys. Stale requests must not repaint another workspace.
+- Use effective permissions for each control; still handle server denial. Do not assume role labels confer fixed permissions.
+- Every screen includes loading, empty, pending mutation and recovery states. Forms retain recoverable input and support keyboard/mobile layouts.
+- No fabricated production data, placeholder metrics presented as live, or guessed endpoints. Label planned destinations clearly.
+- Destructive actions need clear user intent and exact scope. Do not assume DELETE means hard deletion; document actual backend lifecycle when its phase is specified.
+- Streaming, realtime reconnects, background processing and ambiguous mutation outcomes require explicit state models and bounded recovery, not silent infinite retries.
+- Revalidate API schema against controllers, services, DTOs and guards at each new handoff. Swagger alone can miss response unions and service-side errors.
+- Store accepted frontend commit, backend baseline, test evidence and known limitations at every gate.
 
-**Goal:** a person can create an account, sign in (including two-step verification),
-recover their password, verify their email, create or pick a workspace and land in a
-permission-aware app shell. They can also manage their own profile, security and
-personal data.
+## Phase 1 checklist — Identity, Secure Sessions & Workspace Entry
 
-- [ ] Project scaffold (Vite, React, TypeScript, router, TanStack Query, Tailwind +
-      component kit), dark AgentVault theme tokens, environment config, dev proxy
-- [ ] API client: envelope parsing, typed `ApiError`, `X-Organization-Id`,
-      request id surfacing, 429 / `Retry-After` handling, timeouts
-- [ ] Token manager: in-memory access token, cookie refresh, single-flight +
-      cross-tab lock, 401 → refresh → retry once, broadcast sign-out
-- [ ] Sign in (+ MFA challenge step, account lockout), Sign up, Forgot password,
-      Reset password, Verify email (+ resend)
-- [ ] App boot / session restore; route guards (public, authenticated, workspace)
-- [ ] Workspace picker, create workspace (onboarding), workspace switcher, last-used
-      workspace
-- [ ] App shell (sidebar, top bar, user menu) with permission-gated navigation and
-      placeholder pages for Phases 2–8
-- [ ] Workspace access error pages (not found, suspended, membership suspended, IP
-      not allowed, MFA required, email not verified)
-- [ ] Account → Profile; Security (change password, two-step verification
-      setup/disable/recovery codes, devices/sessions, sign out everywhere); Privacy
-      (download my data, erase account)
+**Detailed contract:** [Phase 1 handoff](PHASE_1_FOUNDATION_AUTH_WORKSPACE.md).
+**Scope:** 26 product operations and 3 health diagnostics.
 
-**Endpoints:** `auth/*` (20), `auth/me/export`, `DELETE auth/me`, `GET/POST
-organizations`, `GET organizations/:id`, `GET organizations/:id/members/me`,
-`GET permissions`,
-`GET /health/live`.
+- [ ] P1.01 Configure frontend origin, API base, CORS/cookie behavior and exact mail callback routes.
+- [ ] P1.02 Build visual tokens, shared components, route layouts and accessible forms.
+- [ ] P1.03 Implement typed envelopes, errors, field validation, pagination and request-ID reporting.
+- [ ] P1.04 Implement in-memory session state, coordinated refresh, cross-tab logout and race protection.
+- [ ] P1.05 Complete registration/login and conditional MFA challenge sign-in.
+- [ ] P1.06 Complete verification/resend and forgot/reset-password flows with token lifecycle handling.
+- [ ] P1.07 Complete profile/password/MFA enrollment/disable/recovery codes and device management.
+- [ ] P1.08 Complete workspace pagination/create/select/switch and permission-aware shell.
+- [ ] P1.09 Complete invitation preview/acceptance through registration/login/MFA/verification.
+- [ ] P1.10 Complete workspace restriction screens and global-account escape paths.
+- [ ] P1.11 Execute P1-T01–P1-T48; attach real cookie/email/auth/workspace evidence.
+- [ ] P1.12 Review demo and accept gate before commissioning Phase 2 handoff.
 
----
+**Demo:** new user to verified workspace; MFA user login; invited member joins; two-tab renewal; A→B workspace isolation; password/device actions.
 
-## Phase 2: Workspace Administration (Team, Roles, Invitations, Security)
+**Exit gate:** real backend integration demonstrated, refresh race tests pass, no cross-workspace stale content, recovery flows usable, frontend build/typecheck and relevant tests pass, owner accepts.
 
-**Goal:** workspace owners and admins run their workspace: invite people, assign
-roles, build custom roles (such as "HR Manager"), issue API keys and lock the
-workspace down.
+**Current integration finding:** API liveness and schema were reachable, CORS preflight passed, but readiness returned 503 on 5 October 2026 around 11:51 Asia/Karachi. It is not proof of an application-code failure, but dependency readiness must be resolved or explicitly recorded before integrated acceptance. No authenticated mutation was performed during documentation.
 
-**Detailed spec:** [`PHASE_2_WORKSPACE_ADMINISTRATION.md`](PHASE_2_WORKSPACE_ADMINISTRATION.md).
+## Phase 2 checklist — Workspace Administration & Access Control
 
-- [ ] Workspace settings: name, description, logo URL; audit retention; document
-      chunking defaults; require MFA (needs `security:update` and an MFA-verified
-      session); require a verified email; allowed email domains
-- [ ] Danger zone: transfer ownership, delete workspace (owner only)
-- [ ] Team directory: search, filter by status (including removed) and role,
-      pagination, last active; member detail
-- [ ] Member actions: replace roles, suspend / reactivate, remove, edit workspace
-      profile (display name, title), leave workspace. The UI must respect role
-      priority: you cannot act on members who rank at or above you.
-- [ ] Invitations: invite by email + role + message, list by status, resend, revoke
-- [ ] **Invitation landing page `/invitations/accept?token=`** (the backend emails
-      this exact route): preview → sign in or register as the invited address →
-      accept → enter the workspace
-- [ ] Roles & permissions: list, role detail, create / edit custom roles with the
-      permission catalogue grouped by category (dangerous permissions flagged),
-      priority, colour; delete; "recompute" repair action
-- [ ] API keys: list, create (scopes from `api-keys/scopes`, expiry, optional IP
-      pinning), **show the secret once**, revoke
-- [ ] Security: IP allowlist rules (CIDR, IPv4/IPv6, last matched), enable/disable
-      enforcement (refused with no active rules, or when it would lock you out)
+**Detailed handoff:** prepare after Phase 1 acceptance. Old Phase 2 document is reference only.
 
-**Endpoints:** `PATCH/DELETE organizations/:id`, `…/transfer-ownership`,
-`…/ip-rules` (GET/POST/DELETE), `…/ip-enforcement`; `…/members` (list, get, roles,
-patch, suspend, reactivate, remove, leave); `…/invitations` (list, create, resend,
-revoke), `invitations/preview`, `invitations/accept`; `…/roles` (get, create, update,
-delete, recompute); `…/api-keys` (scopes, list, create, revoke).
+- [ ] P2.01 Revalidate all Phase 2 endpoints, DTOs, permissions, role-priority rules and owner-only rules.
+- [ ] P2.02 Workspace profile/settings, ingestion defaults, audit retention, email-domain restrictions.
+- [ ] P2.03 Workspace MFA/verified-email requirements with correct permissions and self-lockout protections.
+- [ ] P2.04 Member directory with supported pagination/search/filter/sort; member details and workspace-local profile.
+- [ ] P2.05 Assign complete role sets, suspend/reactivate/remove members, leave workspace, protect last owner.
+- [ ] P2.06 Invitation list/create/resend/revoke and integration with Phase 1 recipient flow.
+- [ ] P2.07 Permission catalogue and role list/create/edit/delete/recompute; prevent privilege escalation in UX and handle server enforcement.
+- [ ] P2.08 API-key scope catalogue, issue/list/revoke, one-time secret display and safe copying.
+- [ ] P2.09 IP-rule add/remove/list and enforcement, with explicit self-lockout error recovery.
+- [ ] P2.10 Transfer ownership and archive workspace with deliberate confirmation, cache cleanup and navigation recovery.
+- [ ] P2.11 Verify owner/admin/limited/custom-role scenarios and stale permission changes.
+- [ ] P2.12 Accept demo/gate; record evidence and constraints before Phase 3 handoff.
 
-**Watch out:** error codes `CANNOT_ESCALATE_PRIVILEGES`, `CANNOT_MODIFY_SELF`,
-`CANNOT_REMOVE_LAST_OWNER`, `ROLE_IMMUTABLE`, `ROLE_IN_USE`, `SEAT_LIMIT_REACHED`,
-`MEMBERSHIP_SUSPENDED`, `IP_ALLOWLIST_SELF_LOCKOUT`, `INVITATION_*`. Saving
-`settings` is a partial update: send only what changed.
+**Demo:** owner invites a colleague; colleague accepts; custom role limits actions; admin cannot exceed authority; revoke key; transfer ownership; demonstrate safe denial without disabling guards.
 
----
+**Exit gate:** all administration actions follow actual permissions/priority/ownership, sensitive values display once, policy changes do not strand the current user without documented recovery, complete invitation lifecycle works.
 
-## Phase 3: Knowledge Bases & Document Vault (Secure RAG)
+## Phase 3 checklist — Knowledge, Document Vault & Privacy
 
-**Goal:** upload enterprise documents into access-controlled knowledge bases, watch
-them go through the ingestion pipeline, inspect their chunks and PII report, and
-query them securely. This is mockup screen 5.
+**Detailed handoff:** prepare after Phase 2 acceptance. Old Phase 3 document is reference only; revised scope includes privacy.
 
-**Detailed spec:** [`PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md`](PHASE_3_KNOWLEDGE_DOCUMENT_VAULT.md).
-Build it against `npm run start:standins` (in-memory storage, vector store and AI
-service) until the real knowledge layer is deployed.
+- [ ] P3.01 Specify all knowledge/document/retrieval/privacy payloads, grants and content visibility rules.
+- [ ] P3.02 Knowledge-base list/create/read/update/delete and grant management.
+- [ ] P3.03 Upload with exact multipart contract and file limits; document processing states and retry recovery.
+- [ ] P3.04 Document directory/detail/metadata updates, chunk inspection, download, reindex and deletion.
+- [ ] P3.05 Bounded polling for background ingestion; cancel on navigation/workspace switch and stop at terminal state.
+- [ ] P3.06 Retrieval query and access-scope explanation, meaningful empty results and citations/provenance.
+- [ ] P3.07 Privacy policy/entity-type catalogue, analysis preview, per-document redaction report.
+- [ ] P3.08 Verify restricted knowledge is absent from unauthorized users' documents, retrieval and previews.
+- [ ] P3.09 Handle storage/vector/worker/AI failures as actionable states rather than permanent spinners.
+- [ ] P3.10 Accessibility, large-file/progress/error behavior and genuine backend evidence.
+- [ ] P3.11 Accept demo/gate before Phase 4 handoff.
 
-- [ ] Knowledge bases: list (sidebar with document counts), create/edit (access
-      mode `WORKSPACE` / `RESTRICTED`, default classification, inherited chunking),
-      delete (type the name)
-- [ ] Access grants on restricted knowledge bases: role / member (membership id) /
-      API key with `READ` / `WRITE` / `MANAGE`, with a self-lockout warning
-- [ ] Document Vault table: filter by knowledge base, status (Indexing =
-      `PARSING,CHUNKING,EMBEDDING`) and classification; title search and an "Ask"
-      mode backed by retrieval; sort; pagination; bulk actions
-- [ ] Upload: drag and drop, client-side pre-checks, one file per request (3 in
-      parallel) with an XHR progress bar, classification always sent, per-file error
-      messages (`DOCUMENT_DUPLICATE`, `DOCUMENT_TYPE_NOT_ALLOWED`,
-      `DOCUMENT_CONTENT_MISMATCH`, `STORAGE_QUOTA_EXCEEDED`, …)
-- [ ] Pipeline status: `UPLOADED → PARSING → CHUNKING → EMBEDDING → READY | FAILED`
-      (poll while any document is in progress; retries visible in `statusMessage`;
-      a reindex keeps the previous version searchable), pipeline status panel
-- [ ] Document detail: metadata, processing timings, chunks, edit and reclassify,
-      reindex / retry, download (filename from `filename*`), delete (irreversible:
-      crypto-shredded)
-- [ ] PII redaction report per document (placeholders, per-page counts, degraded
-      banner; `pii:reveal` to unmask, audited)
-- [ ] Retrieval playground: query → passages with sources, relative scores and
-      timings; "my access scope" panel
-- [ ] Graceful `503 KNOWLEDGE_LAYER_NOT_CONFIGURED` / `OBJECT_STORAGE_UNAVAILABLE` /
-      `AI_SERVICE_UNAVAILABLE` / `VECTOR_STORE_UNAVAILABLE` /
-      `PII_DETECTION_UNAVAILABLE` states
+**Demo:** create a restricted collection, upload a supported document, observe processing, inspect redaction/retrieval, confirm unauthorized member cannot access it, download and reindex with explicit status.
 
-**Endpoints (E60–E78, 19):** `…/knowledge-bases` (8, including grants),
-`…/documents` (8, including upload), `…/rag/query`, `…/rag/access-scope`,
-`…/pii/documents/:id/report`.
+**Exit gate:** ingestion through retrieval works with real services, grants are respected, unmasked sensitive content is not accidentally exposed in logs/previews, failed processing has a recovery path.
 
-**Watch out:** hidden knowledge bases and documents above your clearance return 404
-and are left out of lists and counts. The Administrator role does not bypass restricted
-knowledge bases; only the owner does. Uploads are limited to 50 MB, 120 s including the
-transfer, and 100 per hour.
+## Phase 4 checklist — Agents, Models & Conversational AI
 
----
+**Detailed handoff:** prepare after Phase 3 acceptance.
 
-## Phase 4: Agent Builder, Models & Privacy Controls
+- [ ] P4.01 Specify agent/model/conversation contracts, version semantics, supported content and streaming events.
+- [ ] P4.02 Agent directory/create/detail/edit/delete and knowledge/privacy configuration.
+- [ ] P4.03 Publish/unpublish, versions, version detail and restore with explicit unsaved-change behavior.
+- [ ] P4.04 Prompt preview with permission-aware content handling.
+- [ ] P4.05 Model catalogue and workspace model-policy read/update; supported direct chat and direct streaming playground.
+- [ ] P4.06 Conversation create/list/detail/update/delete, paginated message history and ordinary message submission.
+- [ ] P4.07 POST-based streaming UI: incremental text, final result, citations, abort, network failure and partial-output recovery.
+- [ ] P4.08 Correct user/workspace ownership, permission, model-unavailable, policy and budget-denied states.
+- [ ] P4.09 Model usage view via existing LLM usage endpoint; richer analytics/quotas arrive in Phase 5.
+- [ ] P4.10 Cross-workspace navigation safely cancels streams and removes partial sensitive content.
+- [ ] P4.11 Accept real agent/RAG/streaming demo and gate before Phase 5 handoff.
 
-**Goal:** build and version "digital employees", choose which models the workspace
-may use, and configure and demonstrate the PII Redaction Engine (the research
-component). This is mockup screen 3.
+**Demo:** configure/version/publish an agent, preview its prompt, ask it a document-grounded question, stream a response with provenance, reload history, and show cancellation/provider failure recovery.
 
-- [ ] AI Agents list (visibility `PRIVATE` = draft / `WORKSPACE` = published, model,
-      knowledge bases)
-- [ ] Agent Builder tabs: Persona & Model (identity, tone, language, instructions,
-      model, temperature, max tokens), Knowledge Base (attach bases you can read),
-      Tool Access (grant tools; read-only list from `…/tools`), RBAC & Access
-      (visibility, allowed roles, classification ceiling)
-- [ ] Save with optimistic concurrency (`AGENT_VERSION_CONFLICT` → reload and
-      reapply); publish / unpublish; delete
-- [ ] Version history, view a version, restore (appends a new version)
-- [ ] Prompt preview ("what the model will receive", masked)
-- [ ] Models: list available models; workspace model policy (allowlist, default)
-- [ ] Privacy: PII policy (entity types, threshold, allow/deny lists, failure mode
-      `REFUSE` / `DEGRADE_TO_PATTERNS`), entity type catalogue
-- [ ] PII analyze playground: paste text → highlighted entities → masked text with
-      placeholders (mockup's "PII Redaction Preview")
-- [ ] Optional: direct model playground (`llm/chat`, `llm/chat/stream`)
+**Exit gate:** live inference and grounded conversation work, streaming parser handles actual backend events, aborted/failed turns are understandable, no replayed turn or tenant-content leakage.
 
-**Endpoints:** `…/agents` (11), `…/llm/models`, `…/llm/policy` (GET/PUT),
-`…/llm/chat`, `…/llm/chat/stream`, `…/pii/policy` (GET/PUT), `…/pii/entity-types`,
-`…/pii/analyze`, `GET …/tools`.
+## Phase 5 checklist — Tools, Orchestration, Governance & Release
 
-**Watch out:** `LLM_NOT_CONFIGURED`, `LLM_MODEL_NOT_ALLOWED`,
-`PII_DETECTION_UNAVAILABLE` (fail-closed), `CLASSIFICATION_EXCEEDS_CLEARANCE`.
+**Detailed handoff:** prepare after Phase 4 acceptance. Use internal work packages below while keeping one Phase 5 acceptance gate.
 
----
+### Work package A — Tools and workflow design
 
-## Phase 5: Agent Chat (Conversations & Streaming)
+- [ ] P5.01 Tool directory/create/detail/edit/delete, exact tool-schema validation, test execution and execution history.
+- [ ] P5.02 Workflow directory/create/detail/edit/delete and node-type catalogue.
+- [ ] P5.03 Canvas/definition editing, validate, version list/detail/restore, publish/archive.
+- [ ] P5.04 Graph contract, allowed nodes/edges, unsaved changes and accessible alternatives to drag-only interaction.
 
-**Goal:** talk to agents with streamed answers that show citations and the
-sensitivity of what they were derived from.
+### Work package B — Execution and realtime
 
-- [ ] Conversation list (per agent), create, rename, archive / unarchive, delete
-- [ ] Chat view: history with paging, message labels (classification), citations to
-      source documents, tool-call indicators
-- [ ] **Streaming over SSE via `POST …/messages/stream`.** This must use `fetch` with
-      a `ReadableStream` parser, because `EventSource` cannot POST. Events: `meta`,
-      `status`, `delta`, `tool`, `done`, `error`. Heartbeats. Stop button aborts the
-      request, which cancels generation on the server.
-- [ ] Idempotent sends (client message id); handle `CONVERSATION_BUSY`,
-      `MESSAGE_DUPLICATE`
-- [ ] Error states inside the stream (`error` event with retry hint) and before it
-      (JSON envelope): `LLM_BUSY`, `LLM_TIMEOUT`, `PII_EGRESS_BLOCKED`,
-      `AGENT_CIRCUIT_OPEN`, `CONVERSATION_TOKEN_BUDGET_EXCEEDED`, `QUOTA_EXCEEDED`,
-      `TOKEN_RATE_LIMITED`
-- [ ] "My quota" indicator (`GET …/quotas/me`)
-- [ ] Supervisors with `conversation:read_all`: masked view; reveal requires
-      `pii:reveal` and is audited
+- [ ] P5.05 Start runs, history/detail/content/step content/trace and deletion semantics.
+- [ ] P5.06 Cancel/resume and distinct execution-state handling.
+- [ ] P5.07 Approval inbox/decisions, dead-letter recovery and permission-aware actions.
+- [ ] P5.08 Socket.IO authentication/subscription/reconnect/resynchronization based on realtime contract; no duplicate listeners or stale tenant subscriptions.
+- [ ] P5.09 Live run/canvas status and notification UI reconciled with REST after missed events.
 
-**Endpoints:** `…/conversations` (8), `…/quotas/me`,
-`…/circuits/agents/:agentId`.
+### Work package C — Governance and personal data
 
----
+- [ ] P5.10 Audit list/filter/statistics/verification/export/archive list/download.
+- [ ] P5.11 Analytics overview/time series/top/security events with real empty/error states.
+- [ ] P5.12 Quota list/my quota/create/update/delete/history, agent circuit list/detail/reset.
+- [ ] P5.13 Personal-data export as raw downloadable JSON and account erasure with ownership/MFA/confirmation requirements.
+- [ ] P5.14 Operator-facing health/readiness diagnostics where authorized; no infrastructure secrets in user UI.
 
-## Phase 6: Tools & Workflow Canvas (design time)
+### Work package D — Release and FYP demonstration
 
-**Goal:** register tools and visually compose multi-agent workflows on a React Flow
-canvas, then validate, version and publish them. This is mockup screen 4, editing
-only.
+- [ ] P5.15 Re-run cross-phase account/admin/document/agent/workflow journeys and tenant-isolation cases.
+- [ ] P5.16 Production origins, HTTPS/cookies, route rewrites, environment documentation and secret-free deployment configuration.
+- [ ] P5.17 Accessibility/responsiveness/performance and supported-browser checks across delivered screens.
+- [ ] P5.18 Test clean deployment, migrations/seed prerequisites and worker/AI dependencies with backend owner; record actual readiness evidence.
+- [ ] P5.19 Prepare realistic demo fixtures, demo script, failure-recovery demonstrations and screenshots without credentials.
+- [ ] P5.20 Final build/typecheck/tests, issue triage, operating notes and project-owner acceptance.
 
-- [ ] Tools registry: built-in and HTTP tools, enable/disable, create/edit HTTP tools
-      (JSON-schema arguments in the supported subset, allowlisted hosts only,
-      credentials write-only), test a tool, tool execution ledger
-- [ ] Workflow list: status `DRAFT` / `ACTIVE` (published) / `ARCHIVED`
-- [ ] Canvas: node palette from `…/workflows/node-types` (trigger, agent, tool,
-      retrieval, condition, supervisor, approval, output), handles, edges, bounded
-      loops, node property panel (retries, timeout, templates)
-- [ ] Serialise exactly per `docs/contracts/workflow-graph-v1.md`; server-side
-      validate (`…/workflows/validate`) with errors pinned to nodes and edges
-- [ ] Save definition (optimistic concurrency, `WORKFLOW_VERSION_CONFLICT`),
-      versions, restore, publish, archive, delete
+**Demo:** configure/test a tool, compose/publish a workflow, execute it with realtime status and a human approval, inspect trace/audit/usage, demonstrate quota/circuit behavior, and walk through the complete product.
 
-**Endpoints:** `…/tools` (7), `…/workflows` (13, everything except starting a run).
+**Exit gate:** all five phases integrated, no undisclosed blocking issue, release configuration verified, documented demo reproducible, personal-data/destructive actions correctly gated, final acceptance recorded.
 
----
+## Delivery and acceptance register
 
-## Phase 7: Workflow Runs, Approvals & Real-Time Events
+Do not check implementation as complete because this specification was written.
 
-**Goal:** run workflows and watch them execute live, approve human-in-the-loop
-steps, and debug failures from metadata alone.
+| Phase | Specification | Implementation status | Frontend commit/PR | Backend baseline | Evidence | Owner acceptance/date |
+|---|---|---|---|---|---|---|
+| 1 | Ready, revision 2 | Not verified | Pending | 877de76 | Pending P1-T01–48 | Pending |
+| 2 | Draft after P1 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
+| 3 | Draft after P2 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
+| 4 | Draft after P3 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
+| 5 | Draft after P4 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
 
-- [ ] Run workflow: input form generated from the trigger's input schema; idempotent
-      start
-- [ ] Run history (per workflow and workspace) and run detail: status, steps,
-      tokens, output (`…/content`), step content, cancel, resume (from failed
-      steps), delete
-- [ ] **Socket.IO client** (path `/realtime`, `auth: { token, organizationId }`):
-      `ready`, `event`, `notification`, subscribe to a run, `resume` with
-      `lastEventId` after reconnect, `auth:refresh` before expiry, `auth:expired` /
-      `auth:revoked` handling. See `docs/contracts/realtime-v1.md`.
-- [ ] Live canvas: node status colours driven by `step.*` / `tool.*` events
-- [ ] Approvals inbox (`workflow:approve`): approve / reject with separation of
-      duties (`WORKFLOW_SELF_APPROVAL_FORBIDDEN`)
-- [ ] Dead-letter viewer (typed, metadata-only records)
-- [ ] Trace view rebuilt from the audit log (`…/trace`, needs `audit:read`)
-- [ ] Notification tray (bell icon) fed by `notification` events
+For each review, attach: running frontend URL, commit/PR, tested backend baseline, test names/results, demo evidence, browser support, unresolved issues and configuration notes without secrets. Reviewers record accepted/deferred/blocked explicitly. Any deferred item must have a receiving phase, rationale and owner; do not silently drop it.
 
-**Endpoints:** `POST …/workflows/:id/runs`, `…/workflow-runs` (11), WebSocket.
+| Issue ID | Finding | Owner | Status | Closure evidence |
+|---|---|---|---|---|
+| INT-01 | Readiness 503 during 5 Oct inspection; liveness 200 | Backend/environment owner | Open observation; recheck | Successful readiness + real auth/workspace journey |
+| INT-02 | MFA disable clears session-row assurance but existing JWTs retain claims until renewed/expired | Backend/security owner | Review if immediate assurance revocation is required | Agreed behavior and cross-client test |
+| INT-03 | Frontend repository/framework/browser matrix not supplied in this workspace | Frontend engineer | Implementation choice pending | Version lockfile + browser/refresh coordination evidence |
 
----
+## Full HTTP scope ledger
 
-## Phase 8: Command Centre, Audit & Governance
+The ledger below is derived from the live `/docs-json` snapshot retrieved during this review and assigns every method/path operation to exactly one primary phase. It is an allocation checklist, not a detailed contract for later phases. Check an operation only after its frontend integration/diagnostic use is verified. Shared APIs can be reused without moving ownership.
 
-**Goal:** the landing dashboard and the compliance and governance screens (mockups 2
-and 6).
+The schema has 122 distinct paths; a path with GET and POST counts as two operations. Root health routes are counted as Phase 1 diagnostics. OpenAPI paths use `{parameter}` notation, equivalent to Nest `:parameter` notation.
 
-- [ ] Command Centre dashboard: KPI tiles (active agents, tasks, PII redactions,
-      token usage), time series (7D/30D/90D), top agents / members, security event
-      feed, system status pill from `/health`
-- [ ] Audit & Security Logs: filterable list, detail drawer, statistics tiles,
-      **verify hash chain** (shows the exact broken sequence if any), export NDJSON,
-      archives
-- [ ] Token quotas: list, create/edit/delete (workspace / agent / member), history,
-      platform-managed quotas read-only (`QUOTA_MANAGED_BY_PLATFORM`)
-- [ ] Agent circuit breakers: open circuits, reset
-- [ ] LLM usage: latency percentiles, token spend, redaction overhead share
+Socket.IO is not represented in this HTTP ledger and is explicitly assigned to Phase 5. Raw `/metrics` is an infrastructure endpoint registered outside Nest/OpenAPI; it uses operator credentials and is not a browser feature. Swagger assets and CORS OPTIONS are documentation/transport surfaces, not product endpoints. Python AI-service internal APIs are backend-to-backend; the frontend integrates through NestJS.
 
-**Endpoints:** `…/analytics/*` (4), `…/audit-logs/*` (6), `…/quotas*` +
-`…/circuits*` (9), `…/llm/usage`, `/health`.
+| Phase | HTTP operations |
+|---|---|
+| 1 | 29 |
+| 2 | 30 |
+| 3 | 23 |
+| 4 | 25 |
+| 5 | 53 |
+| Total | 160 |
 
----
+### Phase 1 operation checklist
 
-## Phase 9: Production Readiness & FYP Demo Polish
+- [ ] `POST /api/v1/auth/change-password`
+- [ ] `POST /api/v1/auth/forgot-password`
+- [ ] `POST /api/v1/auth/login`
+- [ ] `POST /api/v1/auth/logout`
+- [ ] `POST /api/v1/auth/logout-all`
+- [ ] `GET /api/v1/auth/me`
+- [ ] `PATCH /api/v1/auth/me`
+- [ ] `GET /api/v1/auth/mfa`
+- [ ] `POST /api/v1/auth/mfa/disable`
+- [ ] `POST /api/v1/auth/mfa/enable`
+- [ ] `POST /api/v1/auth/mfa/recovery-codes`
+- [ ] `POST /api/v1/auth/mfa/setup`
+- [ ] `POST /api/v1/auth/mfa/verify`
+- [ ] `POST /api/v1/auth/refresh`
+- [ ] `POST /api/v1/auth/register`
+- [ ] `POST /api/v1/auth/resend-verification`
+- [ ] `POST /api/v1/auth/reset-password`
+- [ ] `GET /api/v1/auth/sessions`
+- [ ] `DELETE /api/v1/auth/sessions/{sessionId}`
+- [ ] `POST /api/v1/auth/verify-email`
+- [ ] `POST /api/v1/invitations/accept`
+- [ ] `GET /api/v1/invitations/preview`
+- [ ] `GET /api/v1/organizations`
+- [ ] `POST /api/v1/organizations`
+- [ ] `GET /api/v1/organizations/{organizationId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/members/me`
+- [ ] `GET /health`
+- [ ] `GET /health/live`
+- [ ] `GET /health/ready`
 
-- [ ] Production deployment: the frontend and API served **same-site** (reverse
-      proxy / rewrites for `/api`), or the backend's cookie settings changed for
-      cross-site use (`COOKIE_SAME_SITE=none`, `COOKIE_SECURE=true`). WebSocket
-      proxying for `/realtime`. `FRONTEND_URL` / `CORS_ORIGINS` set on the backend.
-- [ ] End-to-end tests of the critical journeys (Playwright): sign-up → workspace →
-      upload → agent → chat → workflow run → audit verify
-- [ ] Error-state audit: every `ErrorCode` a screen can receive has a designed state
-- [ ] Accessibility pass (keyboard, focus, contrast in the dark theme), responsive
-      layout down to tablet
-- [ ] Performance: code-split routes (the canvas and charts are heavy), query
-      caching, bundle budget
-- [ ] Demo script and seeded demo workspace (`SEED_DEMO_DATA=true`: `acme-corp`,
-      five demo accounts, agents, workflows)
+### Phase 2 operation checklist
 
----
+- [ ] `DELETE /api/v1/organizations/{organizationId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/api-keys`
+- [ ] `POST /api/v1/organizations/{organizationId}/api-keys`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/api-keys/{apiKeyId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/api-keys/scopes`
+- [ ] `GET /api/v1/organizations/{organizationId}/invitations`
+- [ ] `POST /api/v1/organizations/{organizationId}/invitations`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/invitations/{invitationId}`
+- [ ] `POST /api/v1/organizations/{organizationId}/invitations/{invitationId}/resend`
+- [ ] `PUT /api/v1/organizations/{organizationId}/ip-enforcement`
+- [ ] `GET /api/v1/organizations/{organizationId}/ip-rules`
+- [ ] `POST /api/v1/organizations/{organizationId}/ip-rules`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/ip-rules/{ruleId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/members`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/members/{memberId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/members/{memberId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}/members/{memberId}`
+- [ ] `POST /api/v1/organizations/{organizationId}/members/{memberId}/reactivate`
+- [ ] `PUT /api/v1/organizations/{organizationId}/members/{memberId}/roles`
+- [ ] `POST /api/v1/organizations/{organizationId}/members/{memberId}/suspend`
+- [ ] `POST /api/v1/organizations/{organizationId}/members/leave`
+- [ ] `GET /api/v1/organizations/{organizationId}/roles`
+- [ ] `POST /api/v1/organizations/{organizationId}/roles`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/roles/{roleId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/roles/{roleId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}/roles/{roleId}`
+- [ ] `POST /api/v1/organizations/{organizationId}/roles/recompute`
+- [ ] `POST /api/v1/organizations/{organizationId}/transfer-ownership`
+- [ ] `GET /api/v1/permissions`
 
-## Backend issues found while writing the specifications
+### Phase 3 operation checklist
 
-Eighteen backend issues surfaced while preparing the phase specifications. **All were
-fixed in the backend on 2026-09-30** and re-verified against a running server; the
-phase specifications describe the fixed behaviour. Details: Phase 1 specification
-section 14 (BF-1…BF-5), Phase 2 specification section 10 (BF-6…BF-12), Phase 3
-specification section 11 (BF-13…BF-18).
+- [ ] `GET /api/v1/organizations/{organizationId}/documents`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/documents/{documentId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/documents/{documentId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}/documents/{documentId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/documents/{documentId}/chunks`
+- [ ] `GET /api/v1/organizations/{organizationId}/documents/{documentId}/download`
+- [ ] `POST /api/v1/organizations/{organizationId}/documents/{documentId}/reindex`
+- [ ] `GET /api/v1/organizations/{organizationId}/knowledge-bases`
+- [ ] `POST /api/v1/organizations/{organizationId}/knowledge-bases`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/knowledge-bases/{knowledgeBaseId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/knowledge-bases/{knowledgeBaseId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}/knowledge-bases/{knowledgeBaseId}`
+- [ ] `POST /api/v1/organizations/{organizationId}/knowledge-bases/{knowledgeBaseId}/documents`
+- [ ] `GET /api/v1/organizations/{organizationId}/knowledge-bases/{knowledgeBaseId}/grants`
+- [ ] `PUT /api/v1/organizations/{organizationId}/knowledge-bases/{knowledgeBaseId}/grants`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/knowledge-bases/{knowledgeBaseId}/grants/{grantId}`
+- [ ] `POST /api/v1/organizations/{organizationId}/pii/analyze`
+- [ ] `GET /api/v1/organizations/{organizationId}/pii/documents/{documentId}/report`
+- [ ] `GET /api/v1/organizations/{organizationId}/pii/entity-types`
+- [ ] `GET /api/v1/organizations/{organizationId}/pii/policy`
+- [ ] `PUT /api/v1/organizations/{organizationId}/pii/policy`
+- [ ] `GET /api/v1/organizations/{organizationId}/rag/access-scope`
+- [ ] `POST /api/v1/organizations/{organizationId}/rag/query`
 
-| # | Was | Fixed behaviour |
-|---|-----|-----------------|
-| BF-1 | `GET /auth/me` never returned `permissions` / `activeOrganizationId` | Returned when `X-Organization-Id` is sent |
-| BF-2 | Every rate-limit bucket was per IP; refresh and the account actions shared 10 requests / 15 min per IP | Signed-in calls count per user; refresh has its own policy (60 / 15 min per session) |
-| BF-3 | A refresh in the same second as `change-password` returned an already-revoked token | Revocation is millisecond-precise: refresh immediately |
-| BF-4 | Some validation errors were keyed by the message's first word (`"Password"`, `"a"`, `"each"`) | Always keyed by the property path |
-| BF-5 | `GET /auth/me` omitted `mfaEnabled` and `avatarUrl` | Both returned |
-| BF-6 | **Security.** Saving workspace `settings` replaced the whole object (turning off `requireMfa`) | Partial update; `null` clears one setting |
-| BF-7 | Editing another member's profile checked rank only | Also requires `member:update` |
-| BF-8 | Re-inviting a suspended member (or their acceptance) reactivated them | Refused with `409 MEMBERSHIP_SUSPENDED` |
-| BF-9 | Invitation preview without a token returned 500 | `422 VALIDATION_FAILED` |
-| BF-10 | Resending an invitation the sweep had marked `EXPIRED` failed; expiry at acceptance was not saved | Resend revives it; preview and accept mark expiry |
-| BF-11 | **Security.** IP enforcement could lock out everyone, including the admin enabling it | Refused with `409 IP_ALLOWLIST_SELF_LOCKOUT` |
-| BF-12 | Chunking defaults and `requireVerifiedEmail` were not applied; `lastMatchedAt` / `lastActiveAt` never written; `REMOVED` filter empty | All applied or recorded |
-| BF-13 | `null` for a knowledge base's name, access mode or default classification failed in the database with a field-less `422`; `""` descriptions were stored | Field-keyed `422`; `""`/`null` clears the description; `null` chunk settings inherit |
-| BF-14 | `PATCH` document with `classification: null` returned **500**; `title`/`tags: null` a field-less `422` | Field-keyed `422` |
-| BF-15 | A knowledge base's chunk overlap was validated against the platform size, not the effective one, then silently shrunk at ingestion | Validated against knowledge base → workspace → platform; field-keyed `422` |
-| BF-16 | Knowledge-base list ignored `sortDirection` for `sortBy=name` | Honoured |
-| BF-17 | Over-long retrieval query: `422` without a field | `details.fields.query` |
-| BF-18 | Document list filtered by one status only | `status` accepts a comma-separated list |
+### Phase 4 operation checklist
+
+- [ ] `GET /api/v1/organizations/{organizationId}/agents`
+- [ ] `POST /api/v1/organizations/{organizationId}/agents`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/agents/{agentId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/agents/{agentId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}/agents/{agentId}`
+- [ ] `POST /api/v1/organizations/{organizationId}/agents/{agentId}/prompt-preview`
+- [ ] `POST /api/v1/organizations/{organizationId}/agents/{agentId}/publish`
+- [ ] `POST /api/v1/organizations/{organizationId}/agents/{agentId}/unpublish`
+- [ ] `GET /api/v1/organizations/{organizationId}/agents/{agentId}/versions`
+- [ ] `GET /api/v1/organizations/{organizationId}/agents/{agentId}/versions/{version}`
+- [ ] `POST /api/v1/organizations/{organizationId}/agents/{agentId}/versions/{version}/restore`
+- [ ] `GET /api/v1/organizations/{organizationId}/conversations`
+- [ ] `POST /api/v1/organizations/{organizationId}/conversations`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/conversations/{conversationId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/conversations/{conversationId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}/conversations/{conversationId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/conversations/{conversationId}/messages`
+- [ ] `POST /api/v1/organizations/{organizationId}/conversations/{conversationId}/messages`
+- [ ] `POST /api/v1/organizations/{organizationId}/conversations/{conversationId}/messages/stream`
+- [ ] `POST /api/v1/organizations/{organizationId}/llm/chat`
+- [ ] `POST /api/v1/organizations/{organizationId}/llm/chat/stream`
+- [ ] `GET /api/v1/organizations/{organizationId}/llm/models`
+- [ ] `GET /api/v1/organizations/{organizationId}/llm/policy`
+- [ ] `PUT /api/v1/organizations/{organizationId}/llm/policy`
+- [ ] `GET /api/v1/organizations/{organizationId}/llm/usage`
+
+### Phase 5 operation checklist
+
+- [ ] `DELETE /api/v1/auth/me`
+- [ ] `GET /api/v1/auth/me/export`
+- [ ] `GET /api/v1/organizations/{organizationId}/analytics/overview`
+- [ ] `GET /api/v1/organizations/{organizationId}/analytics/security-events`
+- [ ] `GET /api/v1/organizations/{organizationId}/analytics/timeseries`
+- [ ] `GET /api/v1/organizations/{organizationId}/analytics/top`
+- [ ] `GET /api/v1/organizations/{organizationId}/audit-logs`
+- [ ] `GET /api/v1/organizations/{organizationId}/audit-logs/archives`
+- [ ] `GET /api/v1/organizations/{organizationId}/audit-logs/archives/{sequence}`
+- [ ] `GET /api/v1/organizations/{organizationId}/audit-logs/export`
+- [ ] `GET /api/v1/organizations/{organizationId}/audit-logs/statistics`
+- [ ] `GET /api/v1/organizations/{organizationId}/audit-logs/verify`
+- [ ] `GET /api/v1/organizations/{organizationId}/circuits`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/circuits/agents/{agentId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/circuits/agents/{agentId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/quotas`
+- [ ] `POST /api/v1/organizations/{organizationId}/quotas`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/quotas/{quotaId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}/quotas/{quotaId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/quotas/{quotaId}/history`
+- [ ] `GET /api/v1/organizations/{organizationId}/quotas/me`
+- [ ] `GET /api/v1/organizations/{organizationId}/tools`
+- [ ] `POST /api/v1/organizations/{organizationId}/tools`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/tools/{toolId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/tools/{toolId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}/tools/{toolId}`
+- [ ] `POST /api/v1/organizations/{organizationId}/tools/{toolId}/test`
+- [ ] `GET /api/v1/organizations/{organizationId}/tools/executions`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflow-runs`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/workflow-runs/{runId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflow-runs/{runId}`
+- [ ] `POST /api/v1/organizations/{organizationId}/workflow-runs/{runId}/cancel`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflow-runs/{runId}/content`
+- [ ] `POST /api/v1/organizations/{organizationId}/workflow-runs/{runId}/resume`
+- [ ] `POST /api/v1/organizations/{organizationId}/workflow-runs/{runId}/steps/{stepId}/approval`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflow-runs/{runId}/steps/{stepId}/content`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflow-runs/{runId}/trace`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflow-runs/approvals`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflow-runs/dead-letters`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflows`
+- [ ] `POST /api/v1/organizations/{organizationId}/workflows`
+- [ ] `DELETE /api/v1/organizations/{organizationId}/workflows/{workflowId}`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflows/{workflowId}`
+- [ ] `PATCH /api/v1/organizations/{organizationId}/workflows/{workflowId}`
+- [ ] `POST /api/v1/organizations/{organizationId}/workflows/{workflowId}/archive`
+- [ ] `PUT /api/v1/organizations/{organizationId}/workflows/{workflowId}/definition`
+- [ ] `POST /api/v1/organizations/{organizationId}/workflows/{workflowId}/publish`
+- [ ] `POST /api/v1/organizations/{organizationId}/workflows/{workflowId}/runs`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflows/{workflowId}/versions`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflows/{workflowId}/versions/{version}`
+- [ ] `POST /api/v1/organizations/{organizationId}/workflows/{workflowId}/versions/{version}/restore`
+- [ ] `GET /api/v1/organizations/{organizationId}/workflows/node-types`
+- [ ] `POST /api/v1/organizations/{organizationId}/workflows/validate`
