@@ -1,0 +1,5392 @@
+{
+  "run": "p3-1791234942236",
+  "baseUrl": "http://localhost:3000",
+  "completedAt": "2026-10-05T21:28:13.578Z",
+  "outageInjected": true,
+  "summary": {
+    "total": 401,
+    "passed": 401,
+    "failed": 0
+  },
+  "facts": {
+    "dependencies": {
+      "database": "up",
+      "redis": "up",
+      "memory_heap": "up",
+      "object_storage": "up",
+      "vector_store": "up",
+      "ai_service": "up",
+      "queue": "up",
+      "llm": "up",
+      "pii_detector": "up",
+      "workflow_engine": "up",
+      "realtime": "up",
+      "row_level_security": "up",
+      "mutual_tls": "up"
+    },
+    "readiness": 200,
+    "permissionCounts": {
+      "owner": 64,
+      "admin": 60,
+      "member": 20,
+      "viewer": 10,
+      "records": 10
+    },
+    "entityTypes": [
+      "EMAIL_ADDRESS:pattern:available:on",
+      "PHONE_NUMBER:pattern:available:on",
+      "CREDIT_CARD:pattern:available:on",
+      "IBAN_CODE:pattern:available:on",
+      "US_SSN:pattern:available:on",
+      "PK_CNIC:pattern:available:on",
+      "IP_ADDRESS:pattern:available:on",
+      "SALARY:pattern:available:on",
+      "FINANCIAL_AMOUNT:pattern:available:off",
+      "CREDENTIAL:pattern:available:on",
+      "CUSTOM:custom:available:off",
+      "PERSON:ner:available:on",
+      "LOCATION:ner:available:off",
+      "ORGANIZATION:ner:available:off",
+      "NRP:ner:available:off",
+      "DATE_TIME:ner:available:off",
+      "MEDICAL_LICENSE:ner:available:off",
+      "US_PASSPORT:ner:available:off",
+      "US_DRIVER_LICENSE:ner:available:off",
+      "UK_NHS:ner:available:off"
+    ],
+    "embedding": {
+      "model": "embeddinggemma-300m-int8",
+      "dimensions": 768
+    },
+    "baseVisibilityInitial": {
+      "owner": [
+        "Company Handbook:MANAGE",
+        "Finance Reports:MANAGE",
+        "HR Records:MANAGE"
+      ],
+      "admin": [
+        "Company Handbook:MANAGE",
+        "Finance Reports:MANAGE"
+      ],
+      "member": [
+        "Company Handbook:MANAGE"
+      ],
+      "viewer": [
+        "Company Handbook:MANAGE"
+      ],
+      "records": [
+        "Company Handbook:MANAGE",
+        "HR Records:MANAGE"
+      ]
+    },
+    "memberCanListWorkspaceBaseGrants": 200,
+    "statusTrace": [
+      "1760ms CHUNKING v1 active=null searchable=false",
+      "3603ms EMBEDDING v1 active=null searchable=false",
+      "12754ms READY v1 active=1 searchable=true"
+    ],
+    "longDocument": {
+      "chunkCount": 6,
+      "tokenCount": 981,
+      "metrics": {
+        "embedMs": 9157,
+        "parseMs": 52,
+        "totalMs": 12101,
+        "attempts": 1,
+        "persistMs": 418,
+        "downloadMs": 510,
+        "queueWaitMs": 487,
+        "embeddingTokens": 1029
+      }
+    },
+    "sanitizedFilename": "quarterly _draft_.txt",
+    "failures": {
+      "corruptPdf": {
+        "failureCode": "UNPARSEABLE_DOCUMENT",
+        "statusMessage": "The document could not be read. It may be damaged."
+      },
+      "blankPdf": {
+        "failureCode": "DOCUMENT_EMPTY",
+        "statusMessage": "No extractable text was found. Scanned documents need OCR support in the AI service."
+      }
+    },
+    "processing": {
+      "remote-work.md": {
+        "status": "READY",
+        "chunkCount": 1,
+        "tokenCount": 112,
+        "pageCount": null,
+        "language": "en",
+        "metrics": {
+          "embedMs": 1445,
+          "parseMs": 12,
+          "totalMs": 4293,
+          "attempts": 1,
+          "persistMs": 405,
+          "downloadMs": 512,
+          "queueWaitMs": 319,
+          "embeddingTokens": 120
+        },
+        "timeline": [
+          "1561ms READY"
+        ]
+      },
+      "Leave Policy 2026.pdf": {
+        "status": "READY",
+        "chunkCount": 1,
+        "tokenCount": 141,
+        "pageCount": 2,
+        "language": "en",
+        "metrics": {
+          "embedMs": 1444,
+          "parseMs": 18,
+          "totalMs": 4380,
+          "attempts": 1,
+          "persistMs": 416,
+          "downloadMs": 513,
+          "queueWaitMs": 315,
+          "embeddingTokens": 149
+        },
+        "timeline": [
+          "1561ms READY"
+        ]
+      },
+      "compensation-review.txt": {
+        "status": "READY",
+        "chunkCount": 1,
+        "tokenCount": 150,
+        "pageCount": null,
+        "language": "en",
+        "metrics": {
+          "embedMs": 1370,
+          "parseMs": 5,
+          "totalMs": 4312,
+          "attempts": 1,
+          "persistMs": 403,
+          "downloadMs": 503,
+          "queueWaitMs": 317,
+          "embeddingTokens": 158
+        },
+        "timeline": [
+          "1561ms READY"
+        ]
+      },
+      "Payroll Register.docx": {
+        "status": "READY",
+        "chunkCount": 1,
+        "tokenCount": 77,
+        "pageCount": null,
+        "language": "en",
+        "metrics": {
+          "embedMs": 3876,
+          "parseMs": 23,
+          "totalMs": 6961,
+          "attempts": 1,
+          "persistMs": 473,
+          "downloadMs": 513,
+          "queueWaitMs": 310,
+          "embeddingTokens": 85
+        },
+        "timeline": [
+          "1561ms READY"
+        ]
+      },
+      "q3-finance.md": {
+        "status": "READY",
+        "chunkCount": 1,
+        "tokenCount": 68,
+        "pageCount": null,
+        "language": "en",
+        "metrics": {
+          "embedMs": 1443,
+          "parseMs": 13,
+          "totalMs": 4467,
+          "attempts": 1,
+          "persistMs": 433,
+          "downloadMs": 568,
+          "queueWaitMs": 323,
+          "embeddingTokens": 76
+        },
+        "timeline": [
+          "1561ms READY"
+        ]
+      },
+      "travel-claims.txt": {
+        "status": "READY",
+        "chunkCount": 1,
+        "tokenCount": 30,
+        "pageCount": null,
+        "language": "en",
+        "metrics": {
+          "embedMs": 1311,
+          "parseMs": 15,
+          "totalMs": 4244,
+          "attempts": 1,
+          "persistMs": 441,
+          "downloadMs": 518,
+          "queueWaitMs": 334,
+          "embeddingTokens": 38
+        },
+        "timeline": [
+          "1561ms READY"
+        ]
+      },
+      "corrupt.pdf": {
+        "status": "FAILED",
+        "chunkCount": 0,
+        "tokenCount": 0,
+        "pageCount": null,
+        "language": null,
+        "metrics": {
+          "parseMs": 7,
+          "attempts": 1,
+          "downloadMs": 523,
+          "queueWaitMs": 317
+        },
+        "timeline": [
+          "1561ms FAILED"
+        ]
+      },
+      "blank-scan.pdf": {
+        "status": "FAILED",
+        "chunkCount": 0,
+        "tokenCount": 0,
+        "pageCount": null,
+        "language": null,
+        "metrics": {
+          "parseMs": 10,
+          "attempts": 1,
+          "downloadMs": 1218,
+          "queueWaitMs": 345
+        },
+        "timeline": [
+          "1561ms FAILED"
+        ]
+      },
+      "employee-handbook.md": {
+        "status": "READY",
+        "chunkCount": 6,
+        "tokenCount": 981,
+        "pageCount": null,
+        "language": "en",
+        "metrics": {
+          "embedMs": 9157,
+          "parseMs": 52,
+          "totalMs": 12101,
+          "attempts": 1,
+          "persistMs": 418,
+          "downloadMs": 510,
+          "queueWaitMs": 487,
+          "embeddingTokens": 1029
+        },
+        "timeline": [
+          "1561ms READY"
+        ]
+      },
+      "سالانہ رخصت پالیسی.txt": {
+        "status": "READY",
+        "chunkCount": 1,
+        "tokenCount": 35,
+        "pageCount": null,
+        "language": null,
+        "metrics": {
+          "embedMs": 2555,
+          "parseMs": 19,
+          "totalMs": 5459,
+          "attempts": 1,
+          "persistMs": 426,
+          "downloadMs": 563,
+          "queueWaitMs": 343,
+          "embeddingTokens": 42
+        },
+        "timeline": [
+          "1561ms READY"
+        ]
+      },
+      "quarterly _draft_.txt": {
+        "status": "READY",
+        "chunkCount": 1,
+        "tokenCount": 18,
+        "pageCount": null,
+        "language": null,
+        "metrics": {
+          "embedMs": 1188,
+          "parseMs": 9,
+          "totalMs": 4015,
+          "attempts": 1,
+          "persistMs": 404,
+          "downloadMs": 505,
+          "queueWaitMs": 309,
+          "embeddingTokens": 26
+        },
+        "timeline": [
+          "1561ms READY"
+        ]
+      }
+    },
+    "documentVisibility": {
+      "owner": [
+        "Leave Policy 2026.pdf",
+        "Payroll Register.docx",
+        "blank-scan.pdf",
+        "compensation-review.txt",
+        "corrupt.pdf",
+        "employee-handbook.md",
+        "q3-finance.md",
+        "quarterly _draft_.txt",
+        "remote-work.md",
+        "travel-claims.txt",
+        "سالانہ رخصت پالیسی.txt"
+      ],
+      "admin": [
+        "Leave Policy 2026.pdf",
+        "blank-scan.pdf",
+        "compensation-review.txt",
+        "corrupt.pdf",
+        "employee-handbook.md",
+        "q3-finance.md",
+        "quarterly _draft_.txt",
+        "remote-work.md",
+        "travel-claims.txt",
+        "سالانہ رخصت پالیسی.txt"
+      ],
+      "member": [
+        "Leave Policy 2026.pdf",
+        "blank-scan.pdf",
+        "corrupt.pdf",
+        "employee-handbook.md",
+        "quarterly _draft_.txt",
+        "remote-work.md",
+        "travel-claims.txt",
+        "سالانہ رخصت پالیسی.txt"
+      ],
+      "viewer": [
+        "Leave Policy 2026.pdf",
+        "blank-scan.pdf",
+        "corrupt.pdf",
+        "employee-handbook.md",
+        "quarterly _draft_.txt",
+        "remote-work.md",
+        "سالانہ رخصت پالیسی.txt"
+      ],
+      "records": [
+        "Leave Policy 2026.pdf",
+        "Payroll Register.docx",
+        "blank-scan.pdf",
+        "compensation-review.txt",
+        "corrupt.pdf",
+        "employee-handbook.md",
+        "quarterly _draft_.txt",
+        "remote-work.md",
+        "سالانہ رخصت پالیسی.txt"
+      ]
+    },
+    "handbookStats": {
+      "member": {
+        "documents": 7,
+        "ready": 5,
+        "processing": 0,
+        "failed": 2,
+        "totalBytes": "8787"
+      },
+      "owner": {
+        "documents": 8,
+        "ready": 6,
+        "processing": 0,
+        "failed": 2,
+        "totalBytes": "9088"
+      }
+    },
+    "downloadHeaders": {
+      "contentType": "application/pdf",
+      "contentDisposition": "attachment; filename=\"Leave Policy 2026.pdf\"; filename*=UTF-8''Leave%20Policy%202026.pdf",
+      "cacheControl": "private, no-store",
+      "contentLength": "1486",
+      "exposeHeaders": "x-request-id,x-ratelimit-limit,x-ratelimit-remaining,x-ratelimit-reset,retry-after,content-disposition"
+    },
+    "unicodeDisposition": "attachment; filename=\"______ ____ ______.txt\"; filename*=UTF-8''%D8%B3%D8%A7%D9%84%D8%A7%D9%86%DB%81%20%D8%B1%D8%AE%D8%B5%D8%AA%20%D9%BE%D8%A7%D9%84%DB%8C%D8%B3%DB%8C.txt",
+    "reindexTrace": [
+      "1539ms EMBEDDING v2 active=1 searchable=true",
+      "3334ms READY v2 active=2 searchable=true"
+    ],
+    "reindexTimeline": [
+      "READY v1 active=1 searchable=true",
+      "READY v2 active=2 searchable=true"
+    ],
+    "leaveQuestionRanking": [
+      "1. Leave Policy 2026 (PUBLIC, score 0.51273)",
+      "2. travel-claims (INTERNAL, score 0.26055)",
+      "3. Employee Handbook (INTERNAL, score 0.180775)",
+      "4. Employee Handbook (INTERNAL, score 0.154402)",
+      "5. Employee Handbook (INTERNAL, score 0.150749)",
+      "6. Remote Work Guidelines (INTERNAL, score 0.112704)",
+      "7. Employee Handbook (INTERNAL, score 0.090538)",
+      "8. Employee Handbook (INTERNAL, score 0.08902)"
+    ],
+    "retrievalDefaults": {
+      "mode": "hybrid",
+      "topK": 8,
+      "reranked": true,
+      "model": "embeddinggemma-300m-int8",
+      "searched": 3,
+      "timings": {
+        "accessMs": 167,
+        "embedMs": 265,
+        "searchMs": 1546,
+        "hydrateMs": 213,
+        "rerankMs": 898,
+        "totalMs": 3091
+      },
+      "results": 8
+    },
+    "nonsenseQueryResults": 8,
+    "topKCap": 50,
+    "ragRateHeaders": {
+      "limit": "60",
+      "remaining": "57",
+      "reset": "1791235518"
+    },
+    "accessScopes": {
+      "owner": {
+        "clearance": "RESTRICTED",
+        "bypass": true,
+        "bases": [
+          "Company Handbook:WORKSPACE:MANAGE",
+          "Finance Reports:RESTRICTED:MANAGE",
+          "HR Records:RESTRICTED:MANAGE"
+        ]
+      },
+      "admin": {
+        "clearance": "CONFIDENTIAL",
+        "bypass": false,
+        "bases": [
+          "Company Handbook:WORKSPACE:MANAGE",
+          "Finance Reports:RESTRICTED:MANAGE"
+        ]
+      },
+      "member": {
+        "clearance": "INTERNAL",
+        "bypass": false,
+        "bases": [
+          "Company Handbook:WORKSPACE:MANAGE",
+          "Finance Reports:RESTRICTED:WRITE"
+        ]
+      },
+      "records": {
+        "clearance": "RESTRICTED",
+        "bypass": false,
+        "bases": [
+          "Company Handbook:WORKSPACE:MANAGE",
+          "HR Records:RESTRICTED:MANAGE"
+        ]
+      }
+    },
+    "policyNullFields": {
+      "status": 200,
+      "version": 2,
+      "enabled": true
+    },
+    "apiKeyOnBearerOnlyRoute": {
+      "status": 401,
+      "code": "AUTH_SCHEME_NOT_ALLOWED"
+    },
+    "nonMemberWorkspaceAccess": {
+      "status": 404,
+      "code": "ORGANIZATION_NOT_FOUND"
+    },
+    "headerPathMismatch": {
+      "status": 200
+    },
+    "outageHealth": {
+      "httpStatus": 200,
+      "ai_service": {
+        "configured": true,
+        "message": "The AI service could not be reached: fetch failed.",
+        "responseTimeMs": 33,
+        "circuit": "CLOSED",
+        "status": "degraded"
+      },
+      "pii_detector": {
+        "configured": true,
+        "responseTimeMs": 27,
+        "kind": "ai-service",
+        "circuit": "CLOSED",
+        "status": "degraded"
+      }
+    },
+    "readinessDuringOutage": 200,
+    "retryMessage": {
+      "status": "PARSING",
+      "statusMessage": "Attempt 1 of 5 failed (AI_SERVICE_UNAVAILABLE); retrying."
+    },
+    "outageRecovery": [
+      "1452ms PARSING",
+      "4982ms PARSING \"Attempt 1 of 5 failed (AI_SERVICE_UNAVAILABLE); retrying.\"",
+      "1537ms EMBEDDING",
+      "4672ms READY"
+    ],
+    "beforeDeletion": {
+      "1042638e-1948-4d17-b47a-6bb03b1c0b8a": {
+        "object": true,
+        "vectors": 1
+      },
+      "73986f8d-33e4-4102-b079-b5d5581adec2": {
+        "object": true,
+        "vectors": 1
+      }
+    },
+    "purge": {
+      "1042638e-1948-4d17-b47a-6bb03b1c0b8a": {
+        "object": false,
+        "vectors": 0,
+        "purgedWithinMs": 1885
+      },
+      "73986f8d-33e4-4102-b079-b5d5581adec2": {
+        "object": false,
+        "vectors": 0,
+        "purgedWithinMs": 700
+      }
+    },
+    "workspaceContentAfterAllBasesDeleted": {
+      "objects": 0,
+      "vectors": 0,
+      "waitedMs": 7896
+    }
+  },
+  "timelines": {
+    "321c24c1-60fc-4772-803b-6d3cf0883172": [
+      {
+        "atMs": 1711,
+        "status": "CHUNKING",
+        "indexVersion": 1,
+        "activeIndexVersion": null,
+        "isSearchable": false,
+        "statusMessage": null,
+        "failureCode": null
+      },
+      {
+        "atMs": 5132,
+        "status": "EMBEDDING",
+        "indexVersion": 1,
+        "activeIndexVersion": null,
+        "isSearchable": false,
+        "statusMessage": null,
+        "failureCode": null
+      },
+      {
+        "atMs": 8516,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "32238ac1-29f0-492d-9cee-019e91f082a0": [
+      {
+        "atMs": 1561,
+        "status": "FAILED",
+        "indexVersion": 1,
+        "activeIndexVersion": null,
+        "isSearchable": false,
+        "statusMessage": "No extractable text was found. Scanned documents need OCR support in the AI service.",
+        "failureCode": "DOCUMENT_EMPTY"
+      }
+    ],
+    "2101b1c0-5762-4d6a-9ed6-a2ddd21c1d72": [
+      {
+        "atMs": 1561,
+        "status": "FAILED",
+        "indexVersion": 1,
+        "activeIndexVersion": null,
+        "isSearchable": false,
+        "statusMessage": "The document could not be read. It may be damaged.",
+        "failureCode": "UNPARSEABLE_DOCUMENT"
+      },
+      {
+        "atMs": 1406,
+        "status": "FAILED",
+        "indexVersion": 2,
+        "activeIndexVersion": null,
+        "isSearchable": false,
+        "statusMessage": "The document could not be read. It may be damaged.",
+        "failureCode": "UNPARSEABLE_DOCUMENT"
+      }
+    ],
+    "73986f8d-33e4-4102-b079-b5d5581adec2": [
+      {
+        "atMs": 1561,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "1042638e-1948-4d17-b47a-6bb03b1c0b8a": [
+      {
+        "atMs": 1561,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "dffa6678-fe1d-48a9-8125-16e7d8feedcc": [
+      {
+        "atMs": 1561,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "038f9b64-1774-42a3-af62-247d8ea52f65": [
+      {
+        "atMs": 1561,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4": [
+      {
+        "atMs": 1561,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "bad87aaf-6db9-4436-88ef-22298d704256": [
+      {
+        "atMs": 1561,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      },
+      {
+        "atMs": 1406,
+        "status": "READY",
+        "indexVersion": 2,
+        "activeIndexVersion": 2,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "e92ca32e-869f-434f-93a9-b629643a2fb2": [
+      {
+        "atMs": 1561,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "c0a3bb3b-c170-497f-9449-7c3cb63d3dec": [
+      {
+        "atMs": 1561,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "36f898ac-9cb8-4d79-9300-bdb8d2cb2013": [
+      {
+        "atMs": 1561,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ],
+    "e2d14c5b-676c-421b-b5e0-6ba028a08bb8": [
+      {
+        "atMs": 1589,
+        "status": "FAILED",
+        "indexVersion": 1,
+        "activeIndexVersion": null,
+        "isSearchable": false,
+        "statusMessage": "No extractable text was found. Scanned documents need OCR support in the AI service.",
+        "failureCode": "DOCUMENT_EMPTY"
+      }
+    ],
+    "642d6936-f3c7-4da3-93d3-dfa1fc1f2ff2": [
+      {
+        "atMs": 1452,
+        "status": "PARSING",
+        "statusMessage": null,
+        "failureCode": null
+      },
+      {
+        "atMs": 4982,
+        "status": "PARSING",
+        "statusMessage": "Attempt 1 of 5 failed (AI_SERVICE_UNAVAILABLE); retrying.",
+        "failureCode": null
+      },
+      {
+        "atMs": 1537,
+        "status": "EMBEDDING",
+        "indexVersion": 1,
+        "activeIndexVersion": null,
+        "isSearchable": false,
+        "statusMessage": null,
+        "failureCode": null
+      },
+      {
+        "atMs": 4672,
+        "status": "READY",
+        "indexVersion": 1,
+        "activeIndexVersion": 1,
+        "isSearchable": true,
+        "statusMessage": null,
+        "failureCode": null
+      }
+    ]
+  },
+  "samples": {
+    "entityTypes": [
+      {
+        "type": "EMAIL_ADDRESS",
+        "label": "Email address",
+        "description": "An email address.",
+        "detector": "pattern",
+        "available": true,
+        "enabled": true,
+        "example": "ayesha.raza@acme.test"
+      },
+      {
+        "type": "PHONE_NUMBER",
+        "label": "Phone number",
+        "description": "International (+92 …), Pakistani mobile (03xx), North American, or any number introduced by a word such as \"phone\" or \"mobile\".",
+        "detector": "pattern",
+        "available": true,
+        "enabled": true,
+        "example": "+92 300 1234567"
+      },
+      {
+        "type": "CREDIT_CARD",
+        "label": "Payment card number",
+        "description": "A 13–19 digit card number passing the Luhn checksum and a known issuer prefix.",
+        "detector": "pattern",
+        "available": true,
+        "enabled": true,
+        "example": "4111 1111 1111 1111"
+      }
+    ],
+    "defaultPolicyAsMember": {
+      "source": "default",
+      "version": 0,
+      "enabled": true,
+      "entityTypes": [
+        "CREDENTIAL",
+        "CREDIT_CARD",
+        "EMAIL_ADDRESS",
+        "IBAN_CODE",
+        "IP_ADDRESS",
+        "PERSON",
+        "PHONE_NUMBER",
+        "PK_CNIC",
+        "SALARY",
+        "US_SSN"
+      ],
+      "nerEntityTypes": [
+        "PERSON"
+      ],
+      "scoreThreshold": 0.5,
+      "onDetectorFailure": "REFUSE",
+      "language": "en",
+      "allowList": [],
+      "denyList": null,
+      "denyListCount": 0,
+      "nerDetector": {
+        "kind": "ai-service",
+        "configured": true,
+        "missingConfiguration": []
+      },
+      "warnings": [],
+      "updatedAt": null
+    },
+    "knowledgeBaseCreated": {
+      "id": "452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "name": "Company Handbook",
+      "description": "Policies every employee can read.",
+      "accessMode": "WORKSPACE",
+      "defaultClassification": "INTERNAL",
+      "embeddingModel": "embeddinggemma-300m-int8",
+      "embeddingDimensions": 768,
+      "chunkSize": null,
+      "chunkOverlap": null,
+      "access": "MANAGE",
+      "stats": {
+        "documents": 0,
+        "ready": 0,
+        "processing": 0,
+        "failed": 0,
+        "totalBytes": "0"
+      },
+      "createdById": "777e8357-84a5-480d-b17e-4218b954019f",
+      "createdAt": "2026-10-05T21:17:45.576Z",
+      "updatedAt": "2026-10-05T21:17:45.576Z",
+      "deleted": true
+    },
+    "validationError": {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_FAILED",
+        "message": "Chunk overlap (128) must be smaller than chunk size (128).",
+        "details": {
+          "fields": {
+            "chunkOverlap": [
+              "must be smaller than the chunk size (128)"
+            ]
+          }
+        }
+      },
+      "meta": {
+        "requestId": "212ef231-18a5-4ebf-9591-ac92af31b4e2",
+        "timestamp": "2026-10-05T21:17:50.503Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+        "durationMs": 1497
+      }
+    },
+    "clearanceError": {
+      "success": false,
+      "error": {
+        "code": "CLASSIFICATION_EXCEEDS_CLEARANCE",
+        "message": "You cannot assign a classification above your own clearance.",
+        "details": {
+          "requested": "RESTRICTED",
+          "clearance": "CONFIDENTIAL"
+        }
+      },
+      "meta": {
+        "requestId": "c151eac6-66ac-478e-b7e4-c2b5b6a857cb",
+        "timestamp": "2026-10-05T21:17:57.997Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+        "durationMs": 1388
+      }
+    },
+    "hiddenNotFound": {
+      "success": false,
+      "error": {
+        "code": "KNOWLEDGE_BASE_NOT_FOUND",
+        "message": "The knowledge base was not found."
+      },
+      "meta": {
+        "requestId": "e7932034-73d5-4eb7-a50a-1ec20e0f4e6b",
+        "timestamp": "2026-10-05T21:18:17.415Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5f805f0-903b-4631-b2d7-5165311afb2d",
+        "durationMs": 1894
+      }
+    },
+    "grants": [
+      {
+        "id": "d5980eaf-4b3b-44f9-bedf-71050343981e",
+        "subjectType": "MEMBER",
+        "subjectId": "e5ac2f78-6e93-421f-af73-502fedd37aa6",
+        "subjectLabel": "PhaseThree Admin",
+        "accessLevel": "MANAGE",
+        "grantedById": "0119f767-892a-4270-ae8e-236c1fecbcfc",
+        "createdAt": "2026-10-05T21:17:54.728Z"
+      }
+    ],
+    "levelDenied": {
+      "success": false,
+      "error": {
+        "code": "KNOWLEDGE_BASE_ACCESS_DENIED",
+        "message": "Your access to this knowledge base does not permit this action.",
+        "details": {
+          "required": "MANAGE",
+          "granted": "WRITE"
+        }
+      },
+      "meta": {
+        "requestId": "e94444c3-7aa1-4ba8-a2cc-38c91d27c465",
+        "timestamp": "2026-10-05T21:18:55.774Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+        "durationMs": 1485
+      }
+    },
+    "documentAccepted": {
+      "id": "bad87aaf-6db9-4436-88ef-22298d704256",
+      "knowledgeBaseId": "452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "title": "remote-work",
+      "description": null,
+      "tags": [
+        "remote",
+        "policy"
+      ],
+      "originalFilename": "remote-work.md",
+      "fileType": "MARKDOWN",
+      "mimeType": "text/markdown",
+      "sizeBytes": "425",
+      "classification": "INTERNAL",
+      "status": "UPLOADED",
+      "statusMessage": null,
+      "failureCode": null,
+      "isSearchable": false,
+      "indexVersion": 1,
+      "activeIndexVersion": null,
+      "chunkCount": 0,
+      "tokenCount": 0,
+      "pageCount": null,
+      "language": null,
+      "embeddingModel": null,
+      "processingMetrics": {},
+      "uploadedById": "82dbe5a9-4ef9-49d4-9c96-6e125cb149f7",
+      "lastStatusAt": "2026-10-05T21:19:57.104Z",
+      "processingCompletedAt": null,
+      "createdAt": "2026-10-05T21:19:55.747Z",
+      "updatedAt": "2026-10-05T21:19:55.747Z"
+    },
+    "uploadRefused": {
+      "success": false,
+      "error": {
+        "code": "DOCUMENT_EMPTY",
+        "message": "The file is empty.",
+        "details": {
+          "reason": "EMPTY",
+          "allowedTypes": [
+            "pdf",
+            "docx",
+            "txt",
+            "md"
+          ]
+        }
+      },
+      "meta": {
+        "requestId": "9cdbae09-f70d-4c19-b2b6-bf1ff444aa6b",
+        "timestamp": "2026-10-05T21:20:38.438Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+        "durationMs": 2741
+      }
+    },
+    "duplicateVisible": {
+      "success": false,
+      "error": {
+        "code": "DOCUMENT_DUPLICATE",
+        "message": "An identical file already exists in this knowledge base.",
+        "details": {
+          "existingDocumentId": "038f9b64-1774-42a3-af62-247d8ea52f65",
+          "existingTitle": "compensation-review"
+        }
+      },
+      "meta": {
+        "requestId": "04e48cda-e3e4-46bc-b854-a9b741b2adfe",
+        "timestamp": "2026-10-05T21:21:13.335Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+        "durationMs": 1893
+      }
+    },
+    "duplicateHidden": {
+      "success": false,
+      "error": {
+        "code": "DOCUMENT_DUPLICATE",
+        "message": "An identical file already exists in this knowledge base.",
+        "details": {}
+      },
+      "meta": {
+        "requestId": "855a33d1-ccfe-4c15-8404-62437ebd81ff",
+        "timestamp": "2026-10-05T21:21:11.438Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+        "durationMs": 1720
+      }
+    },
+    "payloadTooLarge": {
+      "success": false,
+      "error": {
+        "code": "PAYLOAD_TOO_LARGE",
+        "message": "File too large"
+      },
+      "meta": {
+        "requestId": "e7241f61-6942-4cc4-93d5-1656fc4db342",
+        "timestamp": "2026-10-05T21:21:29.939Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+        "durationMs": 1526
+      }
+    },
+    "missingFile": {
+      "success": false,
+      "error": {
+        "code": "BAD_REQUEST",
+        "message": "Attach the document as a multipart field named \"file\"."
+      },
+      "meta": {
+        "requestId": "af8f6b66-465a-4021-ae30-0674eeeea9c0",
+        "timestamp": "2026-10-05T21:21:31.065Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+        "durationMs": 1122
+      }
+    },
+    "documentReady": {
+      "id": "1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4",
+      "knowledgeBaseId": "452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "title": "Leave Policy 2026",
+      "description": "Annual, sick and parental leave.",
+      "tags": [
+        "policy",
+        "2026",
+        "leave"
+      ],
+      "originalFilename": "Leave Policy 2026.pdf",
+      "fileType": "PDF",
+      "mimeType": "application/pdf",
+      "sizeBytes": "1486",
+      "classification": "PUBLIC",
+      "status": "READY",
+      "statusMessage": null,
+      "failureCode": null,
+      "isSearchable": true,
+      "indexVersion": 1,
+      "activeIndexVersion": 1,
+      "chunkCount": 1,
+      "tokenCount": 141,
+      "pageCount": 2,
+      "language": "en",
+      "embeddingModel": "embeddinggemma-300m-int8",
+      "processingMetrics": {
+        "embedMs": 1444,
+        "parseMs": 18,
+        "totalMs": 4380,
+        "attempts": 1,
+        "persistMs": 416,
+        "downloadMs": 513,
+        "queueWaitMs": 315,
+        "embeddingTokens": 149
+      },
+      "uploadedById": "777e8357-84a5-480d-b17e-4218b954019f",
+      "lastStatusAt": "2026-10-05T21:20:05.919Z",
+      "processingCompletedAt": "2026-10-05T21:20:05.919Z",
+      "createdAt": "2026-10-05T21:19:59.361Z",
+      "updatedAt": "2026-10-05T21:20:04.722Z"
+    },
+    "documentFailed": {
+      "id": "2101b1c0-5762-4d6a-9ed6-a2ddd21c1d72",
+      "knowledgeBaseId": "452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "title": "corrupt",
+      "description": null,
+      "tags": [],
+      "originalFilename": "corrupt.pdf",
+      "fileType": "PDF",
+      "mimeType": "application/pdf",
+      "sizeBytes": "1226",
+      "classification": "INTERNAL",
+      "status": "FAILED",
+      "statusMessage": "The document could not be read. It may be damaged.",
+      "failureCode": "UNPARSEABLE_DOCUMENT",
+      "isSearchable": false,
+      "indexVersion": 1,
+      "activeIndexVersion": null,
+      "chunkCount": 0,
+      "tokenCount": 0,
+      "pageCount": null,
+      "language": null,
+      "embeddingModel": null,
+      "processingMetrics": {
+        "parseMs": 7,
+        "attempts": 1,
+        "downloadMs": 523,
+        "queueWaitMs": 317
+      },
+      "uploadedById": "777e8357-84a5-480d-b17e-4218b954019f",
+      "lastStatusAt": "2026-10-05T21:20:25.274Z",
+      "processingCompletedAt": null,
+      "createdAt": "2026-10-05T21:20:21.926Z",
+      "updatedAt": "2026-10-05T21:20:24.239Z"
+    },
+    "chunk": {
+      "id": "89f8e29f-e141-51ad-a2ae-261cc1223e30",
+      "chunkIndex": 0,
+      "text": "Leave Policy 2026 Reference p3-1791234942236.\n\nAnnual leave: every full-time employee receives 24 days of paid annual leave per calendar year. Annual leave accrues at two days per month, and up to 5 unused days carry over to the next year. ",
+      "tokenCount": 141,
+      "pageStart": 1,
+      "pageEnd": 2
+    },
+    "processingConflict": {
+      "success": false,
+      "error": {
+        "code": "DOCUMENT_PROCESSING",
+        "message": "The document is still being processed. Try again when processing finishes.",
+        "details": {
+          "status": "CHUNKING"
+        }
+      },
+      "meta": {
+        "requestId": "f28b432a-b8e6-462e-99f9-12c9667568fc",
+        "timestamp": "2026-10-05T21:23:10.254Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256/reindex",
+        "durationMs": 1539
+      }
+    },
+    "retrieval": {
+      "retrievalId": "db9c87e6-ae91-4338-a763-4f62d2b35035",
+      "mode": "hybrid",
+      "topK": 8,
+      "reranked": true,
+      "embeddingModel": "embeddinggemma-300m-int8",
+      "knowledgeBasesSearched": 3,
+      "clearance": "RESTRICTED",
+      "effectiveClearance": "RESTRICTED",
+      "results": [
+        {
+          "chunkId": "89f8e29f-e141-51ad-a2ae-261cc1223e30",
+          "documentId": "1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4",
+          "documentTitle": "Leave Policy 2026",
+          "knowledgeBaseId": "452fd543-2a3a-4e6f-a0af-6ca80379b239",
+          "knowledgeBaseName": "Company Handbook",
+          "classification": "PUBLIC",
+          "chunkIndex": 0,
+          "pageStart": 1,
+          "pageEnd": 2,
+          "rank": 1,
+          "score": 0.51273,
+          "text": "Leave Policy 2026 Reference p3-1791234942236.\n\nAnnual leave: every full-time employee receives 24 days of paid annual leave per calendar year. Annual leave accrues at two days per month, and up to 5 u"
+        },
+        {
+          "chunkId": "9ce7dd4c-1f16-5b21-a75f-f48c3998961b",
+          "documentId": "73986f8d-33e4-4102-b079-b5d5581adec2",
+          "documentTitle": "travel-claims",
+          "knowledgeBaseId": "a5b10678-d03e-4fed-9b26-db9f0756ec44",
+          "knowledgeBaseName": "Finance Reports",
+          "classification": "INTERNAL",
+          "chunkIndex": 0,
+          "pageStart": null,
+          "pageEnd": null,
+          "rank": 2,
+          "score": 0.26055,
+          "text": "Travel reimbursement claims are settled within 7 working days of approval (p3-1791234942236)."
+        }
+      ],
+      "timings": {
+        "accessMs": 167,
+        "embedMs": 265,
+        "searchMs": 1546,
+        "hydrateMs": 213,
+        "rerankMs": 898,
+        "totalMs": 3091
+      }
+    },
+    "analyze": {
+      "maskedText": "[PERSON_1] ([EMAIL_ADDRESS_1], [PHONE_NUMBER_1]) earns [SALARY_1] per year. Ref p3-1791234942236.",
+      "entities": [
+        {
+          "entityType": "PERSON",
+          "start": 0,
+          "end": 11,
+          "score": 1,
+          "source": "ner",
+          "recognizer": "presidio@2.2.364/en_core_web_md+bert-base-NER",
+          "placeholder": "[PERSON_1]"
+        },
+        {
+          "entityType": "EMAIL_ADDRESS",
+          "start": 13,
+          "end": 34,
+          "score": 1,
+          "source": "pattern",
+          "recognizer": "email",
+          "placeholder": "[EMAIL_ADDRESS_1]"
+        },
+        {
+          "entityType": "PHONE_NUMBER",
+          "start": 36,
+          "end": 51,
+          "score": 0.85,
+          "source": "pattern",
+          "recognizer": "phone",
+          "placeholder": "[PHONE_NUMBER_1]"
+        },
+        {
+          "entityType": "SALARY",
+          "start": 59,
+          "end": 70,
+          "score": 0.9,
+          "source": "pattern",
+          "recognizer": "money",
+          "placeholder": "[SALARY_1]"
+        }
+      ],
+      "entityCount": 4,
+      "byType": {
+        "PERSON": 1,
+        "EMAIL_ADDRESS": 1,
+        "PHONE_NUMBER": 1,
+        "SALARY": 1
+      },
+      "degraded": false,
+      "detectors": [
+        "patterns@1",
+        "presidio@2.2.364/en_core_web_md+bert-base-NER"
+      ],
+      "revealed": false,
+      "timings": {
+        "patternMs": 73.84,
+        "nerMs": 556.45,
+        "maskingMs": 23.64,
+        "totalMs": 826.18
+      }
+    },
+    "permissionDenied": {
+      "success": false,
+      "error": {
+        "code": "PERMISSION_DENIED",
+        "message": "You lack the permissions required for this action.",
+        "details": {
+          "missingPermissions": [
+            "pii:reveal"
+          ]
+        }
+      },
+      "meta": {
+        "requestId": "1f414792-18ca-4046-af75-e1a3a9af15a5",
+        "timestamp": "2026-10-05T21:24:30.951Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+        "durationMs": 1732
+      }
+    },
+    "report": {
+      "documentId": "038f9b64-1774-42a3-af62-247d8ea52f65",
+      "chunks": [
+        {
+          "chunkId": "59ce3d6e-2a54-5825-928b-6220b27faf89",
+          "chunkIndex": 0,
+          "pageStart": null,
+          "maskedText": "Compensation review notes (p3-1791234942236).\n[PERSON_1] ([EMAIL_ADDRESS_1], [PHONE_NUMBER_1], CNIC [PK_CNIC_1]) earns [SALARY_1] per year.\n[PERSON_2] leads Project Falcon with Acme Corporation; his corporate card is [CREDIT_CARD_1].\nThe payroll account IBAN is [IBAN_CODE_1].",
+          "entities": [
+            {
+              "entityType": "PERSON",
+              "start": 46,
+              "end": 57,
+              "score": 1,
+              "source": "ner",
+              "recognizer": "presidio@2.2.364/en_core_web_md+bert-base-NER",
+              "placeholder": "[PERSON_1]"
+            },
+            {
+              "entityType": "EMAIL_ADDRESS",
+              "start": 59,
+              "end": 80,
+              "score": 1,
+              "source": "pattern",
+              "recognizer": "email",
+              "placeholder": "[EMAIL_ADDRESS_1]"
+            },
+            {
+              "entityType": "PHONE_NUMBER",
+              "start": 82,
+              "end": 97,
+              "score": 0.85,
+              "source": "pattern",
+              "recognizer": "phone",
+              "placeholder": "[PHONE_NUMBER_1]"
+            },
+            {
+              "entityType": "PK_CNIC",
+              "start": 104,
+              "end": 119,
+              "score": 0.95,
+              "source": "pattern",
+              "recognizer": "national-id",
+              "placeholder": "[PK_CNIC_1]"
+            },
+            {
+              "entityType": "SALARY",
+              "start": 127,
+              "end": 138,
+              "score": 0.9,
+              "source": "pattern",
+              "recognizer": "money",
+              "placeholder": "[SALARY_1]"
+            },
+            {
+              "entityType": "PERSON",
+              "start": 149,
+              "end": 159,
+              "score": 0.999,
+              "source": "ner",
+              "recognizer": "presidio@2.2.364/en_core_web_md+bert-base-NER",
+              "placeholder": "[PERSON_2]"
+            },
+            {
+              "entityType": "CREDIT_CARD",
+              "start": 226,
+              "end": 245,
+              "score": 1,
+              "source": "pattern",
+              "recognizer": "credit-card",
+              "placeholder": "[CREDIT_CARD_1]"
+            },
+            {
+              "entityType": "IBAN_CODE",
+              "start": 275,
+              "end": 299,
+              "score": 1,
+              "source": "pattern",
+              "recognizer": "iban",
+              "placeholder": "[IBAN_CODE_1]"
+            }
+          ]
+        }
+      ],
+      "byType": {
+        "PERSON": 2,
+        "EMAIL_ADDRESS": 1,
+        "PHONE_NUMBER": 1,
+        "PK_CNIC": 1,
+        "SALARY": 1,
+        "CREDIT_CARD": 1,
+        "IBAN_CODE": 1
+      },
+      "entityCount": 8,
+      "page": 1,
+      "totalChunks": 1,
+      "degraded": false,
+      "revealed": false,
+      "timings": {
+        "patternMs": 3.3,
+        "nerMs": 524.58,
+        "maskingMs": 8.08,
+        "totalMs": 621.77
+      }
+    },
+    "policyUpdated": {
+      "source": "workspace",
+      "version": 1,
+      "enabled": true,
+      "entityTypes": [
+        "CREDENTIAL",
+        "CREDIT_CARD",
+        "CUSTOM",
+        "EMAIL_ADDRESS",
+        "IBAN_CODE",
+        "IP_ADDRESS",
+        "LOCATION",
+        "PERSON",
+        "PHONE_NUMBER",
+        "PK_CNIC",
+        "SALARY",
+        "US_SSN"
+      ],
+      "nerEntityTypes": [
+        "LOCATION",
+        "PERSON"
+      ],
+      "scoreThreshold": 0.5,
+      "onDetectorFailure": "REFUSE",
+      "language": "en",
+      "allowList": [
+        "Acme Corporation"
+      ],
+      "denyList": [
+        "Project Falcon"
+      ],
+      "denyListCount": 1,
+      "nerDetector": {
+        "kind": "ai-service",
+        "configured": true,
+        "missingConfiguration": []
+      },
+      "warnings": [],
+      "updatedAt": "2026-10-05T21:24:54.174Z"
+    },
+    "aiUnavailable": {
+      "success": false,
+      "error": {
+        "code": "AI_SERVICE_UNAVAILABLE",
+        "message": "The AI service is temporarily unavailable.",
+        "details": {
+          "reason": "AI_SERVICE_UNREACHABLE"
+        }
+      },
+      "meta": {
+        "requestId": "42822e92-bc53-47fd-a8d8-c94192508ba7",
+        "timestamp": "2026-10-05T21:26:36.725Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+        "durationMs": 2745
+      }
+    },
+    "piiUnavailable": {
+      "success": false,
+      "error": {
+        "code": "PII_DETECTION_UNAVAILABLE",
+        "message": "Sensitive-data detection is unavailable, and this workspace refuses to send unprotected text to the model.",
+        "details": {
+          "reason": "UNAVAILABLE",
+          "detector": "ai-service",
+          "entityTypes": [
+            "LOCATION",
+            "PERSON"
+          ],
+          "missingConfiguration": [],
+          "hint": "Configure the NER detector, or set the workspace PII policy to DEGRADE_TO_PATTERNS to continue with pattern-based masking only."
+        }
+      },
+      "meta": {
+        "requestId": "eebe86c6-b7b2-48ee-a5e1-076429803de5",
+        "timestamp": "2026-10-05T21:26:39.456Z",
+        "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+        "durationMs": 2729
+      }
+    }
+  },
+  "results": [
+    {
+      "label": "liveness",
+      "method": "GET",
+      "path": "/health/live",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 261,
+      "requestId": "8d3a97d3-8bf2-41ad-9468-eb5279224482"
+    },
+    {
+      "label": "readiness",
+      "method": "GET",
+      "path": "/health/ready",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 310,
+      "requestId": "8e57d11f-6726-45a9-83fa-58c6590cf7b9"
+    },
+    {
+      "label": "health detail",
+      "method": "GET",
+      "path": "/health",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 764,
+      "requestId": "8043d64a-b32d-49aa-9386-3cc064825004"
+    },
+    {
+      "label": "register owner",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "actor": "anonymous",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 5203,
+      "requestId": "dfe265f7-ef77-49a3-a36d-411a8a0f37b7"
+    },
+    {
+      "label": "register admin",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "actor": "anonymous",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 4836,
+      "requestId": "b432d3f6-7166-4075-9d7f-3f3aa7c02111"
+    },
+    {
+      "label": "register member",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "actor": "anonymous",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 4915,
+      "requestId": "b9c248b1-3182-4ae9-ad5e-87af5ea3338a"
+    },
+    {
+      "label": "register viewer",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "actor": "anonymous",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 4839,
+      "requestId": "74153614-ad42-4e4b-9293-ff441cb03eb1"
+    },
+    {
+      "label": "register records",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "actor": "anonymous",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 4845,
+      "requestId": "f3ebb3ea-e214-4f7e-af1e-25608cd585d2"
+    },
+    {
+      "label": "register outsider",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "actor": "anonymous",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 5257,
+      "requestId": "e0b27ab6-c821-4f31-8f5b-872baa921ada"
+    },
+    {
+      "label": "create workspace",
+      "method": "POST",
+      "path": "/api/v1/organizations",
+      "actor": "owner",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 3525,
+      "requestId": "9d3d26e5-f884-4a2f-bbf3-c89d433bb470"
+    },
+    {
+      "label": "create second tenant",
+      "method": "POST",
+      "path": "/api/v1/organizations",
+      "actor": "outsider",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 3131,
+      "requestId": "aadfd21b-9865-4443-8c21-f828c5bb11b4"
+    },
+    {
+      "label": "roles",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/roles",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1861,
+      "requestId": "88ff07ec-31a7-4c4b-82c4-a335e7dd4dcb"
+    },
+    {
+      "label": "create custom Records Manager role",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/roles",
+      "actor": "owner",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 1995,
+      "requestId": "c9b9a781-e75f-4b3c-87ab-fa8f4ad68f73"
+    },
+    {
+      "label": "invite admin",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/invitations",
+      "actor": "owner",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 5018,
+      "requestId": "98aa927c-d17a-47ec-b7dd-ecdcf24ac584"
+    },
+    {
+      "label": "invite member",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/invitations",
+      "actor": "owner",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 6447,
+      "requestId": "3817bd1a-afc2-4252-b6d6-6a52a37fdc9a"
+    },
+    {
+      "label": "invite viewer",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/invitations",
+      "actor": "owner",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 4976,
+      "requestId": "23d2eed4-f66e-4534-9247-354a55c2569f"
+    },
+    {
+      "label": "invite records",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/invitations",
+      "actor": "owner",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 5356,
+      "requestId": "7c6f334c-60d8-4b15-8c9a-c4e9998a2dd6"
+    },
+    {
+      "label": "invitation email delivered to admin (Ethereal IMAP)",
+      "pass": true
+    },
+    {
+      "label": "accept invitation as admin",
+      "method": "POST",
+      "path": "/api/v1/invitations/accept",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2904,
+      "requestId": "db750ba8-7336-433d-9aa0-5f4659248c9e"
+    },
+    {
+      "label": "invitation email delivered to member (Ethereal IMAP)",
+      "pass": true
+    },
+    {
+      "label": "accept invitation as member",
+      "method": "POST",
+      "path": "/api/v1/invitations/accept",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2572,
+      "requestId": "5758ea23-45af-44cc-b4d4-c979926c0db1"
+    },
+    {
+      "label": "invitation email delivered to viewer (Ethereal IMAP)",
+      "pass": true
+    },
+    {
+      "label": "accept invitation as viewer",
+      "method": "POST",
+      "path": "/api/v1/invitations/accept",
+      "actor": "viewer",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2603,
+      "requestId": "f77a0b7e-49a6-4551-9fa7-a2af7d488fe7"
+    },
+    {
+      "label": "invitation email delivered to records (Ethereal IMAP)",
+      "pass": true
+    },
+    {
+      "label": "accept invitation as records",
+      "method": "POST",
+      "path": "/api/v1/invitations/accept",
+      "actor": "records",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2614,
+      "requestId": "15d755a2-603c-4184-be90-7b48ef326e56"
+    },
+    {
+      "label": "membership owner",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/members/me",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1454,
+      "requestId": "ec941bb2-6d8e-42ce-9dab-8ae7cdfed53a"
+    },
+    {
+      "label": "contextual permissions owner",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1551,
+      "requestId": "849eabc9-8ec9-425a-b0c3-e1cfa256c4aa"
+    },
+    {
+      "label": "membership admin",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/members/me",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1964,
+      "requestId": "89691080-26ea-4979-ba12-4f4ccfe1e5b7"
+    },
+    {
+      "label": "contextual permissions admin",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1631,
+      "requestId": "4b238e22-d36e-41e6-8a74-ee7f986427d1"
+    },
+    {
+      "label": "membership member",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/members/me",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1903,
+      "requestId": "54376181-92d0-4fb6-a721-d7e76edef53f"
+    },
+    {
+      "label": "contextual permissions member",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1557,
+      "requestId": "6a1aa646-9a00-4160-b1d8-5fd2cc82a87e"
+    },
+    {
+      "label": "membership viewer",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/members/me",
+      "actor": "viewer",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2051,
+      "requestId": "c412b489-3c4e-4c78-bf36-748766b7a1d1"
+    },
+    {
+      "label": "contextual permissions viewer",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "actor": "viewer",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1469,
+      "requestId": "e2e27389-a36c-4afd-91a6-78a7706f8c9d"
+    },
+    {
+      "label": "membership records",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/members/me",
+      "actor": "records",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1872,
+      "requestId": "fdc7d672-7289-44b8-a262-7b5d177a7321"
+    },
+    {
+      "label": "contextual permissions records",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "actor": "records",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1823,
+      "requestId": "c2ab55dd-34a3-4206-9c92-c0dc0b903511"
+    },
+    {
+      "label": "P3-API-19 entity types",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/entity-types",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1393,
+      "requestId": "7051874c-7a79-464c-ab01-d2688dc07380"
+    },
+    {
+      "label": "entity type shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "viewer lacks pii:policy:read (entity types)",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/entity-types",
+      "actor": "viewer",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1774,
+      "requestId": "ff2caa93-3d40-43cc-9bab-674f48effc91"
+    },
+    {
+      "label": "P3-API-17 default policy as member",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1400,
+      "requestId": "8669800c-4420-4417-b490-43ae8ebbd56c"
+    },
+    {
+      "label": "default policy: source default, version 0, deny list hidden from member",
+      "pass": true
+    },
+    {
+      "label": "policy shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "policy as admin shows deny list",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1430,
+      "requestId": "cb9bfde3-e0e6-48e4-a640-ca52e72063f5"
+    },
+    {
+      "label": "pii:policy:update holder sees denyList array",
+      "pass": true
+    },
+    {
+      "label": "viewer cannot read policy",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "viewer",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1850,
+      "requestId": "91d98be0-9480-4bda-b766-e218bb0f0c04"
+    },
+    {
+      "label": "P3-API-23 access scope before bases",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/access-scope",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1550,
+      "requestId": "b0288e9c-ede6-4bfb-8aea-9c9e7e76295c"
+    },
+    {
+      "label": "member scope: INTERNAL clearance, no bases yet",
+      "pass": true
+    },
+    {
+      "label": "access scope shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "viewer lacks rag:query (access scope)",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/access-scope",
+      "actor": "viewer",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1843,
+      "requestId": "9d8b816b-b741-40c0-aba9-afb1ee182339"
+    },
+    {
+      "label": "member cannot create base",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1761,
+      "requestId": "2f552b67-b32a-4db4-9d12-1be11602f01d"
+    },
+    {
+      "label": "P3-API-02 create WORKSPACE base",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "owner",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 2058,
+      "requestId": "bc0842e6-3dbf-4418-aff2-fc7da7868c72"
+    },
+    {
+      "label": "knowledge base shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "create defaults: WORKSPACE, INTERNAL, inherit chunking, MANAGE, zero stats",
+      "pass": true
+    },
+    {
+      "label": "duplicate name, different case",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "owner",
+      "status": 409,
+      "expected": 409,
+      "code": "KNOWLEDGE_BASE_NAME_TAKEN",
+      "pass": true,
+      "ms": 1797,
+      "requestId": "7b0a3a0a-3e61-4d2b-acc9-a31b0c2f9d41"
+    },
+    {
+      "label": "create with overlap >= size",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1504,
+      "requestId": "212ef231-18a5-4ebf-9591-ac92af31b4e2"
+    },
+    {
+      "label": "overlap error filed under chunkOverlap",
+      "pass": true,
+      "detail": {
+        "fields": {
+          "chunkOverlap": [
+            "must be smaller than the chunk size (128)"
+          ]
+        }
+      }
+    },
+    {
+      "label": "create with unknown field",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1217,
+      "requestId": "b3c27f4e-9dac-4703-80a1-627766a12651"
+    },
+    {
+      "label": "create with blank name",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1318,
+      "requestId": "01c2464f-89b6-4406-a83d-57c30c73f995"
+    },
+    {
+      "label": "create with chunkSize 63",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1296,
+      "requestId": "2cfdda06-7c31-45c6-8947-db01bce291bb"
+    },
+    {
+      "label": "admin creates RESTRICTED base",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "admin",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 2269,
+      "requestId": "8ef74098-c24e-4122-b414-6aae892e9e68"
+    },
+    {
+      "label": "admin default classification above clearance",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "admin",
+      "status": 403,
+      "expected": 403,
+      "code": "CLASSIFICATION_EXCEEDS_CLEARANCE",
+      "pass": true,
+      "ms": 1390,
+      "requestId": "c151eac6-66ac-478e-b7e4-c2b5b6a857cb"
+    },
+    {
+      "label": "clearance error details",
+      "pass": true,
+      "detail": {
+        "requested": "RESTRICTED",
+        "clearance": "CONFIDENTIAL"
+      }
+    },
+    {
+      "label": "records manager creates RESTRICTED/RESTRICTED base",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "records",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 2174,
+      "requestId": "620dfa2b-e798-4538-bbc2-cd0d34ead2c3"
+    },
+    {
+      "label": "P3-API-01 list bases as owner",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases?limit=100",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1556,
+      "requestId": "653e43c5-0ef6-422b-8517-746a690eead5"
+    },
+    {
+      "label": "P3-API-01 list bases as admin",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases?limit=100",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1551,
+      "requestId": "a6b9b122-6ffa-40e3-a8b4-2468d8958d5b"
+    },
+    {
+      "label": "P3-API-01 list bases as member",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases?limit=100",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1563,
+      "requestId": "11b76f3e-9730-4363-826a-f8e6f0577791"
+    },
+    {
+      "label": "P3-API-01 list bases as viewer",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases?limit=100",
+      "actor": "viewer",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1544,
+      "requestId": "55ac7873-a3f4-4061-bd41-5889d45d54a6"
+    },
+    {
+      "label": "P3-API-01 list bases as records",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases?limit=100",
+      "actor": "records",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1549,
+      "requestId": "0aba35c7-cadb-4660-aa2a-db98e4f12223"
+    },
+    {
+      "label": "owner bypasses compartments",
+      "pass": true
+    },
+    {
+      "label": "admin sees own RESTRICTED base, not HR Records",
+      "pass": true
+    },
+    {
+      "label": "member and viewer see only the WORKSPACE base",
+      "pass": true
+    },
+    {
+      "label": "records manager sees Handbook and HR Records",
+      "pass": true
+    },
+    {
+      "label": "list pagination limit=1",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases?limit=1&page=2",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1642,
+      "requestId": "8176a074-98e5-4779-ad6c-6a2d46f0a810"
+    },
+    {
+      "label": "pagination meta",
+      "pass": true,
+      "detail": {
+        "page": 2,
+        "limit": 1,
+        "totalItems": 3,
+        "totalPages": 3,
+        "hasPreviousPage": true,
+        "hasNextPage": true
+      }
+    },
+    {
+      "label": "list search=hand",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases?search=hand",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1600,
+      "requestId": "fcfa7582-0d71-4425-8d2b-05be44063327"
+    },
+    {
+      "label": "search matches name",
+      "pass": true
+    },
+    {
+      "label": "list sortBy=createdAt (DESC default)",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases?sortBy=createdAt",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1586,
+      "requestId": "65d9d2e1-5c2f-472c-b844-d604fe48f263"
+    },
+    {
+      "label": "explicit sortBy uses DESC default",
+      "pass": true
+    },
+    {
+      "label": "list limit=101",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases?limit=101",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1232,
+      "requestId": "ad458de2-ddd1-4ac6-a28f-1ad5c5a3549c"
+    },
+    {
+      "label": "P3-API-03 read base",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "viewer",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1516,
+      "requestId": "a5dcdeaa-487a-4710-8cee-a96fe41f378e"
+    },
+    {
+      "label": "hidden base is 404",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5f805f0-903b-4631-b2d7-5165311afb2d",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 1899,
+      "requestId": "e7932034-73d5-4eb7-a50a-1ec20e0f4e6b"
+    },
+    {
+      "label": "unknown base is 404",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/ade088d5-2a73-425f-a572-f7b69b087217",
+      "actor": "owner",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 1697,
+      "requestId": "31c7748e-8686-48ab-8c86-807c18111f04"
+    },
+    {
+      "label": "malformed base id",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/not-a-uuid",
+      "actor": "owner",
+      "status": 400,
+      "expected": 400,
+      "code": "BAD_REQUEST",
+      "pass": true,
+      "ms": 1215,
+      "requestId": "88c4acea-84fb-4cd4-a676-1a5b66962a10"
+    },
+    {
+      "label": "member cannot update base",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1628,
+      "requestId": "9ad111a6-d940-444a-99c7-77e944f6e13f"
+    },
+    {
+      "label": "P3-API-04 update base",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2413,
+      "requestId": "0e7a6132-88f4-44fb-9583-9d3b7fec1cac"
+    },
+    {
+      "label": "chunking override saved",
+      "pass": true
+    },
+    {
+      "label": "chunk settings back to inherited (null)",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2425,
+      "requestId": "5aa88e36-558e-4e1f-abb7-74fcde6e8e75"
+    },
+    {
+      "label": "null returns to inheritance",
+      "pass": true
+    },
+    {
+      "label": "overlap against inherited size",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1449,
+      "requestId": "296b64cd-e9b4-4e90-888e-c199b8b74284"
+    },
+    {
+      "label": "inherited-size overlap error under chunkOverlap",
+      "pass": true,
+      "detail": {
+        "fields": {
+          "chunkOverlap": [
+            "must be smaller than the chunk size (512)"
+          ]
+        }
+      }
+    },
+    {
+      "label": "name null refused",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1292,
+      "requestId": "90f75d3d-c241-4c7f-bac8-e90e1c226641"
+    },
+    {
+      "label": "description null clears",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2413,
+      "requestId": "1d58d6f2-7b83-4996-950a-c228cb34f37c"
+    },
+    {
+      "label": "description cleared",
+      "pass": true
+    },
+    {
+      "label": "empty PATCH is a no-op 200",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1939,
+      "requestId": "ff90bb29-6511-48fa-b7e7-cb0e18506b99"
+    },
+    {
+      "label": "admin raises default above clearance",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44",
+      "actor": "admin",
+      "status": 403,
+      "expected": 403,
+      "code": "CLASSIFICATION_EXCEEDS_CLEARANCE",
+      "pass": true,
+      "ms": 1492,
+      "requestId": "b014c985-b07f-4fd0-9e4a-ffcab0716fb7"
+    },
+    {
+      "label": "rename collides",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44",
+      "actor": "admin",
+      "status": 409,
+      "expected": 409,
+      "code": "KNOWLEDGE_BASE_NAME_TAKEN",
+      "pass": true,
+      "ms": 1861,
+      "requestId": "0714b7e1-ed49-498c-9099-b3024a2e9572"
+    },
+    {
+      "label": "P3-API-06 list grants (creator auto-grant)",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1532,
+      "requestId": "114bcd0d-7073-49ce-b806-63c3b1b28ae6"
+    },
+    {
+      "label": "creator received MEMBER MANAGE grant",
+      "pass": true
+    },
+    {
+      "label": "grant shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "P3-API-07 grant Member role READ",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2409,
+      "requestId": "c9801f69-8659-444b-8b93-6d754b38557e"
+    },
+    {
+      "label": "re-grant same subject changes level",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2443,
+      "requestId": "4f9404b8-796c-412d-a74d-06927534c486"
+    },
+    {
+      "label": "upsert keeps grant id",
+      "pass": true
+    },
+    {
+      "label": "grant viewer membership READ",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2383,
+      "requestId": "273e1b90-ee85-4d68-875c-ffe5ae0a95fc"
+    },
+    {
+      "label": "user id is not a membership id",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "RESOURCE_NOT_FOUND",
+      "pass": true,
+      "ms": 1552,
+      "requestId": "9276816f-c585-4926-ad39-b9bf7c0a1633"
+    },
+    {
+      "label": "second tenant roles",
+      "method": "GET",
+      "path": "/api/v1/organizations/487fde8c-5673-47ae-a1cf-b54c6aa996cd/roles",
+      "actor": "outsider",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2179,
+      "requestId": "9ec12c81-dda6-4e13-abe0-8f45df9403ed"
+    },
+    {
+      "label": "cross-tenant role refused",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "RESOURCE_NOT_FOUND",
+      "pass": true,
+      "ms": 1658,
+      "requestId": "5d24172c-5f42-4451-b5c4-c03f6ca8f645"
+    },
+    {
+      "label": "invalid access level",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "admin",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1432,
+      "requestId": "0c5a4904-cef9-440a-beb6-5e565e06e5dc"
+    },
+    {
+      "label": "member sees Finance through role grant",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1444,
+      "requestId": "26aa04be-131e-4868-a9ce-9450232e775f"
+    },
+    {
+      "label": "member effective level WRITE",
+      "pass": true
+    },
+    {
+      "label": "WRITE is not enough to list grants",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "KNOWLEDGE_BASE_ACCESS_DENIED",
+      "pass": true,
+      "ms": 1490,
+      "requestId": "e94444c3-7aa1-4ba8-a2cc-38c91d27c465"
+    },
+    {
+      "label": "access denied details",
+      "pass": true,
+      "detail": {
+        "required": "MANAGE",
+        "granted": "WRITE"
+      }
+    },
+    {
+      "label": "member lacks knowledgebase:update for grants",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/grants",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1680,
+      "requestId": "29b6a864-d860-4b99-839c-b5c8ae022f1f"
+    },
+    {
+      "label": "member can list grants on a WORKSPACE base",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/grants",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1534,
+      "requestId": "c0a77f3e-febd-420b-9b1d-efbcf6f8da53"
+    },
+    {
+      "label": "P3-API-08 revoke viewer grant",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants/c4183cf4-ab80-4ad1-91f4-81df749d1e1e",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2148,
+      "requestId": "cddb05ac-8648-49d1-bc25-49f49ed739fe"
+    },
+    {
+      "label": "revoked grant takes effect next request",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44",
+      "actor": "viewer",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 2357,
+      "requestId": "29c745c8-7280-4613-88c2-f5b3b65ca0a0"
+    },
+    {
+      "label": "revoke again",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants/c4183cf4-ab80-4ad1-91f4-81df749d1e1e",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_GRANT_NOT_FOUND",
+      "pass": true,
+      "ms": 1702,
+      "requestId": "cf0e6ff7-6aae-4ecd-b4d7-990c8a698028"
+    },
+    {
+      "label": "admin creates WORKSPACE base to restrict",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "admin",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 2136,
+      "requestId": "eb78f90f-3840-4847-a18f-42f00e39d345"
+    },
+    {
+      "label": "switch to RESTRICTED",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/4d140250-9dc3-4a76-baeb-9377b0344418",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2681,
+      "requestId": "2423a154-f6bc-42c9-a0c4-187475305dad"
+    },
+    {
+      "label": "auto MANAGE grant after switch",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/4d140250-9dc3-4a76-baeb-9377b0344418/grants",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1594,
+      "requestId": "fd0cd715-d81b-4d39-a888-0dd621e81f87"
+    },
+    {
+      "label": "switch created editor grant",
+      "pass": true
+    },
+    {
+      "label": "member loses switched base",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/4d140250-9dc3-4a76-baeb-9377b0344418",
+      "actor": "member",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 2158,
+      "requestId": "f485ca8f-7f9c-4c27-ae36-63ea85798f05"
+    },
+    {
+      "label": "admin revokes own grant",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/4d140250-9dc3-4a76-baeb-9377b0344418/grants/4eab41d4-fa2b-4c89-9bb8-491492317d0c",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2040,
+      "requestId": "3efb9bb6-f489-4f08-84e3-5c4be18362ab"
+    },
+    {
+      "label": "admin locked out of own base",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/4d140250-9dc3-4a76-baeb-9377b0344418",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 1912,
+      "requestId": "5d225c8e-0d22-430c-868e-975ab05cbd14"
+    },
+    {
+      "label": "records manager lacks knowledgebase:delete",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5f805f0-903b-4631-b2d7-5165311afb2d",
+      "actor": "records",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1944,
+      "requestId": "31855275-de6b-438d-9805-fae7e85021c6"
+    },
+    {
+      "label": "P3-API-05 owner deletes locked-out base",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/4d140250-9dc3-4a76-baeb-9377b0344418",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2297,
+      "requestId": "e44249ba-c376-488e-8411-15ee6d3325e4"
+    },
+    {
+      "label": "deleted base is 404",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/4d140250-9dc3-4a76-baeb-9377b0344418",
+      "actor": "owner",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 1518,
+      "requestId": "1898e56b-7721-467b-8bdc-9cb72894444e"
+    },
+    {
+      "label": "name of a deleted base can be reused",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "admin",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 1955,
+      "requestId": "0b6fbee1-5c6b-4f05-ac1d-844d85a6cefb"
+    },
+    {
+      "label": "cleanup reused base",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/d9181fbc-6073-4d0b-ae59-9947f9f8957f",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2265,
+      "requestId": "5ed3a91d-3a77-4e57-9ffc-10ed61e46c2d"
+    },
+    {
+      "label": "multi-chunk handbook upload",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3736,
+      "requestId": "f9d8e3d6-5351-4019-8041-96577d74f3d6"
+    },
+    {
+      "label": "multi-chunk document READY with several chunks",
+      "pass": true,
+      "detail": {
+        "status": "READY",
+        "chunks": 6
+      }
+    },
+    {
+      "label": "chunk page 2",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/36f898ac-9cb8-4d79-9300-bdb8d2cb2013/chunks?page=2&limit=1",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1768,
+      "requestId": "3e8b7794-5015-4a5e-b1f4-d0343fbe075d"
+    },
+    {
+      "label": "chunk pagination page 2",
+      "pass": true,
+      "detail": {
+        "page": 2,
+        "limit": 1,
+        "totalItems": 6,
+        "totalPages": 6,
+        "hasPreviousPage": true,
+        "hasNextPage": true
+      }
+    },
+    {
+      "label": "UTF-8 (Urdu) filename upload",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3455,
+      "requestId": "24176712-771e-4c68-a2d3-7c0200600673"
+    },
+    {
+      "label": "Unicode filename and default title preserved",
+      "pass": true,
+      "detail": {
+        "filename": "سالانہ رخصت پالیسی.txt",
+        "title": "سالانہ رخصت پالیسی"
+      }
+    },
+    {
+      "label": "client path and quotes in filename",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3496,
+      "requestId": "4894ffda-f7c9-4d1c-b6bc-aba6e1149580"
+    },
+    {
+      "label": "path stripped and quotes replaced",
+      "pass": true,
+      "detail": "quarterly _draft_.txt"
+    },
+    {
+      "label": "P3-API-09 member uploads Markdown",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "member",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3456,
+      "requestId": "f4543d18-741e-4f7b-95a1-5c54ad68c88b"
+    },
+    {
+      "label": "document shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "accepted upload: UPLOADED, not searchable, defaults applied",
+      "pass": true
+    },
+    {
+      "label": "owner uploads PDF as PUBLIC with title",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3616,
+      "requestId": "fa556713-0504-4f49-a80a-36c0a8f39233"
+    },
+    {
+      "label": "owner uploads CONFIDENTIAL text",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3342,
+      "requestId": "d78404ad-99fb-441d-8a9c-94bba6272867"
+    },
+    {
+      "label": "records manager uploads DOCX to HR Records",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5f805f0-903b-4631-b2d7-5165311afb2d/documents",
+      "actor": "records",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3397,
+      "requestId": "70551183-59da-4e0e-bd9f-7bb91a2463ff"
+    },
+    {
+      "label": "DOCX inherits RESTRICTED default",
+      "pass": true
+    },
+    {
+      "label": "admin uploads to Finance (CONFIDENTIAL default)",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/documents",
+      "actor": "admin",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 6694,
+      "requestId": "337f037c-b65f-45c8-b52c-c846d51a7eed"
+    },
+    {
+      "label": "member upload inherits Finance default above clearance",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/documents",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "CLASSIFICATION_EXCEEDS_CLEARANCE",
+      "pass": true,
+      "ms": 1774,
+      "requestId": "d6701511-3768-494e-b312-18761587dc79"
+    },
+    {
+      "label": "member uploads to Finance as INTERNAL via role WRITE grant",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/documents",
+      "actor": "member",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3656,
+      "requestId": "ef720524-5f29-431d-a0dc-e761f994557f"
+    },
+    {
+      "label": "corrupt PDF is accepted then fails",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3761,
+      "requestId": "da2e56d1-a8c8-4039-aab8-d62f554354e2"
+    },
+    {
+      "label": "text-less PDF is accepted then fails",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 6115,
+      "requestId": "e3358f91-ab09-47e0-adc1-40cfb1349c68"
+    },
+    {
+      "label": "no file part",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 400,
+      "expected": 400,
+      "code": "BAD_REQUEST",
+      "pass": true,
+      "ms": 2684,
+      "requestId": "490a14cf-faa8-4d92-ad65-bf859f22ba65"
+    },
+    {
+      "label": "file under another field name",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 400,
+      "expected": 400,
+      "code": "BAD_REQUEST",
+      "pass": true,
+      "ms": 1370,
+      "requestId": "77074e45-dc7a-4dd1-91b0-f3b90583c7f7"
+    },
+    {
+      "label": "two files",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 400,
+      "expected": 400,
+      "code": "BAD_REQUEST",
+      "pass": true,
+      "ms": 1439,
+      "requestId": "877c91fc-8c41-45eb-a0ba-ec050dedc4da"
+    },
+    {
+      "label": "empty file",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 415,
+      "expected": 415,
+      "code": "DOCUMENT_EMPTY",
+      "pass": true,
+      "ms": 2746,
+      "requestId": "9cdbae09-f70d-4c19-b2b6-bf1ff444aa6b"
+    },
+    {
+      "label": "empty file: details.reason EMPTY",
+      "pass": true,
+      "detail": {
+        "reason": "EMPTY",
+        "allowedTypes": [
+          "pdf",
+          "docx",
+          "txt",
+          "md"
+        ]
+      }
+    },
+    {
+      "label": "executable extension",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 415,
+      "expected": 415,
+      "code": "DOCUMENT_TYPE_NOT_ALLOWED",
+      "pass": true,
+      "ms": 1980,
+      "requestId": "d7b31ab4-f51e-4e06-82d9-8ef15ea4d1ea"
+    },
+    {
+      "label": "executable extension: details.reason TYPE_NOT_ALLOWED",
+      "pass": true,
+      "detail": {
+        "reason": "TYPE_NOT_ALLOWED",
+        "allowedTypes": [
+          "pdf",
+          "docx",
+          "txt",
+          "md"
+        ]
+      }
+    },
+    {
+      "label": "no extension",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 415,
+      "expected": 415,
+      "code": "DOCUMENT_TYPE_NOT_ALLOWED",
+      "pass": true,
+      "ms": 2117,
+      "requestId": "919c677f-89e2-42fa-bc68-b816222ebf9d"
+    },
+    {
+      "label": "no extension: details.reason TYPE_NOT_ALLOWED",
+      "pass": true,
+      "detail": {
+        "reason": "TYPE_NOT_ALLOWED",
+        "allowedTypes": [
+          "pdf",
+          "docx",
+          "txt",
+          "md"
+        ]
+      }
+    },
+    {
+      "label": "image extension",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 415,
+      "expected": 415,
+      "code": "DOCUMENT_TYPE_NOT_ALLOWED",
+      "pass": true,
+      "ms": 2600,
+      "requestId": "5ee6d386-f255-401b-b85a-55e6e3f28d57"
+    },
+    {
+      "label": "image extension: details.reason TYPE_NOT_ALLOWED",
+      "pass": true,
+      "detail": {
+        "reason": "TYPE_NOT_ALLOWED",
+        "allowedTypes": [
+          "pdf",
+          "docx",
+          "txt",
+          "md"
+        ]
+      }
+    },
+    {
+      "label": "executable named .pdf",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 415,
+      "expected": 415,
+      "code": "DOCUMENT_CONTENT_MISMATCH",
+      "pass": true,
+      "ms": 7321,
+      "requestId": "46b3f849-6242-4c93-befe-51d103bdaf9c"
+    },
+    {
+      "label": "executable named .pdf: details.reason CONTENT_MISMATCH",
+      "pass": true,
+      "detail": {
+        "reason": "CONTENT_MISMATCH",
+        "allowedTypes": [
+          "pdf",
+          "docx",
+          "txt",
+          "md"
+        ]
+      }
+    },
+    {
+      "label": "plain ZIP named .docx",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 415,
+      "expected": 415,
+      "code": "DOCUMENT_CONTENT_MISMATCH",
+      "pass": true,
+      "ms": 2079,
+      "requestId": "ce829183-2e77-47ff-9945-2e1d4e488332"
+    },
+    {
+      "label": "plain ZIP named .docx: details.reason CONTENT_MISMATCH",
+      "pass": true,
+      "detail": {
+        "reason": "CONTENT_MISMATCH",
+        "allowedTypes": [
+          "pdf",
+          "docx",
+          "txt",
+          "md"
+        ]
+      }
+    },
+    {
+      "label": "DOCX with macros",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 415,
+      "expected": 415,
+      "code": "DOCUMENT_TYPE_NOT_ALLOWED",
+      "pass": true,
+      "ms": 1998,
+      "requestId": "df85eb6f-78ca-467f-8931-b1261f8823b1"
+    },
+    {
+      "label": "DOCX with macros: details.reason MACROS_PRESENT",
+      "pass": true,
+      "detail": {
+        "reason": "MACROS_PRESENT",
+        "allowedTypes": [
+          "pdf",
+          "docx",
+          "txt",
+          "md"
+        ]
+      }
+    },
+    {
+      "label": "binary named .txt",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 415,
+      "expected": 415,
+      "code": "DOCUMENT_CONTENT_MISMATCH",
+      "pass": true,
+      "ms": 1930,
+      "requestId": "4a00b9e2-4156-4acd-b186-c914c4605607"
+    },
+    {
+      "label": "binary named .txt: details.reason CONTENT_MISMATCH",
+      "pass": true,
+      "detail": {
+        "reason": "CONTENT_MISMATCH",
+        "allowedTypes": [
+          "pdf",
+          "docx",
+          "txt",
+          "md"
+        ]
+      }
+    },
+    {
+      "label": "invalid classification",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1307,
+      "requestId": "1c859af9-cabd-43d1-a042-b4dd536a16cb"
+    },
+    {
+      "label": "title over 255",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1184,
+      "requestId": "4ca08ed0-0b09-4772-b041-d064e5a47354"
+    },
+    {
+      "label": "21 tags",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1183,
+      "requestId": "6228745c-11b4-43e3-aac7-4eafe193b826"
+    },
+    {
+      "label": "tag over 40",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1169,
+      "requestId": "072abc5f-844f-4cf8-9762-d02e8877eb3b"
+    },
+    {
+      "label": "unknown form field",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1124,
+      "requestId": "ecc81d05-2304-4616-b0aa-e37f5fa381cd"
+    },
+    {
+      "label": "member classification above clearance",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "CLASSIFICATION_EXCEEDS_CLEARANCE",
+      "pass": true,
+      "ms": 1405,
+      "requestId": "9f956b46-1697-4cb2-bc72-3532ef7c333f"
+    },
+    {
+      "label": "viewer lacks document:create",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "viewer",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1850,
+      "requestId": "a95f76b7-a4ef-413c-8555-1664dc1623ba"
+    },
+    {
+      "label": "upload into hidden base",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5f805f0-903b-4631-b2d7-5165311afb2d/documents",
+      "actor": "member",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 2023,
+      "requestId": "2d8123f2-0d2b-42f3-b51a-512de7a3153c"
+    },
+    {
+      "label": "member duplicates CONFIDENTIAL file",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "member",
+      "status": 409,
+      "expected": 409,
+      "code": "DOCUMENT_DUPLICATE",
+      "pass": true,
+      "ms": 1725,
+      "requestId": "855a33d1-ccfe-4c15-8404-62437ebd81ff"
+    },
+    {
+      "label": "duplicate above clearance names nothing",
+      "pass": true,
+      "detail": {}
+    },
+    {
+      "label": "admin duplicates the same file",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "admin",
+      "status": 409,
+      "expected": 409,
+      "code": "DOCUMENT_DUPLICATE",
+      "pass": true,
+      "ms": 1898,
+      "requestId": "04e48cda-e3e4-46bc-b854-a9b741b2adfe"
+    },
+    {
+      "label": "duplicate within clearance names the existing copy",
+      "pass": true,
+      "detail": {
+        "existingDocumentId": "038f9b64-1774-42a3-af62-247d8ea52f65",
+        "existingTitle": "compensation-review"
+      }
+    },
+    {
+      "label": "same bytes in another base are allowed",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/documents",
+      "actor": "admin",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3624,
+      "requestId": "7ef5bca2-eae4-4934-9e2e-6a308a848b19"
+    },
+    {
+      "label": "cleanup cross-base copy",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/321c24c1-60fc-4772-803b-6d3cf0883172",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2874,
+      "requestId": "1634c1bc-5c81-480b-89a1-c0557763b8cd"
+    },
+    {
+      "label": "file over UPLOAD_MAX_FILE_SIZE",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 413,
+      "expected": 413,
+      "code": "PAYLOAD_TOO_LARGE",
+      "pass": true,
+      "ms": 1538,
+      "requestId": "e7241f61-6942-4cc4-93d5-1656fc4db342"
+    },
+    {
+      "label": "no file part (sample)",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 400,
+      "expected": 400,
+      "code": "BAD_REQUEST",
+      "pass": true,
+      "ms": 1125,
+      "requestId": "af8f6b66-465a-4021-ae30-0674eeeea9c0"
+    },
+    {
+      "label": "all uploads reached READY or FAILED",
+      "pass": true
+    },
+    {
+      "label": "Markdown READY",
+      "pass": true,
+      "detail": "READY"
+    },
+    {
+      "label": "PDF READY with 2 pages",
+      "pass": true,
+      "detail": {
+        "status": "READY",
+        "pages": 2,
+        "failure": null
+      }
+    },
+    {
+      "label": "TXT READY",
+      "pass": true,
+      "detail": "READY"
+    },
+    {
+      "label": "DOCX READY",
+      "pass": true,
+      "detail": {
+        "status": "READY",
+        "failure": null,
+        "message": null
+      }
+    },
+    {
+      "label": "Finance Markdown READY",
+      "pass": true,
+      "detail": "READY"
+    },
+    {
+      "label": "corrupt PDF FAILED permanently",
+      "pass": true,
+      "detail": {
+        "code": "UNPARSEABLE_DOCUMENT",
+        "message": "The document could not be read. It may be damaged."
+      }
+    },
+    {
+      "label": "text-less PDF FAILED",
+      "pass": true,
+      "detail": {
+        "code": "DOCUMENT_EMPTY",
+        "message": "No extractable text was found. Scanned documents need OCR support in the AI service."
+      }
+    },
+    {
+      "label": "P3-API-10 list documents as owner",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1629,
+      "requestId": "588cc1da-b013-4112-87eb-4d9a52d41c86"
+    },
+    {
+      "label": "P3-API-10 list documents as admin",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1789,
+      "requestId": "13fa3b47-8599-4a50-9259-7baad2c8a345"
+    },
+    {
+      "label": "P3-API-10 list documents as member",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1700,
+      "requestId": "65f92cfc-4c68-4453-8226-26203a6ed819"
+    },
+    {
+      "label": "P3-API-10 list documents as viewer",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100",
+      "actor": "viewer",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1709,
+      "requestId": "3b78cd4e-564b-4f8c-8205-1d88c2dd9445"
+    },
+    {
+      "label": "P3-API-10 list documents as records",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100",
+      "actor": "records",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1768,
+      "requestId": "13c64923-c507-4e00-9dd2-b43de066a349"
+    },
+    {
+      "label": "member sees no CONFIDENTIAL/RESTRICTED documents",
+      "pass": true
+    },
+    {
+      "label": "viewer sees Handbook INTERNAL/PUBLIC only",
+      "pass": true
+    },
+    {
+      "label": "admin sees CONFIDENTIAL but not HR Records",
+      "pass": true
+    },
+    {
+      "label": "records manager sees RESTRICTED payroll",
+      "pass": true
+    },
+    {
+      "label": "owner sees everything",
+      "pass": true
+    },
+    {
+      "label": "base stats as member",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1562,
+      "requestId": "b1efa747-2b80-4371-8d40-bb69a8c33e21"
+    },
+    {
+      "label": "base stats as owner",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1622,
+      "requestId": "2c5c5aaf-042d-4cdd-9859-445f48f0a817"
+    },
+    {
+      "label": "stats count only documents within clearance",
+      "pass": true
+    },
+    {
+      "label": "totalBytes is a string",
+      "pass": true
+    },
+    {
+      "label": "P3-API-10 list documents as owner &status=FAILED",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100&status=FAILED",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1478,
+      "requestId": "924e96cc-854e-45f9-a6d5-35591ad5fe86"
+    },
+    {
+      "label": "status filter FAILED",
+      "pass": true
+    },
+    {
+      "label": "P3-API-10 list documents as owner &status=READY,FAILED",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100&status=READY,FAILED",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1506,
+      "requestId": "45f8e008-2c6a-4e2d-b249-d3233cd0c374"
+    },
+    {
+      "label": "comma-separated status filter",
+      "pass": true
+    },
+    {
+      "label": "unknown status value",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?status=DONE",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1312,
+      "requestId": "9af3098e-b61d-469d-9249-2657d1565fbd"
+    },
+    {
+      "label": "P3-API-10 list documents as member &classification=CONFIDENTIAL",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100&classification=CONFIDENTIAL",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1449,
+      "requestId": "1914acc1-8f07-4a4d-a1cf-3578bc2f0fc1"
+    },
+    {
+      "label": "classification above clearance is an empty page",
+      "pass": true
+    },
+    {
+      "label": "filter by hidden base",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?knowledgeBaseId=a5f805f0-903b-4631-b2d7-5165311afb2d",
+      "actor": "member",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 1882,
+      "requestId": "77cb4e3a-6c27-4485-ad32-367fabf0a770"
+    },
+    {
+      "label": "P3-API-10 list documents as admin &knowledgeBaseId=a5b10678-d03e-4fed-9b26-db9f0756ec44",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100&knowledgeBaseId=a5b10678-d03e-4fed-9b26-db9f0756ec44",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1571,
+      "requestId": "dd91c9ce-acbb-4867-900d-1df2c0fa75b7"
+    },
+    {
+      "label": "knowledgeBaseId filter",
+      "pass": true
+    },
+    {
+      "label": "P3-API-10 list documents as owner &search=leave",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100&search=leave",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1535,
+      "requestId": "46ba6157-2cd4-4c2c-8644-194b23a972bf"
+    },
+    {
+      "label": "search matches title",
+      "pass": true
+    },
+    {
+      "label": "P3-API-10 list documents as owner &sortBy=sizeBytes&sortDirection=ASC",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100&sortBy=sizeBytes&sortDirection=ASC",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1531,
+      "requestId": "708c85d9-24dd-4654-803e-575211299b7a"
+    },
+    {
+      "label": "sort by sizeBytes ASC",
+      "pass": true
+    },
+    {
+      "label": "P3-API-11 read document",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4",
+      "actor": "viewer",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1462,
+      "requestId": "24d5b9c4-0902-4594-ad9f-5211552b3973"
+    },
+    {
+      "label": "above-clearance document is 404",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/038f9b64-1774-42a3-af62-247d8ea52f65",
+      "actor": "member",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 2068,
+      "requestId": "917bc7f4-e3c5-4935-aa54-8fe2db0dbc74"
+    },
+    {
+      "label": "out-of-compartment document is 404",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/dffa6678-fe1d-48a9-8125-16e7d8feedcc",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 2322,
+      "requestId": "f38f3ed2-99aa-4cb1-972c-62b5375bd46d"
+    },
+    {
+      "label": "P3-API-12 chunks",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4/chunks?limit=1",
+      "actor": "viewer",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1759,
+      "requestId": "931715d7-4855-4085-9057-bdfda2a2ee07"
+    },
+    {
+      "label": "chunk shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "chunk pagination meta",
+      "pass": true,
+      "detail": {
+        "page": 1,
+        "limit": 1,
+        "totalItems": 1,
+        "totalPages": 1,
+        "hasPreviousPage": false,
+        "hasNextPage": false
+      }
+    },
+    {
+      "label": "chunks of a never-indexed document",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/2101b1c0-5762-4d6a-9ed6-a2ddd21c1d72/chunks",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1708,
+      "requestId": "8fe7910f-f33b-40fb-88f8-ec394f2a0509"
+    },
+    {
+      "label": "never-indexed document has no chunks",
+      "pass": true
+    },
+    {
+      "label": "chunks of hidden document",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/038f9b64-1774-42a3-af62-247d8ea52f65/chunks",
+      "actor": "member",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 2434,
+      "requestId": "528a57ee-2321-4612-b780-dbe414528630"
+    },
+    {
+      "label": "P3-API-13 download PDF",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4/download",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2542,
+      "requestId": "3cf7bd15-b33e-4ce5-94a1-03761cb1b68c"
+    },
+    {
+      "label": "download bytes identical to upload",
+      "pass": true
+    },
+    {
+      "label": "download is an attachment, not cached",
+      "pass": true
+    },
+    {
+      "label": "download with a Unicode filename",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/c0a3bb3b-c170-497f-9449-7c3cb63d3dec/download",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2372,
+      "requestId": "1e57d5d2-be3b-4797-990a-b88b7000d177"
+    },
+    {
+      "label": "Unicode filename survives in filename*",
+      "pass": true,
+      "detail": "attachment; filename=\"______ ____ ______.txt\"; filename*=UTF-8''%D8%B3%D8%A7%D9%84%D8%A7%D9%86%DB%81%20%D8%B1%D8%AE%D8%B5%D8%AA%20%D9%BE%D8%A7%D9%84%DB%8C%D8%B3%DB%8C.txt"
+    },
+    {
+      "label": "records manager downloads DOCX",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/dffa6678-fe1d-48a9-8125-16e7d8feedcc/download",
+      "actor": "records",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2641,
+      "requestId": "ac32ebe9-6adc-4765-bcb8-37583542ba33"
+    },
+    {
+      "label": "DOCX bytes identical",
+      "pass": true
+    },
+    {
+      "label": "member lacks document:download",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4/download",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1728,
+      "requestId": "b8c85890-c466-443c-a03e-dbbef30a24dd"
+    },
+    {
+      "label": "download of hidden document",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/dffa6678-fe1d-48a9-8125-16e7d8feedcc/download",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 2021,
+      "requestId": "00495b04-efb2-4978-ab8b-2acc3d335dc5"
+    },
+    {
+      "label": "download of FAILED document still serves original",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/2101b1c0-5762-4d6a-9ed6-a2ddd21c1d72/download",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2298,
+      "requestId": "29aceebf-eac5-487e-bfc3-11cc9df69b10"
+    },
+    {
+      "label": "FAILED document original is downloadable",
+      "pass": true
+    },
+    {
+      "label": "member lacks document:update",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1806,
+      "requestId": "ebde5516-a913-44df-bca4-32d974b247d2"
+    },
+    {
+      "label": "P3-API-14 edit metadata",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2434,
+      "requestId": "9aa69591-74c2-454b-8acc-75c8393ea045"
+    },
+    {
+      "label": "tags normalised on PATCH",
+      "pass": true
+    },
+    {
+      "label": "clear description and tags",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2145,
+      "requestId": "368aeaf4-7f61-496c-860b-ab6d0113817e"
+    },
+    {
+      "label": "description \"\" → null, tags []",
+      "pass": true
+    },
+    {
+      "label": "title null refused",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256",
+      "actor": "admin",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1574,
+      "requestId": "1a8bea9a-b47a-4fbd-9fda-c89f39dbc4a6"
+    },
+    {
+      "label": "blank title refused",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256",
+      "actor": "admin",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1177,
+      "requestId": "d5b53b97-4e16-4231-be23-504e4fe45ffc"
+    },
+    {
+      "label": "classification null refused",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256",
+      "actor": "admin",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1363,
+      "requestId": "4ba67db9-593c-4097-90e8-64b9dfe57087"
+    },
+    {
+      "label": "reclassify above clearance",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4",
+      "actor": "admin",
+      "status": 403,
+      "expected": 403,
+      "code": "CLASSIFICATION_EXCEEDS_CLEARANCE",
+      "pass": true,
+      "ms": 1402,
+      "requestId": "6ac0129a-d62b-4c47-96ab-2ee6a02dc27b"
+    },
+    {
+      "label": "reclassify PUBLIC → CONFIDENTIAL",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2263,
+      "requestId": "47f963b4-75ad-49b1-9403-6a74e582afae"
+    },
+    {
+      "label": "reclassified",
+      "pass": true
+    },
+    {
+      "label": "reclassification hides it from member at once",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4",
+      "actor": "member",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 1984,
+      "requestId": "18342d6e-20ca-4e87-9026-8460c0abbbf7"
+    },
+    {
+      "label": "reclassified document leaves member retrieval at once",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 5042,
+      "requestId": "2561be51-dadb-4065-ab92-7272ead5abed"
+    },
+    {
+      "label": "no CONFIDENTIAL passage for member",
+      "pass": true,
+      "detail": [
+        "travel-claims",
+        "Employee Handbook",
+        "Employee Handbook",
+        "Employee Handbook",
+        "Remote Work Guidelines",
+        "Employee Handbook",
+        "Employee Handbook",
+        "Employee Handbook"
+      ]
+    },
+    {
+      "label": "reclassify back to PUBLIC",
+      "method": "PATCH",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2243,
+      "requestId": "16ea73ba-b5ed-41eb-bbbf-ad55a9473926"
+    },
+    {
+      "label": "viewer lacks document:reindex",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256/reindex",
+      "actor": "viewer",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1952,
+      "requestId": "ca169376-f09d-4ff1-9e40-37c8bad1c163"
+    },
+    {
+      "label": "P3-API-15 member reindexes READY document",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256/reindex",
+      "actor": "member",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 2521,
+      "requestId": "ea294f86-0044-4dd6-971e-3f6771ed2275"
+    },
+    {
+      "label": "reindex: new version queued, previous still searchable",
+      "pass": true,
+      "detail": {
+        "status": "UPLOADED",
+        "v": 2,
+        "a": 1
+      }
+    },
+    {
+      "label": "second reindex while in flight",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/bad87aaf-6db9-4436-88ef-22298d704256/reindex",
+      "actor": "member",
+      "status": 409,
+      "expected": 409,
+      "code": "DOCUMENT_PROCESSING",
+      "pass": true,
+      "ms": 1547,
+      "requestId": "f28b432a-b8e6-462e-99f9-12c9667568fc"
+    },
+    {
+      "label": "conflict carries current status",
+      "pass": true,
+      "detail": {
+        "status": "CHUNKING"
+      }
+    },
+    {
+      "label": "retry FAILED document",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/2101b1c0-5762-4d6a-9ed6-a2ddd21c1d72/reindex",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 2466,
+      "requestId": "6603d226-6438-42b3-adea-96ebe3cccdbd"
+    },
+    {
+      "label": "retry bumps version, still not searchable",
+      "pass": true
+    },
+    {
+      "label": "reindex completed: v2 active",
+      "pass": true,
+      "detail": {
+        "status": "READY",
+        "a": 2
+      }
+    },
+    {
+      "label": "permanent failure fails again on retry",
+      "pass": true,
+      "detail": "UNPARSEABLE_DOCUMENT"
+    },
+    {
+      "label": "member lacks document:delete",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/32238ac1-29f0-492d-9cee-019e91f082a0",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1703,
+      "requestId": "f82cc0cf-0d3f-4b8b-ad11-5b41d9c741e3"
+    },
+    {
+      "label": "P3-API-16 delete document",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/32238ac1-29f0-492d-9cee-019e91f082a0",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2434,
+      "requestId": "129944c6-86ae-4302-b4d3-f01a313c52f2"
+    },
+    {
+      "label": "deleted document is 404",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/32238ac1-29f0-492d-9cee-019e91f082a0",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 1373,
+      "requestId": "5220e47e-57f5-4535-87e1-3a8f2c967f46"
+    },
+    {
+      "label": "delete again is 404",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/32238ac1-29f0-492d-9cee-019e91f082a0",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 1447,
+      "requestId": "17b33d18-ad7f-4561-afac-396d2421f1df"
+    },
+    {
+      "label": "re-upload after delete is not a duplicate",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3425,
+      "requestId": "cdd33eec-b6d5-4aef-adde-0bc4c544fab0"
+    },
+    {
+      "label": "cleanup re-upload",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/e2d14c5b-676c-421b-b5e0-6ba028a08bb8",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2506,
+      "requestId": "2d36c7c0-fa6e-4677-95ae-5f3005e9efb2"
+    },
+    {
+      "label": "P3-API-22 retrieval as owner",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 4832,
+      "requestId": "43504e2e-b3f8-488a-8bf2-ef534af8ec2c"
+    },
+    {
+      "label": "retrieval shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "retrieved passage shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "leave policy passage ranked in the top 3",
+      "pass": true,
+      "detail": [
+        "1 Leave Policy 2026 0.51273",
+        "2 travel-claims 0.26055",
+        "3 Employee Handbook 0.180775",
+        "4 Employee Handbook 0.154402",
+        "5 Employee Handbook 0.150749",
+        "6 Remote Work Guidelines 0.112704",
+        "7 Employee Handbook 0.090538",
+        "8 Employee Handbook 0.08902"
+      ]
+    },
+    {
+      "label": "retrieval as member",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3883,
+      "requestId": "2e6fb72b-1f7f-45bb-8d22-c682e727bf45"
+    },
+    {
+      "label": "member never receives CONFIDENTIAL/RESTRICTED passages",
+      "pass": true
+    },
+    {
+      "label": "records manager retrieves RESTRICTED payroll",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "records",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3419,
+      "requestId": "a4136a2b-8466-4222-a816-83452932fc14"
+    },
+    {
+      "label": "payroll passage returned to RESTRICTED clearance",
+      "pass": true,
+      "detail": [
+        "Payroll Register",
+        "compensation-review",
+        "quarterly _draft_",
+        "Leave Policy 2026",
+        "Employee Handbook",
+        "Employee Handbook",
+        "Employee Handbook",
+        "Remote Work Guidelines"
+      ]
+    },
+    {
+      "label": "admin same question",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 4190,
+      "requestId": "18da2a2d-80d3-43e7-9876-8f2ae82886de"
+    },
+    {
+      "label": "admin never receives HR Records passages",
+      "pass": true
+    },
+    {
+      "label": "narrow to a hidden base",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "admin",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 2140,
+      "requestId": "2859d005-25cd-49c8-8d9f-a01140bb96a8"
+    },
+    {
+      "label": "hidden narrowing echoes the ids",
+      "pass": true
+    },
+    {
+      "label": "narrow to a hidden document",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3119,
+      "requestId": "2507c301-609c-43e9-ba92-0d9161ec83bf"
+    },
+    {
+      "label": "hidden document narrowing silently returns nothing",
+      "pass": true
+    },
+    {
+      "label": "narrow to Finance",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2775,
+      "requestId": "f345a7e0-0a94-4371-bbd3-31819d089b68"
+    },
+    {
+      "label": "narrowing searches one base",
+      "pass": true
+    },
+    {
+      "label": "dense mode with minScore 0.99",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2637,
+      "requestId": "1372290e-c594-4f95-862c-bc98c43aa7ab"
+    },
+    {
+      "label": "high minScore filters dense results",
+      "pass": true
+    },
+    {
+      "label": "hybrid has no relevance floor",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2640,
+      "requestId": "d6a803a5-9e1d-48a4-8cb9-83c30ae47a23"
+    },
+    {
+      "label": "topK above RAG_MAX_TOP_K is capped",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2770,
+      "requestId": "91ab6124-da93-41bf-af85-4f33169ccbe7"
+    },
+    {
+      "label": "rerank false",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2669,
+      "requestId": "865e4c15-c404-4c95-8fea-715ced8deb56"
+    },
+    {
+      "label": "rerank false honoured",
+      "pass": true
+    },
+    {
+      "label": "blank query",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1441,
+      "requestId": "01d9454a-a432-4fa4-9223-d0c9cd6009da"
+    },
+    {
+      "label": "query over RAG_MAX_QUERY_LENGTH",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1132,
+      "requestId": "ff0aec81-54d8-4c77-9a46-cb06092fc0f8"
+    },
+    {
+      "label": "query length error under fields.query",
+      "pass": true,
+      "detail": {
+        "fields": {
+          "query": [
+            "must be at most 2000 characters"
+          ]
+        }
+      }
+    },
+    {
+      "label": "topK 0",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1144,
+      "requestId": "17f1b73a-2c0e-41a1-a1fd-a2af162572e3"
+    },
+    {
+      "label": "unknown retrieval field",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1329,
+      "requestId": "6c3546bb-c63d-4816-8ec6-7c04eb5ed45e"
+    },
+    {
+      "label": "viewer lacks rag:query",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "viewer",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 2212,
+      "requestId": "fdb65fd6-e061-45f1-9758-a51a4cde2a89"
+    },
+    {
+      "label": "retrieval rate-limit headers",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3043,
+      "requestId": "dabfc1f7-a0b7-491f-b908-6c4bb10d6112"
+    },
+    {
+      "label": "access scope as owner",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/access-scope",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1487,
+      "requestId": "04fb95a0-c52a-4049-b50b-f511f502375b"
+    },
+    {
+      "label": "access scope as admin",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/access-scope",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1459,
+      "requestId": "27319452-a0a1-469d-933b-0d72b6fd5a83"
+    },
+    {
+      "label": "access scope as member",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/access-scope",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1528,
+      "requestId": "4bd5e88c-392e-4892-988c-c6e67bd8d893"
+    },
+    {
+      "label": "access scope as records",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/access-scope",
+      "actor": "records",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2401,
+      "requestId": "1b4b70a9-d2f9-4d06-91a2-5af8670c6517"
+    },
+    {
+      "label": "owner bypasses, member sees Finance via grant",
+      "pass": true
+    },
+    {
+      "label": "P3-API-20 analyze as member",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2095,
+      "requestId": "d222f561-64d1-4e09-8df5-54fd673e8083"
+    },
+    {
+      "label": "analyze shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "names, email, phone and salary masked; no values",
+      "pass": true,
+      "detail": "[PERSON_1] ([EMAIL_ADDRESS_1], [PHONE_NUMBER_1]) earns [SALARY_1] per year. Ref p3-1791234942236."
+    },
+    {
+      "label": "masking keeps the bracket after a phone number",
+      "pass": true,
+      "detail": "[PERSON_1] ([EMAIL_ADDRESS_1], [PHONE_NUMBER_1]) earns [SALARY_1] per year. Ref p3-1791234942236."
+    },
+    {
+      "label": "reveal without pii:reveal",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "admin",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1737,
+      "requestId": "1f414792-18ca-4046-af75-e1a3a9af15a5"
+    },
+    {
+      "label": "owner reveal",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2400,
+      "requestId": "ad7d23fc-32db-4c5e-9915-787a22aa42d6"
+    },
+    {
+      "label": "reveal returns values",
+      "pass": true
+    },
+    {
+      "label": "analysis text over PII_MAX_ANALYZE_LENGTH",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "member",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1475,
+      "requestId": "45e3078b-05c1-4af5-b34b-c4922be7ab01"
+    },
+    {
+      "label": "empty analysis text",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "member",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1129,
+      "requestId": "f227247e-ec54-4895-b0d6-e896536ddd41"
+    },
+    {
+      "label": "viewer cannot analyze",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "viewer",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1734,
+      "requestId": "01f8326e-23dc-4071-b67c-6dd75006f3d2"
+    },
+    {
+      "label": "P3-API-21 document report",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/documents/038f9b64-1774-42a3-af62-247d8ea52f65/report",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2262,
+      "requestId": "b050642b-9efa-4727-af9a-33bf35be12ce"
+    },
+    {
+      "label": "report shape",
+      "pass": true,
+      "detail": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "label": "report masks the document",
+      "pass": true
+    },
+    {
+      "label": "report limit 21",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/documents/038f9b64-1774-42a3-af62-247d8ea52f65/report?limit=21",
+      "actor": "admin",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1199,
+      "requestId": "0ce115ba-3cc1-4418-8ea9-f1eb3bf5f522"
+    },
+    {
+      "label": "report reveal without permission",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/documents/038f9b64-1774-42a3-af62-247d8ea52f65/report?reveal=true",
+      "actor": "admin",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1954,
+      "requestId": "56b5bc15-a49e-4516-aaa7-7397730587c5"
+    },
+    {
+      "label": "owner report with reveal",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/documents/038f9b64-1774-42a3-af62-247d8ea52f65/report?reveal=true&limit=1",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2857,
+      "requestId": "e120c727-4d28-4ee1-a399-79c2e1d654fc"
+    },
+    {
+      "label": "revealed report includes values",
+      "pass": true
+    },
+    {
+      "label": "report on hidden document",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/documents/038f9b64-1774-42a3-af62-247d8ea52f65/report",
+      "actor": "member",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 2607,
+      "requestId": "792b2e34-fd13-4d6d-b328-622bc255f40c"
+    },
+    {
+      "label": "viewer cannot open report",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4/report",
+      "actor": "viewer",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1853,
+      "requestId": "bb74673c-37e5-46b8-aa84-f62da8b64b6c"
+    },
+    {
+      "label": "report on never-indexed document",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/documents/2101b1c0-5762-4d6a-9ed6-a2ddd21c1d72/report",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1606,
+      "requestId": "3f018716-239f-4fc7-aaf1-bdb8ca95bf6f"
+    },
+    {
+      "label": "never-indexed report is empty",
+      "pass": true
+    },
+    {
+      "label": "member cannot update policy",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1863,
+      "requestId": "2f4347ad-523e-413e-8aeb-a9e236fc3d1f"
+    },
+    {
+      "label": "P3-API-18 update policy",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2082,
+      "requestId": "0e381a78-27f8-49b1-90e7-9ad276d9959e"
+    },
+    {
+      "label": "saved policy: version 1, CUSTOM added, LOCATION added",
+      "pass": true
+    },
+    {
+      "label": "stale expectedVersion",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 409,
+      "expected": 409,
+      "code": "RESOURCE_CONFLICT",
+      "pass": true,
+      "ms": 1806,
+      "requestId": "d2d47d87-9ec9-4014-9549-e79adca550d6"
+    },
+    {
+      "label": "conflict reports current version",
+      "pass": true,
+      "detail": {
+        "expectedVersion": 0,
+        "currentVersion": 1
+      }
+    },
+    {
+      "label": "score threshold above 1",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1306,
+      "requestId": "086f2bfd-9a20-49cd-85ba-b078a9751453"
+    },
+    {
+      "label": "entity type pattern",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1246,
+      "requestId": "7f0a8ee2-c70d-454a-aa51-91475fddfd1f"
+    },
+    {
+      "label": "unknown failure mode",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 422,
+      "expected": 422,
+      "code": "VALIDATION_FAILED",
+      "pass": true,
+      "ms": 1229,
+      "requestId": "3a442316-69fe-488e-ac00-8e8f38ca74cd"
+    },
+    {
+      "label": "null fields keep current values",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1991,
+      "requestId": "496498e1-4953-4519-930f-b1a3b81cf479"
+    },
+    {
+      "label": "member view hides deny list",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1424,
+      "requestId": "36f8374d-6661-40c4-a62b-69e8f1105e70"
+    },
+    {
+      "label": "deny list hidden, counted",
+      "pass": true
+    },
+    {
+      "label": "deny and allow lists applied",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1727,
+      "requestId": "04558158-ed71-4454-9ba6-d461fe1a9a5b"
+    },
+    {
+      "label": "deny term masked as CUSTOM, allow term kept",
+      "pass": true,
+      "detail": "[CUSTOM_1] is run with Acme Corporation in [LOCATION_1]. p3-1791234942236"
+    },
+    {
+      "label": "disable redaction",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2287,
+      "requestId": "4ee281ee-d21b-4664-bd0f-acc19bf9ab18"
+    },
+    {
+      "label": "disabled policy warns",
+      "pass": true
+    },
+    {
+      "label": "analysis with redaction off",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1525,
+      "requestId": "648d96df-a88b-4edf-ad5c-642bc43f2d79"
+    },
+    {
+      "label": "redaction off passes text through",
+      "pass": true
+    },
+    {
+      "label": "re-enable redaction",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2086,
+      "requestId": "a7773ce4-d97b-4e9d-bee7-a8baa90ab638"
+    },
+    {
+      "label": "owner issues API key",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/api-keys",
+      "actor": "owner",
+      "status": 201,
+      "expected": 201,
+      "pass": true,
+      "ms": 2260,
+      "requestId": "39234e71-fe28-4fd1-97bb-46853b76be5a"
+    },
+    {
+      "label": "API key lists bases",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "api-key",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1098,
+      "requestId": "4543da64-585e-49d1-b8ed-7f7474bbc9d4"
+    },
+    {
+      "label": "API key sees WORKSPACE base only",
+      "pass": true
+    },
+    {
+      "label": "grant API key READ on Finance",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2421,
+      "requestId": "a024c8e0-69c4-4a4a-811b-50ecef1126ae"
+    },
+    {
+      "label": "API key grant label",
+      "pass": true
+    },
+    {
+      "label": "API key sees Finance after grant",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "api-key",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 866,
+      "requestId": "fdcf816c-73a2-4420-8aa3-47049543d9c3"
+    },
+    {
+      "label": "grant admits the key",
+      "pass": true
+    },
+    {
+      "label": "API key retrieval",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "api-key",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3469,
+      "requestId": "3f87bae8-225c-4bb4-8550-e5ce549aa7f6"
+    },
+    {
+      "label": "API key on bearer-only chunks route",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4/chunks",
+      "actor": "api-key",
+      "status": 401,
+      "expected": [
+        401,
+        403
+      ],
+      "code": "AUTH_SCHEME_NOT_ALLOWED",
+      "pass": true,
+      "ms": 223,
+      "requestId": "cc54d425-72bb-4313-a8b4-356c2a1999b8"
+    },
+    {
+      "label": "API key cannot write to a READ base",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/documents",
+      "actor": "api-key",
+      "status": 403,
+      "expected": 403,
+      "code": "KNOWLEDGE_BASE_ACCESS_DENIED",
+      "pass": true,
+      "ms": 794,
+      "requestId": "42906557-1cb5-405a-9c07-bf5a0ad5e724"
+    },
+    {
+      "label": "revoke key",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/api-keys/40e6a2f6-cff0-4168-a3cb-00e856f085db",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2712,
+      "requestId": "7d63ca7a-79e6-4717-a664-8500b4db0b2d"
+    },
+    {
+      "label": "revoked key grant hidden",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44/grants",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2119,
+      "requestId": "502990e0-d731-4602-b8f4-038fd1c8ddb5"
+    },
+    {
+      "label": "revoked key grant no longer listed",
+      "pass": true
+    },
+    {
+      "label": "revoked key refused",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "api-key",
+      "status": 401,
+      "expected": 401,
+      "code": "API_KEY_REVOKED",
+      "pass": true,
+      "ms": 1205,
+      "requestId": "8fe2a296-19be-44ee-9b31-7fb9827023ac"
+    },
+    {
+      "label": "outsider addresses another workspace",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases",
+      "actor": "outsider",
+      "status": 404,
+      "expected": [
+        403,
+        404
+      ],
+      "code": "ORGANIZATION_NOT_FOUND",
+      "pass": true,
+      "ms": 1180,
+      "requestId": "cdfedfef-983a-4ca1-ab46-ff7cf9f34373"
+    },
+    {
+      "label": "foreign base id inside own workspace",
+      "method": "GET",
+      "path": "/api/v1/organizations/487fde8c-5673-47ae-a1cf-b54c6aa996cd/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "outsider",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 2183,
+      "requestId": "bd800ac2-b49c-4998-8ecf-f4fbbedc8737"
+    },
+    {
+      "label": "foreign document id inside own workspace",
+      "method": "GET",
+      "path": "/api/v1/organizations/487fde8c-5673-47ae-a1cf-b54c6aa996cd/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4",
+      "actor": "outsider",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 1877,
+      "requestId": "55650412-da73-4e73-9498-e38c957ea2c8"
+    },
+    {
+      "label": "foreign download inside own workspace",
+      "method": "GET",
+      "path": "/api/v1/organizations/487fde8c-5673-47ae-a1cf-b54c6aa996cd/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4/download",
+      "actor": "outsider",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 1968,
+      "requestId": "74aa4c4b-f15c-4527-9094-d54c660d3747"
+    },
+    {
+      "label": "foreign base in retrieval narrowing",
+      "method": "POST",
+      "path": "/api/v1/organizations/487fde8c-5673-47ae-a1cf-b54c6aa996cd/rag/query",
+      "actor": "outsider",
+      "status": 404,
+      "expected": 404,
+      "code": "KNOWLEDGE_BASE_NOT_FOUND",
+      "pass": true,
+      "ms": 1926,
+      "requestId": "373f1822-195e-4827-96b8-05742454a107"
+    },
+    {
+      "label": "empty workspace retrieval",
+      "method": "POST",
+      "path": "/api/v1/organizations/487fde8c-5673-47ae-a1cf-b54c6aa996cd/rag/query",
+      "actor": "outsider",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2331,
+      "requestId": "cd30ec51-b48a-4eaa-9c1b-10013420fa8a"
+    },
+    {
+      "label": "no readable bases → empty results, 0 searched",
+      "pass": true
+    },
+    {
+      "label": "foreign PII report",
+      "method": "GET",
+      "path": "/api/v1/organizations/487fde8c-5673-47ae-a1cf-b54c6aa996cd/pii/documents/038f9b64-1774-42a3-af62-247d8ea52f65/report",
+      "actor": "outsider",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 1610,
+      "requestId": "0bcda147-287e-4517-a5ba-3c03f6a2b5d5"
+    },
+    {
+      "label": "header/path mismatch uses header",
+      "method": "GET",
+      "path": "/api/v1/organizations/487fde8c-5673-47ae-a1cf-b54c6aa996cd/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4",
+      "actor": "owner",
+      "status": 200,
+      "expected": [
+        200,
+        400,
+        403,
+        404
+      ],
+      "pass": true,
+      "ms": 1958,
+      "requestId": "88e6d28f-ad9d-4fc3-9528-3effa820db65"
+    },
+    {
+      "label": "AI service stopped for outage test",
+      "pass": true
+    },
+    {
+      "label": "readiness during AI outage",
+      "method": "GET",
+      "path": "/health/ready",
+      "actor": "anonymous",
+      "status": 200,
+      "expected": [
+        200,
+        503
+      ],
+      "pass": true,
+      "ms": 300,
+      "requestId": "58ef4628-ecfa-4414-bdd4-bc9c5ee20076"
+    },
+    {
+      "label": "retrieval during AI outage",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 503,
+      "expected": 503,
+      "code": "AI_SERVICE_UNAVAILABLE",
+      "pass": true,
+      "ms": 2758,
+      "requestId": "42822e92-bc53-47fd-a8d8-c94192508ba7"
+    },
+    {
+      "label": "analysis during outage, policy REFUSE",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "member",
+      "status": 503,
+      "expected": 503,
+      "code": "PII_DETECTION_UNAVAILABLE",
+      "pass": true,
+      "ms": 2734,
+      "requestId": "eebe86c6-b7b2-48ee-a5e1-076429803de5"
+    },
+    {
+      "label": "switch policy to DEGRADE_TO_PATTERNS",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1951,
+      "requestId": "1df27a13-2226-43e1-b347-9139531c8a51"
+    },
+    {
+      "label": "analysis degraded to patterns",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/analyze",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2083,
+      "requestId": "cfe7fcab-a61f-4f3e-9558-c744dac88dfa"
+    },
+    {
+      "label": "degraded: email masked, name not",
+      "pass": true,
+      "detail": "Ayesha Raza ([EMAIL_ADDRESS_1]) 9d5dd25d-58d3-4b2d-8437-867fed08abc0"
+    },
+    {
+      "label": "chunks still readable during outage",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4/chunks",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1881,
+      "requestId": "cfe1586e-b190-43dd-9427-b28d23f1ec19"
+    },
+    {
+      "label": "download still works during outage",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1a7a4ee8-2b83-4ed8-bab2-0e341a3015d4/download",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2461,
+      "requestId": "a0c49c90-b281-495a-8fbb-434a5a9f7d62"
+    },
+    {
+      "label": "upload during AI outage is accepted",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239/documents",
+      "actor": "owner",
+      "status": 202,
+      "expected": 202,
+      "pass": true,
+      "ms": 3334,
+      "requestId": "3255ab3b-34c3-4095-b0d9-03f982232b6d"
+    },
+    {
+      "label": "in-flight retry is visible in statusMessage",
+      "pass": true,
+      "detail": {
+        "status": "PARSING",
+        "message": "Attempt 1 of 5 failed (AI_SERVICE_UNAVAILABLE); retrying."
+      }
+    },
+    {
+      "label": "AI service recovered",
+      "pass": true
+    },
+    {
+      "label": "upload made during outage becomes READY after recovery",
+      "pass": true,
+      "detail": {
+        "status": "READY",
+        "failure": null,
+        "attempts": 2
+      }
+    },
+    {
+      "label": "retrieval after recovery",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3766,
+      "requestId": "456bc2f6-310c-4f12-b3f3-dcfcd72f2c3e"
+    },
+    {
+      "label": "restore REFUSE policy",
+      "method": "PUT",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/pii/policy",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2522,
+      "requestId": "af01df0f-c029-4f41-81c3-74e5b6de05e6"
+    },
+    {
+      "label": "member cannot delete base",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "member",
+      "status": 403,
+      "expected": 403,
+      "code": "PERMISSION_DENIED",
+      "pass": true,
+      "ms": 1709,
+      "requestId": "8e04473b-6f29-4622-8d62-e7c1f4826d9c"
+    },
+    {
+      "label": "stored objects and vectors exist before deletion",
+      "pass": true,
+      "detail": {
+        "1042638e-1948-4d17-b47a-6bb03b1c0b8a": {
+          "object": true,
+          "vectors": 1
+        },
+        "73986f8d-33e4-4102-b079-b5d5581adec2": {
+          "object": true,
+          "vectors": 1
+        }
+      }
+    },
+    {
+      "label": "delete Finance base",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5b10678-d03e-4fed-9b26-db9f0756ec44",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2462,
+      "requestId": "79135828-8667-482b-8dc6-c42d1c7f2f01"
+    },
+    {
+      "label": "documents of deleted base are gone",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1042638e-1948-4d17-b47a-6bb03b1c0b8a",
+      "actor": "owner",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 1383,
+      "requestId": "8ef50d68-8d84-4627-a5bb-9aa4d8bff467"
+    },
+    {
+      "label": "download from deleted base",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents/1042638e-1948-4d17-b47a-6bb03b1c0b8a/download",
+      "actor": "owner",
+      "status": 404,
+      "expected": 404,
+      "code": "DOCUMENT_NOT_FOUND",
+      "pass": true,
+      "ms": 1536,
+      "requestId": "90ed684c-c21b-40c4-a149-6733c5b788b2"
+    },
+    {
+      "label": "P3-API-10 list documents as owner &search=q3",
+      "method": "GET",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/documents?limit=100&search=q3",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1490,
+      "requestId": "f38231e5-190d-4f5f-9f7e-4607e8a54d5b"
+    },
+    {
+      "label": "deleted base documents absent from list",
+      "pass": true
+    },
+    {
+      "label": "retrieval after base deletion",
+      "method": "POST",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/rag/query",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 3786,
+      "requestId": "95132e1c-b43a-4874-a14e-8d2de6b9a828"
+    },
+    {
+      "label": "no passages from deleted base",
+      "pass": true
+    },
+    {
+      "label": "purge removed stored object and vectors for 1042638e",
+      "pass": true,
+      "detail": {
+        "object": false,
+        "vectors": 0,
+        "purgedWithinMs": 1885
+      }
+    },
+    {
+      "label": "purge removed stored object and vectors for 73986f8d",
+      "pass": true,
+      "detail": {
+        "object": false,
+        "vectors": 0,
+        "purgedWithinMs": 700
+      }
+    },
+    {
+      "label": "P3-API-05 delete Company Handbook",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/452fd543-2a3a-4e6f-a0af-6ca80379b239",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2301,
+      "requestId": "0b2539ae-2191-4a34-9127-a9249b9c7ebc"
+    },
+    {
+      "label": "P3-API-05 delete HR Records",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014/knowledge-bases/a5f805f0-903b-4631-b2d7-5165311afb2d",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2388,
+      "requestId": "bc113dea-e6b3-46e3-8e47-cec8312fa3a0"
+    },
+    {
+      "label": "every stored object and vector of the workspace purged",
+      "pass": true,
+      "detail": {
+        "objects": 0,
+        "vectors": 0,
+        "waitedMs": 7896
+      }
+    },
+    {
+      "label": "cleanup delete disposable workspace",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/e85e2a6d-c038-43fc-8c45-ff96f96ee014",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2684,
+      "requestId": "c424fdf1-0b35-446e-9681-fc32dcf6a759"
+    },
+    {
+      "label": "cleanup delete disposable workspace",
+      "method": "DELETE",
+      "path": "/api/v1/organizations/487fde8c-5673-47ae-a1cf-b54c6aa996cd",
+      "actor": "outsider",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 2846,
+      "requestId": "ffc9c30e-cd72-4f7d-b2e5-4d4ee17239b6"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "actor": "owner",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1241,
+      "requestId": "218ba558-9cac-456e-b34d-8827a81c6c3c"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "actor": "admin",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1181,
+      "requestId": "c12d9396-bfc4-405b-9b03-d76ed6327cc5"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "actor": "member",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1165,
+      "requestId": "ed5454d7-97fa-4de5-a97b-c439c8db54d9"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "actor": "viewer",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1402,
+      "requestId": "6877c85c-6f42-4940-90e4-65193dc04d70"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "actor": "records",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1390,
+      "requestId": "31316bb6-c9a5-488e-b1f2-71d7af84138a"
+    },
+    {
+      "label": "cleanup logout all fixture sessions",
+      "method": "POST",
+      "path": "/api/v1/auth/logout-all",
+      "actor": "outsider",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "ms": 1281,
+      "requestId": "94956935-0d52-4fef-8ada-8b457e4cf9f7"
+    }
+  ],
+  "fixtureUsers": [
+    "777e8357-84a5-480d-b17e-4218b954019f",
+    "0119f767-892a-4270-ae8e-236c1fecbcfc",
+    "82dbe5a9-4ef9-49d4-9c96-6e125cb149f7",
+    "e8006540-7591-45ea-88d1-6c42db6737c9",
+    "5fc7de7b-29f2-4e88-8007-13e5be4be562",
+    "e6571035-1cea-4324-8333-394e119f0470"
+  ],
+  "fixtureWorkspaces": [
+    "e85e2a6d-c038-43fc-8c45-ff96f96ee014",
+    "487fde8c-5673-47ae-a1cf-b54c6aa996cd"
+  ],
+  "limitations": [
+    "Members joined through real invitation emails read from the Ethereal test inbox; no direct database writes.",
+    "Fixture accounts retained with sessions revoked; workspaces soft-deleted through the API.",
+    "Workspace vector collections are removed by the organization purge after ORGANIZATION_PURGE_GRACE.",
+    "No browser/frontend tests."
+  ]
+}

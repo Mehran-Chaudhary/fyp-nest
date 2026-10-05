@@ -1,16 +1,16 @@
 # Frontend Delivery — Five Phases & Master Checklist
 
-**Revision 4 · 5 October 2026 · backend baseline `5b4efb7`**
+**Revision 5 · 6 October 2026 · backend baseline `979dfd5`**
 **Product:** AgentVault / Distributed AI Agent Management Platform
-**Active handoff:** [Phase 2 — Workspace Administration & Access Control](PHASE_2_WORKSPACE_ADMINISTRATION.md)
+**Active handoff:** [Phase 3 — Knowledge, Document Vault & Privacy](PHASE_3_KNOWLEDGE_DOCUMENT_VAULT_PRIVACY.md)
 
 > This is the authoritative frontend delivery plan. It replaces the old nine-phase roadmap. Deliver exactly five sequential phases. Advance after review and acceptance, or an explicit owner request to prepare the next handoff. Owner-requested progression does not establish unverified implementation acceptance. Historical backend phase numbers do not control frontend delivery order.
 
 ## How to use this document
 
-The roadmap defines scope, dependencies and acceptance; the Phase 1 and Phase 2 documents define implementation contracts. Check a task only when evidence exists. A finished specification is not a finished frontend. Do not infer implementation progress from the presence of old documents.
+The roadmap defines scope, dependencies and acceptance; the Phase 1, Phase 2 and Phase 3 documents define implementation contracts. Check a task only when evidence exists. A finished specification is not a finished frontend. Do not infer implementation progress from the presence of old documents.
 
-The obsolete frontend handoffs and connection guide have been removed. This directory contains only the current five-phase roadmap, Phase 1 and Phase 2 handoffs, and Phase 2 live verification evidence created in this session. Prepare Phase 3–5 handoffs when commissioned. The owner requested Phase 2 progression; Phase 1 browser acceptance evidence remains unverified.
+The obsolete frontend handoffs and connection guide have been removed. This directory contains only the current five-phase roadmap, the Phase 1–3 handoffs and the Phase 2–3 live verification evidence. Prepare Phase 4–5 handoffs when commissioned. The owner requested Phase 2 and Phase 3 progression; Phase 1–2 browser acceptance evidence remains unverified.
 
 Status vocabulary: **Not started**, **In progress**, **Ready for review**, **Accepted**, **Blocked**. Record blockers separately from ordinary unfinished work. The owner accepts each phase after the frontend engineer supplies evidence and a demo. No automatic advancement.
 
@@ -97,7 +97,7 @@ This orders identity before administration, grants before restricted knowledge, 
 
 ## Phase 3 checklist — Knowledge, Document Vault & Privacy
 
-**Detailed handoff:** prepare after Phase 2 acceptance or explicit owner request. Scope includes privacy; no current Phase 3 handoff has been commissioned.
+**Detailed handoff:** [Phase 3 contract](PHASE_3_KNOWLEDGE_DOCUMENT_VAULT_PRIVACY.md), revision 1: all 23 operations, 42 acceptance checks (P3-T01–P3-T42), 12 decision records (P3-G01–P3-G12) and type-checked TypeScript helpers. The owner requested this handoff. Source verification and a live API run are complete: [401 checks across all 23 operations](PHASE_3_LIVE_VERIFICATION.md), against real storage, vector store, queues and AI service, including an AI outage and recovery. One backend defect found during verification was fixed (P3-G01). Client implementation and browser acceptance remain unverified.
 
 - [ ] P3.01 Specify all knowledge/document/retrieval/privacy payloads, grants and content visibility rules.
 - [ ] P3.02 Knowledge-base list/create/read/update/delete and grant management.
@@ -183,7 +183,7 @@ Do not check implementation as complete because this specification was written.
 |---|---|---|---|---|---|---|
 | 1 | Ready, revision 2 | Not verified | Pending | 877de76 | Pending P1-T01–48 | Pending |
 | 2 | Ready, revision 3; owner requested progression | Not verified | Pending | 5b4efb7 | Live API 66/66; browser P2-T01–68 pending; see P2-G02–12 | Pending |
-| 3 | Draft after P2 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
+| 3 | Ready, revision 1; owner requested progression | Not verified | Pending | 979dfd5 + P3-G01 fix | Live API 401/401; browser P3-T01–42 pending; see P3-G02–12 | Pending |
 | 4 | Draft after P3 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
 | 5 | Draft after P4 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
 
@@ -194,6 +194,7 @@ For each review, attach: running frontend URL, commit/PR, tested backend baselin
 | INT-01 | Earlier readiness/connection failures; later live checks succeeded | Backend/environment owner | Availability observation resolved for this run | Readiness 200, database/Redis up, real auth/workspace/admin checks in [live report](PHASE_2_LIVE_VERIFICATION.md) |
 | INT-02 | MFA disable clears session-row assurance but existing JWTs retain claims until renewed/expired | Backend/security owner | Review if immediate assurance revocation is required | Agreed behavior and cross-client test |
 | INT-03 | Frontend repository/framework/browser matrix not supplied in this workspace | Frontend engineer | Implementation choice pending | Version lockfile + browser/refresh coordination evidence |
+| INT-04 | Interrupted Phase 3 verification attempts left fixtures behind:<br>• attempt 2, cut off by a watch-mode restart: two empty workspaces and six synthetic `example.invalid` accounts the harness can no longer sign in to;<br>• attempt 3: one soft-deleted workspace whose two remaining test bases still hold synthetic documents | Backend/environment owner | Open, harmless | IDs in the [Phase 3 live report](PHASE_3_LIVE_VERIFICATION.md). Attempt 3's content is removed by the organization purge after `ORGANIZATION_PURGE_GRACE` (7 days). Delete the rest if desired |
 
 ## Full HTTP scope ledger
 

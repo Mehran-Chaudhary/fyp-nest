@@ -69,6 +69,24 @@ const GENERIC = /(?<![\p{N}+])\(?\d{2,5}\)?[ .-]?\d{3,4}[ .-]?\d{3,4}(?![\p{N}])
 /** Dates are the classic phone false positive. */
 const DATE_LIKE = /^\d{4}[ .-]\d{2}[ .-]\d{2}$|^\d{2}[ .-]\d{2}[ .-]\d{4}$/;
 
+/**
+ * The span of `match` without a bracket it took from the surrounding sentence.
+ * Each group may carry its own optional brackets, so "(+92 300 1234567)" would
+ * otherwise end with the sentence's ")", and masking it would delete that ")".
+ */
+function withoutStrayBrackets(match: RegExpExecArray): { start: number; end: number } {
+  const value = match[0];
+  let from = 0;
+  let to = value.length;
+  const count = (bracket: string) =>
+    [...value.slice(from, to)].filter((character) => character === bracket).length;
+
+  while (to > from && value[to - 1] === ')' && count(')') > count('(')) to -= 1;
+  while (from < to && value[from] === '(' && count('(') > count(')')) from += 1;
+
+  return { start: match.index + from, end: match.index + to };
+}
+
 export class PhoneRecognizer implements PatternRecognizer {
   readonly name = 'phone';
   readonly entityTypes = ['PHONE_NUMBER'] as const;
@@ -81,13 +99,15 @@ export class PhoneRecognizer implements PatternRecognizer {
     for (const match of matchesOf(INTERNATIONAL, text)) {
       const digits = digitCount(match[0]);
       if (digits < 8 || digits > 15) continue;
-      add(match.index, match.index + match[0].length, 0.85);
+      const { start, end } = withoutStrayBrackets(match);
+      add(start, end, 0.85);
     }
 
     for (const match of matchesOf(INTERNATIONAL_00, text)) {
       const digits = digitCount(match[0]) - 2;
       if (digits < 8 || digits > 15) continue;
-      add(match.index, match.index + match[0].length, 0.85);
+      const { start, end } = withoutStrayBrackets(match);
+      add(start, end, 0.85);
     }
 
     for (const match of matchesOf(PK_MOBILE, text)) {

@@ -411,6 +411,16 @@ describe('benchmark regressions', () => {
     expect(found('Email:john@acme.test', 'EMAIL_ADDRESS')).toEqual(['john@acme.test']);
   });
 
+  it('leaves a bracket that belongs to the sentence outside the number', () => {
+    expect(found('Ayesha (+92 300 1234567) called', 'PHONE_NUMBER')).toEqual([
+      '+92 300 1234567',
+    ]);
+    expect(found('reach her (0092 300 1234567) today', 'PHONE_NUMBER')).toEqual([
+      '0092 300 1234567',
+    ]);
+    expect(found('Call +92 (21) 3456 7890', 'PHONE_NUMBER')).toEqual(['+92 (21) 3456 7890']);
+  });
+
   it('does not start a phone number in the middle of a longer number', () => {
     expect(found('tracking number 8150 0063 5858 5691', 'PHONE_NUMBER')).toEqual([]);
   });
