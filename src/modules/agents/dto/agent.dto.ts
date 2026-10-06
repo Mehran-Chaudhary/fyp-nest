@@ -18,6 +18,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { IsOptionalNotNull } from '../../../common/validation/optional';
 import { Classification } from '../../knowledge/domain/classification';
 import { GenerationParametersDto } from '../../llm/dto/llm.dto';
 import {
@@ -50,7 +51,7 @@ export class AgentPersonaDto {
   role?: string | null;
 
   @ApiPropertyOptional({ enum: ['neutral', 'formal', 'friendly', 'concise'] })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsIn(['neutral', 'formal', 'friendly', 'concise'])
   tone?: AgentTone;
 
@@ -78,7 +79,7 @@ export class AgentPersonaDto {
 
 export class AgentRetrievalDto {
   @ApiPropertyOptional()
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsBoolean()
   enabled?: boolean;
 
@@ -88,26 +89,26 @@ export class AgentRetrievalDto {
       'Knowledge bases the agent consults. You must be able to read each one you add. ' +
       'Whoever uses the agent only ever retrieves what they could retrieve themselves.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsArray()
   @ArrayMaxSize(20)
   @IsUUID('4', { each: true })
   knowledgeBaseIds?: string[];
 
   @ApiPropertyOptional({ minimum: 1, maximum: 20 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   @Max(20)
   topK?: number;
 
   @ApiPropertyOptional({ enum: ['hybrid', 'dense'] })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsIn(['hybrid', 'dense'])
   mode?: 'hybrid' | 'dense';
 
   @ApiPropertyOptional()
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsBoolean()
   rerank?: boolean;
 
@@ -116,7 +117,7 @@ export class AgentRetrievalDto {
     maximum: 65_536,
     description: 'Token budget for passages.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(0)
   @Max(65_536)
@@ -143,14 +144,14 @@ export class AgentRetrievalDto {
 
 export class AgentMemoryDto {
   @ApiPropertyOptional({ minimum: 0, maximum: 500, description: '0 disables memory.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(0)
   @Max(500)
   maxMessages?: number;
 
   @ApiPropertyOptional({ minimum: 0, maximum: 262_144 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(0)
   @Max(262_144)
@@ -165,7 +166,7 @@ export class AgentToolsDto {
       'is necessary, never sufficient: a tool is offered only when the person using the ' +
       'agent may run it (tool:execute and the tool’s own permissions).',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsArray()
   @ArrayMaxSize(20)
   @IsUUID('all', { each: true })
@@ -177,7 +178,7 @@ export class AgentToolsDto {
     description:
       'Reason → act iterations per answer, up to TOOL_MAX_ITERATIONS. 0 disables tools.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(0)
   @Max(32)
@@ -187,7 +188,7 @@ export class AgentToolsDto {
 /** Fields shared by create and update. */
 class AgentBehaviourDto {
   @ApiPropertyOptional({ type: AgentPersonaDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => AgentPersonaDto)
   persona?: AgentPersonaDto;
@@ -203,7 +204,7 @@ class AgentBehaviourDto {
   model?: string | null;
 
   @ApiPropertyOptional({ type: GenerationParametersDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => GenerationParametersDto)
   parameters?: GenerationParametersDto;
@@ -216,13 +217,13 @@ class AgentBehaviourDto {
   contextWindow?: number | null;
 
   @ApiPropertyOptional({ type: AgentRetrievalDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => AgentRetrievalDto)
   retrieval?: AgentRetrievalDto;
 
   @ApiPropertyOptional({ type: AgentMemoryDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => AgentMemoryDto)
   memory?: AgentMemoryDto;
@@ -232,17 +233,17 @@ class AgentBehaviourDto {
     description:
       'STRICT answers only from retrieved material; BALANCED may use general knowledge.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsIn(['STRICT', 'BALANCED'])
   grounding?: GroundingMode;
 
   @ApiPropertyOptional({ description: 'Ask the model to cite sources as [S1], [S2].' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsBoolean()
   citations?: boolean;
 
   @ApiPropertyOptional({ type: AgentToolsDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => AgentToolsDto)
   tools?: AgentToolsDto;
@@ -251,7 +252,7 @@ class AgentBehaviourDto {
     maxLength: MAX_INSTRUCTIONS_LENGTH,
     description: 'The system prompt: how the agent should behave. Stored encrypted.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(MAX_INSTRUCTIONS_LENGTH)
   instructions?: string;
@@ -262,12 +263,12 @@ class AgentBehaviourDto {
       'WORKSPACE: any member with agent:execute may use it once published. RESTRICTED: only ' +
       'members holding one of allowedRoleIds.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEnum(AgentAccessMode)
   accessMode?: AgentAccessMode;
 
   @ApiPropertyOptional({ type: [String] })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsArray()
   @ArrayMaxSize(50)
   @IsUUID('4', { each: true })
@@ -292,7 +293,7 @@ export class CreateAgentDto extends AgentBehaviourDto {
 
 export class UpdateAgentDto extends AgentBehaviourDto {
   @ApiPropertyOptional({ maxLength: 80 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @IsNotEmpty()
   @MaxLength(80)
@@ -310,7 +311,7 @@ export class UpdateAgentDto extends AgentBehaviourDto {
     maxLength: 500,
     description: 'Recorded with the new version, like a commit message.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(500)
   @Trim()
@@ -320,7 +321,7 @@ export class UpdateAgentDto extends AgentBehaviourDto {
     description:
       'The version you edited. If the agent has moved on, 409 instead of overwriting.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   expectedVersion?: number;
@@ -328,14 +329,14 @@ export class UpdateAgentDto extends AgentBehaviourDto {
 
 export class RestoreVersionDto {
   @ApiPropertyOptional({ maxLength: 500 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(500)
   @Trim()
   changeNote?: string;
 
   @ApiPropertyOptional()
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   expectedVersion?: number;

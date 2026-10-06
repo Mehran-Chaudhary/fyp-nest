@@ -18,6 +18,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { IsOptionalNotNull } from '../../../common/validation/optional';
 import { Classification } from '../../knowledge/domain/classification';
 import { ConversationStatus } from '../entities/conversation.entity';
 import { MessageRole, MessageStatus } from '../entities/conversation-message.entity';
@@ -45,7 +46,7 @@ export class CreateConversationDto {
 
 export class UpdateConversationDto {
   @ApiPropertyOptional({ maxLength: 120 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @IsNotEmpty()
   @MaxLength(120)
@@ -53,7 +54,7 @@ export class UpdateConversationDto {
   title?: string;
 
   @ApiPropertyOptional({ enum: ConversationStatus })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEnum(ConversationStatus)
   status?: ConversationStatus;
 }
@@ -82,14 +83,14 @@ export class ListConversationsQueryDto extends PaginationQueryDto {
 
 export class TurnOverridesDto {
   @ApiPropertyOptional({ minimum: 0, maximum: 2 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsNumber()
   @Min(0)
   @Max(2)
   temperature?: number;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 65_536 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   @Max(65_536)
@@ -98,7 +99,7 @@ export class TurnOverridesDto {
 
 export class TurnRetrievalDto {
   @ApiPropertyOptional({ description: 'Skip retrieval for this turn.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsBoolean()
   enabled?: boolean;
 
@@ -106,7 +107,7 @@ export class TurnRetrievalDto {
     type: [String],
     description: 'Search only these of the agent’s knowledge bases this turn.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsArray()
   @ArrayMaxSize(20)
   @IsUUID('4', { each: true })
@@ -126,18 +127,18 @@ export class SendMessageDto {
       'Idempotency key. Resending a message with the same key returns 409 MESSAGE_DUPLICATE ' +
       'instead of answering it twice.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsUUID('4')
   clientMessageId?: string;
 
   @ApiPropertyOptional({ type: TurnOverridesDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => TurnOverridesDto)
   parameters?: TurnOverridesDto;
 
   @ApiPropertyOptional({ type: TurnRetrievalDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => TurnRetrievalDto)
   retrieval?: TurnRetrievalDto;

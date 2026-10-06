@@ -1,16 +1,16 @@
 # Frontend Delivery — Five Phases & Master Checklist
 
-**Revision 5 · 6 October 2026 · backend baseline `979dfd5`**
+**Revision 6 · 6 October 2026 · backend baseline `42ab352` + P4-G01 fix**
 **Product:** AgentVault / Distributed AI Agent Management Platform
-**Active handoff:** [Phase 3 — Knowledge, Document Vault & Privacy](PHASE_3_KNOWLEDGE_DOCUMENT_VAULT_PRIVACY.md)
+**Active handoff:** [Phase 4 — Agents, Models & Conversational AI](PHASE_4_AGENTS_MODELS_CONVERSATIONAL_AI.md)
 
 > This is the authoritative frontend delivery plan. It replaces the old nine-phase roadmap. Deliver exactly five sequential phases. Advance after review and acceptance, or an explicit owner request to prepare the next handoff. Owner-requested progression does not establish unverified implementation acceptance. Historical backend phase numbers do not control frontend delivery order.
 
 ## How to use this document
 
-The roadmap defines scope, dependencies and acceptance; the Phase 1, Phase 2 and Phase 3 documents define implementation contracts. Check a task only when evidence exists. A finished specification is not a finished frontend. Do not infer implementation progress from the presence of old documents.
+The roadmap defines scope, dependencies and acceptance; the Phase 1–4 documents define implementation contracts. Check a task only when evidence exists. A finished specification is not a finished frontend. Do not infer implementation progress from the presence of old documents.
 
-The obsolete frontend handoffs and connection guide have been removed. This directory contains only the current five-phase roadmap, the Phase 1–3 handoffs and the Phase 2–3 live verification evidence. Prepare Phase 4–5 handoffs when commissioned. The owner requested Phase 2 and Phase 3 progression; Phase 1–2 browser acceptance evidence remains unverified.
+The obsolete frontend handoffs and connection guide have been removed. This directory contains only the current five-phase roadmap, the Phase 1–4 handoffs and the Phase 2–4 live verification evidence. Prepare the Phase 5 handoff when commissioned. The owner requested Phase 2, 3 and 4 progression; Phase 1–3 browser acceptance evidence remains unverified.
 
 Status vocabulary: **Not started**, **In progress**, **Ready for review**, **Accepted**, **Blocked**. Record blockers separately from ordinary unfinished work. The owner accepts each phase after the frontend engineer supplies evidence and a demo. No automatic advancement.
 
@@ -117,7 +117,7 @@ This orders identity before administration, grants before restricted knowledge, 
 
 ## Phase 4 checklist — Agents, Models & Conversational AI
 
-**Detailed handoff:** prepare after Phase 3 acceptance.
+**Detailed handoff:** [Phase 4 contract](PHASE_4_AGENTS_MODELS_CONVERSATIONAL_AI.md), revision 1: all 25 operations, 42 acceptance checks (P4-T01–P4-T42), 16 decision records (P4-G01–P4-G16), the streaming wire contract and type-checked TypeScript helpers. The owner requested this handoff. Source verification and a live API run are complete: [461 checks across all 25 operations](PHASE_4_LIVE_VERIFICATION.md), with real model calls (Groq, `qwen/qwen3.8-27b`), retrieval, masking, streaming and cancellation, and an AI-service outage and recovery. One backend defect found during verification was fixed (P4-G01: `null` accepted for fields that cannot be cleared). Client implementation and browser acceptance remain unverified.
 
 - [ ] P4.01 Specify agent/model/conversation contracts, version semantics, supported content and streaming events.
 - [ ] P4.02 Agent directory/create/detail/edit/delete and knowledge/privacy configuration.
@@ -184,7 +184,7 @@ Do not check implementation as complete because this specification was written.
 | 1 | Ready, revision 2 | Not verified | Pending | 877de76 | Pending P1-T01–48 | Pending |
 | 2 | Ready, revision 3; owner requested progression | Not verified | Pending | 5b4efb7 | Live API 66/66; browser P2-T01–68 pending; see P2-G02–12 | Pending |
 | 3 | Ready, revision 1; owner requested progression | Not verified | Pending | 979dfd5 + P3-G01 fix | Live API 401/401; browser P3-T01–42 pending; see P3-G02–12 | Pending |
-| 4 | Draft after P3 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
+| 4 | Ready, revision 1; owner requested progression | Not verified | Pending | 42ab352 + P4-G01 fix | Live API 459/461; browser P4-T01–42 pending; see P4-G02–16 | Pending |
 | 5 | Draft after P4 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
 
 For each review, attach: running frontend URL, commit/PR, tested backend baseline, test names/results, demo evidence, browser support, unresolved issues and configuration notes without secrets. Reviewers record accepted/deferred/blocked explicitly. Any deferred item must have a receiving phase, rationale and owner; do not silently drop it.
@@ -195,6 +195,8 @@ For each review, attach: running frontend URL, commit/PR, tested backend baselin
 | INT-02 | MFA disable clears session-row assurance but existing JWTs retain claims until renewed/expired | Backend/security owner | Review if immediate assurance revocation is required | Agreed behavior and cross-client test |
 | INT-03 | Frontend repository/framework/browser matrix not supplied in this workspace | Frontend engineer | Implementation choice pending | Version lockfile + browser/refresh coordination evidence |
 | INT-04 | Interrupted Phase 3 verification attempts left fixtures behind:<br>• attempt 2, cut off by a watch-mode restart: two empty workspaces and six synthetic `example.invalid` accounts the harness can no longer sign in to;<br>• attempt 3: one soft-deleted workspace whose two remaining test bases still hold synthetic documents | Backend/environment owner | Open, harmless | IDs in the [Phase 3 live report](PHASE_3_LIVE_VERIFICATION.md). Attempt 3's content is removed by the organization purge after `ORGANIZATION_PURGE_GRACE` (7 days). Delete the rest if desired |
+| INT-05 | Aborted Phase 4 verification attempts left synthetic fixtures behind (credentials existed only in the aborted processes):<br>• attempt 1: workspace `be41cb41-c6e8-47a5-ae88-20eea719e419` (no content), one empty second tenant, six accounts;<br>• attempt 2: four accounts, no workspace;<br>• attempt 3: **cleaned up** on 6 October (knowledge bases and workspaces deleted, sessions revoked); six accounts remain;<br>• attempt 5: **cleaned up** the same way; six accounts remain;<br>• attempt 7: empty workspaces `84d68ac0-8dd9-4b94-a916-54d8e603d893` and `68314368-27a9-4204-986b-7ad35813ee32`, six accounts | Backend/environment owner | Open, harmless (synthetic data only) | Details in the [Phase 4 live report](PHASE_4_LIVE_VERIFICATION.md). Attempt 7's two empty workspaces can be removed the same way (password reset via the Ethereal inbox); delete the rest if desired |
+| INT-06 | The development machine's `C:` drive is full (0–50 MB free during the Phase 4 run; 13.5 GB `pagefile.sys`, 6.3 GB `hiberfil.sys`, ~1 GB of tool temp files) and RAM was often under 500 MB free. It aborted Phase 4 attempts 1, 2, 5 and 7; the dev backend exited repeatedly and at 17:14 on 6 October was restarting in a loop | Machine owner | **Open, blocking** further live verification (Phase 4 confirmation run, Phase 5) | Free several GB on `C:` (older Claude Code scratch folders under `%LOCALAPPDATA%\Temp\claude`, including stale scratch PostgreSQL clusters, are disposable), close unused memory-heavy apps, restart `npm run start:dev` |
 
 ## Full HTTP scope ledger
 

@@ -17,26 +17,27 @@ import {
   ValidateNested,
 } from 'class-validator';
 import type { ChatRole } from '../domain/generation';
+import { IsOptionalNotNull } from '../../../common/validation/optional';
 
 // ── Generation parameters ───────────────────────────────────────────────────
 
 export class GenerationParametersDto {
   @ApiPropertyOptional({ minimum: 0, maximum: 2, example: 0.3 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsNumber()
   @Min(0)
   @Max(2)
   temperature?: number;
 
   @ApiPropertyOptional({ minimum: 0.01, maximum: 1 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsNumber()
   @Min(0.01)
   @Max(1)
   topP?: number;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 500, description: 'Ollama only.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   @Max(500)
@@ -48,26 +49,26 @@ export class GenerationParametersDto {
     description:
       'Capped by the platform and workspace ceilings, and by half the context window.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   @Max(65_536)
   maxOutputTokens?: number;
 
   @ApiPropertyOptional({ minimum: 0.5, maximum: 2, description: 'Ollama only.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsNumber()
   @Min(0.5)
   @Max(2)
   repeatPenalty?: number;
 
   @ApiPropertyOptional({ description: 'For reproducible sampling.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   seed?: number;
 
   @ApiPropertyOptional({ type: [String], maxItems: 4 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsArray()
   @ArrayMaxSize(4)
   @IsString({ each: true })
@@ -110,7 +111,7 @@ export class DirectChatDto {
   model?: string;
 
   @ApiPropertyOptional({ type: GenerationParametersDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => GenerationParametersDto)
   parameters?: GenerationParametersDto;
@@ -195,7 +196,7 @@ export class UpdateLlmPolicyDto {
     type: [String],
     description: 'Models the workspace may use. Empty: every model the platform allows.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsArray()
   @ArrayMaxSize(100)
   @IsString({ each: true })
@@ -226,7 +227,7 @@ export class UpdateLlmPolicyDto {
   maxContextTokens?: number | null;
 
   @ApiPropertyOptional({ description: 'The version you edited; a mismatch returns 409.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(0)
   expectedVersion?: number;
