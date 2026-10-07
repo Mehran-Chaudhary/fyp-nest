@@ -575,6 +575,16 @@ authenticate **in the handshake**: `{ token, organizationId }` for a person,
   on the load balancer.
 - **Idle timeouts.** Keep `REALTIME_PING_INTERVAL` (25 s) below the proxy's
   idle timeout (commonly 60 s; Cloudflare 100 s; AWS ALB 60 s by default).
+- **The Redis side has idle timeouts too.** Each API instance holds one Redis
+  pub/sub connection for the event bus, and it is silent whenever nothing
+  happens. NAT gateways and managed-Redis network paths drop silent TCP
+  connections without telling either end (observed on 7 October 2026 against
+  Aiven Valkey: lost after ~4 minutes of silence), after which no live event
+  reaches any browser. The event bus therefore PINGs its subscriber every
+  30 s and reconnects when a PING goes unanswered; `/health` reports
+  `realtime.eventBus: "subscribed"` only while those heartbeats succeed. To
+  confirm in production: `PUBSUB NUMSUB <REDIS_KEY_PREFIX>events:live` should
+  equal the number of API instances.
 - **Origins.** Browsers may open a socket only from an origin in
   `CORS_ORIGINS` — add your frontend's production origin there.
 - **Client IPs.** Handshakes are throttled per IP

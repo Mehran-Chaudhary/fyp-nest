@@ -1,16 +1,16 @@
 # Frontend Delivery — Five Phases & Master Checklist
 
-**Revision 6 · 6 October 2026 · backend baseline `42ab352` + P4-G01 fix**
+**Revision 7 · 7 October 2026 · backend baseline `69a9ba9` + P5-G01–G06 fixes**
 **Product:** AgentVault / Distributed AI Agent Management Platform
-**Active handoff:** [Phase 4 — Agents, Models & Conversational AI](PHASE_4_AGENTS_MODELS_CONVERSATIONAL_AI.md)
+**Active handoff:** [Phase 5 — Tools, Workflow Orchestration, Governance & Release](PHASE_5_TOOLS_ORCHESTRATION_GOVERNANCE_RELEASE.md) (the final phase)
 
 > This is the authoritative frontend delivery plan. It replaces the old nine-phase roadmap. Deliver exactly five sequential phases. Advance after review and acceptance, or an explicit owner request to prepare the next handoff. Owner-requested progression does not establish unverified implementation acceptance. Historical backend phase numbers do not control frontend delivery order.
 
 ## How to use this document
 
-The roadmap defines scope, dependencies and acceptance; the Phase 1–4 documents define implementation contracts. Check a task only when evidence exists. A finished specification is not a finished frontend. Do not infer implementation progress from the presence of old documents.
+The roadmap defines scope, dependencies and acceptance; the Phase 1–5 documents define implementation contracts. Check a task only when evidence exists. A finished specification is not a finished frontend. Do not infer implementation progress from the presence of old documents.
 
-The obsolete frontend handoffs and connection guide have been removed. This directory contains only the current five-phase roadmap, the Phase 1–4 handoffs and the Phase 2–4 live verification evidence. Prepare the Phase 5 handoff when commissioned. The owner requested Phase 2, 3 and 4 progression; Phase 1–3 browser acceptance evidence remains unverified.
+The obsolete frontend handoffs and connection guide have been removed. This directory contains only the current five-phase roadmap, the Phase 1–5 handoffs and the Phase 2–5 live verification evidence. All five handoffs now exist. The owner requested Phase 2, 3, 4 and 5 progression; Phase 1–4 browser acceptance evidence remains unverified, and Phase 5 ends with the product release gate.
 
 Status vocabulary: **Not started**, **In progress**, **Ready for review**, **Accepted**, **Blocked**. Record blockers separately from ordinary unfinished work. The owner accepts each phase after the frontend engineer supplies evidence and a demo. No automatic advancement.
 
@@ -137,7 +137,7 @@ This orders identity before administration, grants before restricted knowledge, 
 
 ## Phase 5 checklist — Tools, Orchestration, Governance & Release
 
-**Detailed handoff:** prepare after Phase 4 acceptance. Use internal work packages below while keeping one Phase 5 acceptance gate.
+**Detailed handoff:** [Phase 5 contract](PHASE_5_TOOLS_ORCHESTRATION_GOVERNANCE_RELEASE.md), revision 1: all 53 operations and the Socket.IO channel, 43 acceptance checks (P5-T01–P5-T43), 27 decision records (P5-G01–P5-G27), the release gate and demonstration script (its section 14), and type-checked TypeScript helpers tested against the live backend. The owner requested this handoff. Source verification and a live run are complete: [783 checks, 783 passed, across all 53 operations and the socket channel](PHASE_5_LIVE_VERIFICATION.md), with real queues, model calls, outbound HTTPS tools, emails, MFA and account erasure. **Six backend defects were found and fixed** with regression specs (P5-G01–G06), including one that silently stopped all live Socket.IO events (P5-G06). Client implementation and browser acceptance remain unverified. The internal work packages below stay within one Phase 5 acceptance gate.
 
 ### Work package A — Tools and workflow design
 
@@ -184,8 +184,8 @@ Do not check implementation as complete because this specification was written.
 | 1 | Ready, revision 2 | Not verified | Pending | 877de76 | Pending P1-T01–48 | Pending |
 | 2 | Ready, revision 3; owner requested progression | Not verified | Pending | 5b4efb7 | Live API 66/66; browser P2-T01–68 pending; see P2-G02–12 | Pending |
 | 3 | Ready, revision 1; owner requested progression | Not verified | Pending | 979dfd5 + P3-G01 fix | Live API 401/401; browser P3-T01–42 pending; see P3-G02–12 | Pending |
-| 4 | Ready, revision 1; owner requested progression | Not verified | Pending | 42ab352 + P4-G01 fix | Live API 459/461; browser P4-T01–42 pending; see P4-G02–16 | Pending |
-| 5 | Draft after P4 accepted | Not started under revised plan | Pending | Recheck at handoff | Pending | Pending |
+| 4 | Ready, revision 1; owner requested progression | Not verified | Pending | 42ab352 + P4-G01 fix (committed in 69a9ba9) | Live API 459/461; browser P4-T01–42 pending; see P4-G02–16 | Pending |
+| 5 | Ready, revision 1; owner requested progression | Not verified | Pending | 69a9ba9 + P5-G01–G06 fixes | Live API 783/783; browser P5-T01–43 and release gate pending; see P5-G07–27 | Pending |
 
 For each review, attach: running frontend URL, commit/PR, tested backend baseline, test names/results, demo evidence, browser support, unresolved issues and configuration notes without secrets. Reviewers record accepted/deferred/blocked explicitly. Any deferred item must have a receiving phase, rationale and owner; do not silently drop it.
 
@@ -196,7 +196,9 @@ For each review, attach: running frontend URL, commit/PR, tested backend baselin
 | INT-03 | Frontend repository/framework/browser matrix not supplied in this workspace | Frontend engineer | Implementation choice pending | Version lockfile + browser/refresh coordination evidence |
 | INT-04 | Interrupted Phase 3 verification attempts left fixtures behind:<br>• attempt 2, cut off by a watch-mode restart: two empty workspaces and six synthetic `example.invalid` accounts the harness can no longer sign in to;<br>• attempt 3: one soft-deleted workspace whose two remaining test bases still hold synthetic documents | Backend/environment owner | Open, harmless | IDs in the [Phase 3 live report](PHASE_3_LIVE_VERIFICATION.md). Attempt 3's content is removed by the organization purge after `ORGANIZATION_PURGE_GRACE` (7 days). Delete the rest if desired |
 | INT-05 | Aborted Phase 4 verification attempts left synthetic fixtures behind (credentials existed only in the aborted processes):<br>• attempt 1: workspace `be41cb41-c6e8-47a5-ae88-20eea719e419` (no content), one empty second tenant, six accounts;<br>• attempt 2: four accounts, no workspace;<br>• attempt 3: **cleaned up** on 6 October (knowledge bases and workspaces deleted, sessions revoked); six accounts remain;<br>• attempt 5: **cleaned up** the same way; six accounts remain;<br>• attempt 7: empty workspaces `84d68ac0-8dd9-4b94-a916-54d8e603d893` and `68314368-27a9-4204-986b-7ad35813ee32`, six accounts | Backend/environment owner | Open, harmless (synthetic data only) | Details in the [Phase 4 live report](PHASE_4_LIVE_VERIFICATION.md). Attempt 7's two empty workspaces can be removed the same way (password reset via the Ethereal inbox); delete the rest if desired |
-| INT-06 | The development machine's `C:` drive is full (0–50 MB free during the Phase 4 run; 13.5 GB `pagefile.sys`, 6.3 GB `hiberfil.sys`, ~1 GB of tool temp files) and RAM was often under 500 MB free. It aborted Phase 4 attempts 1, 2, 5 and 7; the dev backend exited repeatedly and at 17:14 on 6 October was restarting in a loop | Machine owner | **Open, blocking** further live verification (Phase 4 confirmation run, Phase 5) | Free several GB on `C:` (older Claude Code scratch folders under `%LOCALAPPDATA%\Temp\claude`, including stale scratch PostgreSQL clusters, are disposable), close unused memory-heavy apps, restart `npm run start:dev` |
+| INT-06 | *(Resolved 7 October: `C:` had 23 GB free and the Phase 5 live run completed; the Phase 4 confirmation run of P4-G16 was not repeated.)* The development machine's `C:` drive is full (0–50 MB free during the Phase 4 run; 13.5 GB `pagefile.sys`, 6.3 GB `hiberfil.sys`, ~1 GB of tool temp files) and RAM was often under 500 MB free. It aborted Phase 4 attempts 1, 2, 5 and 7; the dev backend exited repeatedly and at 17:14 on 6 October was restarting in a loop | Machine owner | Resolved for Phase 5 | Free several GB on `C:` (older Claude Code scratch folders under `%LOCALAPPDATA%\Temp\claude`, including stale scratch PostgreSQL clusters, are disposable), close unused memory-heavy apps, restart `npm run start:dev` |
+| INT-07 | The development backend's event-bus subscription is lost after a few quiet minutes on this network path, so its Socket.IO clients get no live events while `/health` says "subscribed" (P5-G06). The fix is in the working tree; the watch-mode server picked it up on restart | Backend owner | Fixed in source; commit and deploy with Phase 5 | Spec `src/shared/events/event-bus.service.spec.ts`; `PUBSUB NUMSUB <prefix>events:live` equals the number of API instances |
+| INT-08 | Phase 5 verification left synthetic `example.invalid` accounts (sessions revoked; their workspaces and knowledge bases deleted through the API; each run's eraser account erased by the test) from attempts 2–5, the defect probes and the Appendix A live tests | Backend/environment owner | Open, harmless (synthetic data only) | Fixture ids in the [Phase 5 report](PHASE_5_LIVE_VERIFICATION.md) and results file |
 
 ## Full HTTP scope ledger
 

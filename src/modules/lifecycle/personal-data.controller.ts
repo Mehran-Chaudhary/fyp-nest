@@ -9,7 +9,8 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiProduces, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
-import { Equals, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { Equals, IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
+import { IsOptionalNotNull } from '../../common/validation/optional';
 import type { Response } from 'express';
 import {
   ApiErrorResponse,
@@ -34,13 +35,13 @@ export class EraseAccountDto {
   password: string;
 
   @ApiPropertyOptional({ description: 'A current authenticator code, if two-step verification is on.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @Matches(/^\s*\d{3}\s?\d{3}\s*$/, { message: 'code must be six digits.' })
   code?: string;
 
   @ApiPropertyOptional({ description: 'Or a recovery code.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(32)
   recoveryCode?: string;

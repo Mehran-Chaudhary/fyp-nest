@@ -109,7 +109,7 @@ Handles: `out`, `error`. A tool that requires approval runs only after an
 | `knowledgeBaseIds` | UUID[], ≤ 20 | Narrow the search; the initiator must be able to read each. |
 | `topK` | 1–20 | Default 8. |
 
-Handles: `out`. Its output may flow only into agents (as passages) and
+Handles: `out`, `error`. Its output may flow only into agents (as passages) and
 templates; a retrieval → tool edge is rejected.
 
 ### `condition` — deterministic branching
@@ -121,6 +121,9 @@ templates; a retrieval → tool edge is rejected.
 - `id`: a letter then letters, digits, `-`, `_` (≤ 32). Not `else`, `error` or
   `out`. It is also the **handle** of the edge taken when the rule matches.
 - `value`: a template — what is tested.
+- `operand`: a string, number or boolean. `gt`, `gte`, `lt` and `lte` require a
+  **number** (`100`, not `"100"`); the unary operators take none. A rule that
+  breaks this is dropped, so its handle is then reported invalid too.
 - `operator`: `equals`, `not_equals`, `contains`, `not_contains`,
   `starts_with`, `ends_with`, `gt`, `gte`, `lt`, `lte`, `is_true`, `is_false`,
   `is_empty`, `is_not_empty`.
@@ -139,7 +142,7 @@ Handles: each rule's `id`, and `else`.
 | `goal` | template, ≤ 8,000 | Default: the supervisor's inputs. |
 | `maxRounds` | 1–`WORKFLOW_MAX_SUPERVISOR_ROUNDS` | Default 3. |
 
-Handles: `worker` (one edge to each worker agent) and `done` (leaving the
+Handles: `worker` (one edge to each worker agent), `error`, and `done` (leaving the
 team). Each round is a step; the chosen worker's task is the supervisor's
 instruction (plus the worker node's own `prompt`, if any).
 
@@ -176,9 +179,9 @@ an object keyed by the ids of those that ran.
 |---|---|
 | trigger | `out` |
 | agent, tool | `out`, `error` |
-| retrieval | `out` |
+| retrieval | `out`, `error` |
 | condition | each rule `id`, `else` |
-| supervisor | `worker` (to each worker), `done` |
+| supervisor | `worker` (to each worker), `done`, `error` |
 | approval | `approved`, `rejected` |
 | output | none |
 

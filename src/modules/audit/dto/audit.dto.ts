@@ -92,6 +92,25 @@ export class QueryAuditLogsDto extends PaginationQueryDto {
   ipAddress?: string;
 }
 
+/**
+ * The export's time window. Validated here, before the stream opens: an
+ * unparseable date used to reach the database inside the stream, after which
+ * the only possible answer was a bare 400 carrying the driver's message.
+ */
+export class ExportAuditLogsQueryDto {
+  @ApiPropertyOptional({ format: 'date-time', description: 'Inclusive lower bound.' })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  from?: Date;
+
+  @ApiPropertyOptional({ format: 'date-time', description: 'Inclusive upper bound.' })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  to?: Date;
+}
+
 export class AuditLogDto {
   @ApiProperty({ format: 'uuid' })
   id: string;

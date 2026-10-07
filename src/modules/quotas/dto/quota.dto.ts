@@ -11,6 +11,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { IsOptionalNotNull } from '../../../common/validation/optional';
 import {
   QuotaEnforcement,
   QuotaManager,
@@ -59,7 +60,7 @@ export class CreateQuotaDto {
     default: QuotaEnforcement.HARD,
     description: 'HARD refuses calls past the limit; SOFT alerts and lets them through.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEnum(QuotaEnforcement)
   enforcement?: QuotaEnforcement;
 
@@ -69,7 +70,7 @@ export class CreateQuotaDto {
     default: 80,
     description: 'Percentage at which quota managers are alerted, once per period.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -86,7 +87,7 @@ export class CreateQuotaDto {
 
 export class UpdateQuotaDto {
   @ApiPropertyOptional({ example: 750000 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -94,12 +95,12 @@ export class UpdateQuotaDto {
   tokenLimit?: number;
 
   @ApiPropertyOptional({ enum: QuotaEnforcement })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEnum(QuotaEnforcement)
   enforcement?: QuotaEnforcement;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @Type(() => Number)
   @IsInt()
   @Min(1)

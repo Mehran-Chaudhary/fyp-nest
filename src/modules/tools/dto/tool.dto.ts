@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsDefined,
   IsEnum,
   IsIn,
   IsInt,
@@ -9,14 +10,18 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
+  NotEquals,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { IsOptionalNotNull } from '../../../common/validation/optional';
 import { Classification } from '../../knowledge/domain/classification';
 import { Integrity } from '../domain/information-flow';
 import { ToolKind } from '../domain/tool-definition';
@@ -37,13 +42,13 @@ export class ToolAuthDto {
   type: 'none' | 'bearer' | 'header' | 'basic';
 
   @ApiPropertyOptional({ example: 'X-Api-Key' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @Matches(/^[A-Za-z0-9-]{1,64}$/)
   headerName?: string;
 
   @ApiPropertyOptional()
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(128)
   username?: string;
@@ -65,12 +70,12 @@ export class HttpToolConfigDto {
   url: string;
 
   @ApiPropertyOptional({ type: 'object', additionalProperties: { type: 'string' } })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsObject()
   query?: Record<string, string>;
 
   @ApiPropertyOptional({ type: 'object', additionalProperties: { type: 'string' } })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsObject()
   headers?: Record<string, string>;
 
@@ -78,7 +83,8 @@ export class HttpToolConfigDto {
     description:
       'JSON body for POST/PUT/PATCH. String values may be {{parameter}} templates.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
+  @NotEquals(null, { message: 'body cannot be null; leave it out instead' })
   body?: unknown;
 
   @ApiProperty({ type: ToolAuthDto })
@@ -90,7 +96,7 @@ export class HttpToolConfigDto {
     example: '/data/items',
     description: 'JSON pointer into the response.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(512)
   responsePath?: string;
@@ -103,7 +109,7 @@ export class ToolDataPolicyDto {
       'The most sensitive context that may flow into this tool. Defaults to PUBLIC, because ' +
       'the tool sends data to a third party.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEnum(Classification)
   maxClassification?: Classification;
 
@@ -113,7 +119,7 @@ export class ToolDataPolicyDto {
       'The least trusted context the tool may be called from. Tools with side effects ' +
       'default to INTERNAL: after reading untrusted external content, they are refused.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEnum(Integrity)
   minIntegrity?: Integrity;
 
@@ -123,7 +129,7 @@ export class ToolDataPolicyDto {
       'deny (default): a call carrying personal data is refused. unmask: masked values are ' +
       'restored before sending — only for a service trusted with personal data. Audited.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsIn(['unmask', 'deny'])
   piiArguments?: 'unmask' | 'deny';
 
@@ -131,14 +137,14 @@ export class ToolDataPolicyDto {
     description:
       'Whether the call changes something. Defaults to true for anything but GET.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsBoolean()
   sideEffects?: boolean;
 }
 
 class ToolWriteDto {
   @ApiPropertyOptional({ maxLength: 80 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @IsNotEmpty()
   @MaxLength(80)
@@ -149,7 +155,7 @@ class ToolWriteDto {
     maxLength: 1000,
     description: 'What the tool does and when to use it. The model reads this.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MinLength(10)
   @MaxLength(1000)
@@ -161,18 +167,18 @@ class ToolWriteDto {
       'JSON Schema (a strict subset) of the arguments. Must be an object schema. Keywords ' +
       'the platform does not enforce (pattern, oneOf, $ref, …) are rejected.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsObject()
   parameters?: Record<string, unknown>;
 
   @ApiPropertyOptional({ type: HttpToolConfigDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => HttpToolConfigDto)
   http?: HttpToolConfigDto;
 
   @ApiPropertyOptional({ type: ToolDataPolicyDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => ToolDataPolicyDto)
   dataPolicy?: ToolDataPolicyDto;
@@ -182,7 +188,7 @@ class ToolWriteDto {
       'Require a person to approve each call. Such tools run only as workflow tool nodes ' +
       'behind an approval node; agents cannot call them on their own.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsBoolean()
   requiresApproval?: boolean;
 
@@ -190,17 +196,27 @@ class ToolWriteDto {
     minimum: 500,
     description: 'Milliseconds, up to TOOL_MAX_TIMEOUT.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(500)
   @Max(600_000)
   timeoutMs?: number;
 
   @ApiPropertyOptional()
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsBoolean()
   enabled?: boolean;
 }
+
+/**
+ * Shadows the optional marker a required field inherits from
+ * {@link ToolWriteDto}. class-validator keeps an inherited decorator unless the
+ * subclass declares one of the same kind on that property, and it evaluates
+ * conditions before `@IsDefined()` — so without this, a create request that
+ * left a required field out skipped its validation entirely and reached the
+ * service, which needs all four (a 500, or a 422 naming no field).
+ */
+const Required = (): PropertyDecorator => ValidateIf(() => true);
 
 export class CreateToolDto extends ToolWriteDto {
   @ApiProperty({
@@ -215,6 +231,8 @@ export class CreateToolDto extends ToolWriteDto {
   name: string;
 
   @ApiProperty({ maxLength: 80 })
+  @Required()
+  @IsDefined()
   @IsString()
   @IsNotEmpty()
   @MaxLength(80)
@@ -222,6 +240,8 @@ export class CreateToolDto extends ToolWriteDto {
   declare displayName: string;
 
   @ApiProperty({ maxLength: 1000 })
+  @Required()
+  @IsDefined()
   @IsString()
   @MinLength(10)
   @MaxLength(1000)
@@ -229,10 +249,14 @@ export class CreateToolDto extends ToolWriteDto {
   declare description: string;
 
   @ApiProperty()
+  @Required()
+  @IsDefined()
   @IsObject()
   declare parameters: Record<string, unknown>;
 
   @ApiProperty({ type: HttpToolConfigDto })
+  @Required()
+  @IsDefined()
   @ValidateNested()
   @Type(() => HttpToolConfigDto)
   declare http: HttpToolConfigDto;
@@ -240,7 +264,7 @@ export class CreateToolDto extends ToolWriteDto {
   @ApiPropertyOptional({
     description: 'The credential. Write-only: stored encrypted and never returned.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(4096)
   secret?: string;
@@ -257,7 +281,7 @@ export class UpdateToolDto extends ToolWriteDto {
   secret?: string | null;
 
   @ApiPropertyOptional({ description: 'The version you edited; 409 if it has moved on.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   expectedVersion?: number;
@@ -273,12 +297,12 @@ export class ListToolsQueryDto extends PaginationQueryDto {
 export class ListToolExecutionsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsString()
+  @IsUUID('all')
   toolId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsString()
+  @IsUUID('all')
   runId?: string;
 }
 

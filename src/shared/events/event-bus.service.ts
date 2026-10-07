@@ -30,6 +30,11 @@ redis.call('PUBLISH', ARGV[4], id .. '\\n' .. ARGV[2])
 return id
 `;
 
+/** How often the subscriber connection proves, end to end, that it is alive. */
+export const SUBSCRIBER_HEARTBEAT_MS = 30_000;
+/** A heartbeat unanswered for this long means the connection is dead. */
+export const SUBSCRIBER_HEARTBEAT_TIMEOUT_MS = 10_000;
+
 type EventHandler = (event: RealtimeEvent) => void;
 type ControlHandler = (message: ControlMessage) => void;
 
@@ -53,6 +58,9 @@ export class EventBusService implements OnApplicationBootstrap, OnApplicationShu
   private readonly config: RealtimeConfig;
   private readonly keyPrefix: string;
   private subscriber: Redis | null = null;
+  private heartbeatTimer: NodeJS.Timeout | null = null;
+  /** When the subscriber last proved it was alive: subscribed, or answered a PING. */
+  private lastHeartbeatAt = 0;
   /**
    * Subscribing waits for bootstrap. The Redis client is created in
    * `RedisService.onModuleInit`, and Nest initialises WebSocket gateways
@@ -164,8 +172,17 @@ export class EventBusService implements OnApplicationBootstrap, OnApplicationShu
     }
   }
 
+  /**
+   * Whether live events can arrive: the subscriber is connected *and* answered
+   * a heartbeat recently. Its client-side status alone is not evidence — a
+   * connection dropped silently somewhere on the path still reads "ready".
+   */
   get isSubscribed(): boolean {
-    return this.subscriber?.status === 'ready';
+    return (
+      this.subscriber?.status === 'ready' &&
+      Date.now() - this.lastHeartbeatAt <=
+        SUBSCRIBER_HEARTBEAT_MS * 2 + SUBSCRIBER_HEARTBEAT_TIMEOUT_MS
+    );
   }
 
   onApplicationBootstrap(): void {
@@ -195,9 +212,47 @@ export class EventBusService implements OnApplicationBootstrap, OnApplicationShu
     });
     subscriber
       .subscribe(this.channel(PubSubChannels.events), this.channel(PubSubChannels.control))
+      .then(() => {
+        this.lastHeartbeatAt = Date.now();
+      })
       .catch((error: Error) =>
         this.logger.warn(`Could not subscribe to the event bus: ${error.message}`),
       );
+    this.heartbeatTimer = setInterval(() => void this.heartbeat(), SUBSCRIBER_HEARTBEAT_MS);
+    this.heartbeatTimer.unref();
+  }
+
+  /**
+   * A pub/sub connection is silent whenever nothing happens, and silent TCP
+   * connections are dropped by NAT gateways and managed-Redis proxies without
+   * either end being told: the server forgets the subscription while the
+   * client still reads "ready", and live events stop for good. A PING through
+   * the subscriber keeps the path in use and proves it end to end; one that
+   * goes unanswered forces a reconnect, after which ioredis resubscribes.
+   */
+  private async heartbeat(): Promise<void> {
+    const subscriber = this.subscriber;
+    if (!subscriber || subscriber.status !== 'ready') return;
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        subscriber.ping(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('no answer')),
+            SUBSCRIBER_HEARTBEAT_TIMEOUT_MS,
+          );
+        }),
+      ]);
+      this.lastHeartbeatAt = Date.now();
+    } catch (error) {
+      this.logger.warn(
+        `The event-bus subscriber did not answer a heartbeat (${(error as Error).message}); reconnecting.`,
+      );
+      subscriber.disconnect(true);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private dispatchEvent(message: string): void {
@@ -240,6 +295,8 @@ export class EventBusService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   async onApplicationShutdown(): Promise<void> {
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = null;
     if (!this.subscriber) return;
     await this.subscriber.quit().catch(() => this.subscriber?.disconnect());
     this.subscriber = null;

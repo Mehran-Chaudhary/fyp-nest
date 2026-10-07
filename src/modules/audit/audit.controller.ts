@@ -27,6 +27,7 @@ import {
   AuditLogDto,
   AuditStatisticsDto,
   ChainVerificationDto,
+  ExportAuditLogsQueryDto,
   QueryAuditLogsDto,
 } from './dto/audit.dto';
 import type { AuditLog } from './entities/audit-log.entity';
@@ -162,20 +163,17 @@ export class AuditController {
   async export(
     @Param('organizationId') _identifier: string,
     @CurrentOrganizationId() organizationId: string,
-    @Query('from') from: string | undefined,
-    @Query('to') to: string | undefined,
+    @Query() query: ExportAuditLogsQueryDto,
   ): Promise<StreamableFile> {
+    const { from, to } = query;
     await this.auditService.recordSafe({
       action: AuditAction.AUDIT_LOG_EXPORTED,
       organizationId,
       resourceType: 'audit_chain',
-      metadata: { from, to },
+      metadata: { from: from?.toISOString(), to: to?.toISOString() },
     });
 
-    const generator = this.auditService.exportChain(organizationId, {
-      from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
-    });
+    const generator = this.auditService.exportChain(organizationId, { from, to });
 
     return new StreamableFile(Readable.from(generator));
   }

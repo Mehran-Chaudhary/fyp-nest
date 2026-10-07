@@ -9,12 +9,14 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { IsOptionalNotNull } from '../../../common/validation/optional';
 import { Classification } from '../../knowledge/domain/classification';
 import { Integrity } from '../../tools/domain/information-flow';
 import { FailureClass, RunStatus, RunTrigger, StepStatus } from '../domain/run-state';
@@ -32,7 +34,7 @@ export class WorkflowSettingsDto {
     minimum: 2,
     description: 'Step ceiling for one run, up to WORKFLOW_MAX_STEPS.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(2)
   @Max(10_000)
@@ -42,7 +44,7 @@ export class WorkflowSettingsDto {
     minimum: 1000,
     description: 'Token budget for one run, up to WORKFLOW_MAX_TOKENS_PER_RUN.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1_000)
   @Max(100_000_000)
@@ -52,7 +54,7 @@ export class WorkflowSettingsDto {
     minimum: 1000,
     description: 'Milliseconds, up to WORKFLOW_RUN_TIMEOUT.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1_000)
   runTimeoutMs?: number;
@@ -77,12 +79,12 @@ export class CreateWorkflowDto {
     description:
       'The canvas graph (see docs/contracts/workflow-graph-v1.md). Default: trigger → output.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsObject()
   graph?: Record<string, unknown>;
 
   @ApiPropertyOptional({ type: WorkflowSettingsDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => WorkflowSettingsDto)
   settings?: WorkflowSettingsDto;
@@ -96,20 +98,20 @@ export class SaveDefinitionDto {
   graph: Record<string, unknown>;
 
   @ApiPropertyOptional({ type: WorkflowSettingsDto })
-  @IsOptional()
+  @IsOptionalNotNull()
   @ValidateNested()
   @Type(() => WorkflowSettingsDto)
   settings?: WorkflowSettingsDto;
 
   @ApiPropertyOptional({ maxLength: 500 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(500)
   @Trim()
   changeNote?: string;
 
   @ApiPropertyOptional({ description: 'The version you edited; 409 if it has moved on.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   expectedVersion?: number;
@@ -123,7 +125,7 @@ export class ValidateWorkflowDto {
 
 export class UpdateWorkflowDto {
   @ApiPropertyOptional({ maxLength: 80 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @IsNotEmpty()
   @MaxLength(80)
@@ -140,7 +142,7 @@ export class UpdateWorkflowDto {
 
 export class PublishWorkflowDto {
   @ApiPropertyOptional({ description: 'Default: the current version. It must be valid.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   version?: number;
@@ -148,7 +150,7 @@ export class PublishWorkflowDto {
 
 export class RestoreWorkflowVersionDto {
   @ApiPropertyOptional({ maxLength: 500 })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(500)
   @Trim()
@@ -230,7 +232,7 @@ export class StartRunDto {
     description: 'Starting a run twice with the same key returns the first run.',
     maxLength: 128,
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(128)
   idempotencyKey?: string;
@@ -240,7 +242,7 @@ export class StartRunDto {
       'Run a specific version instead of the published one — a test run of a draft. ' +
       'Requires workflow:update.',
   })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   version?: number;
@@ -262,7 +264,7 @@ export class ListRunsQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsString()
+  @IsUUID('4')
   workflowId?: string;
 }
 
@@ -283,7 +285,7 @@ export class ApprovalDecisionDto {
   decision: 'approve' | 'reject';
 
   @ApiPropertyOptional({ maxLength: 2000, description: 'Stored encrypted with the run.' })
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   @MaxLength(2000)
   comment?: string;

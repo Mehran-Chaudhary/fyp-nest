@@ -98,6 +98,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       response.setHeader(HEADER.RETRY_AFTER, String(resolved.retryAfterSeconds));
     }
 
+    // A download route declares its success headers up front (`@Header`), and
+    // Express's json() keeps a Content-Type already set: an envelope would go
+    // out labelled as NDJSON, with an attachment disposition. Errors are JSON.
+    response.removeHeader('Content-Disposition');
+    response.setHeader('Content-Type', 'application/json; charset=utf-8');
+
     response.status(resolved.status).json({
       success: false,
       error: {

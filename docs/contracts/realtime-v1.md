@@ -52,10 +52,10 @@ socket.on('connect_error', (err) => console.log(err.data?.code, err.message));
 | `AUTH_SCHEME_NOT_ALLOWED` | Credentials in the URL. |
 | `ORGANIZATION_CONTEXT_REQUIRED`, `ORGANIZATION_NOT_FOUND`, `ORGANIZATION_SUSPENDED`, `MEMBERSHIP_SUSPENDED` | No workspace given; unknown or not yours (answered alike, so workspaces cannot be probed); suspended; or your membership is. |
 | `IP_NOT_ALLOWED` | The workspace's IP allowlist refuses this address. |
-| `REALTIME_ORIGIN_NOT_ALLOWED` | The page's origin is not in `CORS_ORIGINS`. |
+| *(no code)* | The page's origin is not in `CORS_ORIGINS`: refused at the engine level before authentication, so the browser sees a bare transport error (`err.data` undefined). `REALTIME_ORIGIN_NOT_ALLOWED` exists but cannot reach a browser. |
 | `REALTIME_CONNECTION_LIMIT` | More than `REALTIME_MAX_CONNECTIONS_PER_USER` sockets for this user or key. |
 | `RATE_LIMIT_EXCEEDED` | More than `REALTIME_MAX_HANDSHAKES_PER_MINUTE` handshakes from this IP. |
-| `REALTIME_DISABLED` | `REALTIME_ENABLED=false`. |
+| *(no code)* | `REALTIME_ENABLED=false`: also refused at the engine level (`REALTIME_DISABLED` cannot reach a client). |
 
 Refused handshakes are audited (`realtime.connection.rejected`).
 
